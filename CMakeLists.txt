@@ -126,7 +126,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
 	add_compile_options(-Wall -Wextra -Wuninitialized)
 	add_compile_options(-Wshadow -Wpedantic -Wcast-align -Wwrite-strings)
 	add_compile_options(-Wmissing-declarations -Wvla)
-  add_compile_options(-Werror -Wno-error=deprecated-declarations -Wno-error=unused-parameter -Wno-error=unused-variable -Wno-error=unused-result -Wno-error=shadow)
+	add_compile_options(-Werror -Wno-error=deprecated-declarations -Wno-error=unused-parameter -Wno-error=unused-variable -Wno-error=unused-result -Wno-error=shadow)
+
+	# 2026-05-01 mingw g++ 16.1.0 seems to be giving false positives around uninitialized values inside std::string
+	# 2026-05-03 arch has picked up the same gcc issue
+	add_compile_options(-Wno-error=uninitialized)
+	add_compile_options(-Wno-error=maybe-uninitialized)
 endif()
 
 # Compiler warnings specific to GCC or Clang
@@ -158,10 +163,6 @@ endif()
 
 if(WIN32)
 	add_compile_options(-D_USE_MATH_DEFINES -D_POSIX_THREAD_SAFE_FUNCTIONS)
-
-	# 2026-05-01 mingw g++ 16.1.0 seems to be giving false positives around uninitialized values inside std::strong
-	add_compile_options(-Wno-error=uninitialized)
-	add_compile_options(-Wno-error=maybe-uninitialized)
 endif()
 
 # Package detection
