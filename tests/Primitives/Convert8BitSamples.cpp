@@ -66,13 +66,13 @@ TEST_CASE("Primitive_Convert8BitSamples")
 	AcceleratorBuffer<float> data_out_golden;
 
 	data_in.SetCpuAccessHint(AcceleratorBuffer<int8_t>::HINT_LIKELY);
-	data_in.SetGpuAccessHint(AcceleratorBuffer<int8_t>::HINT_LIKELY);
+	data_in.SetGpuAccessHint(AcceleratorBuffer<int8_t>::HINT_UNLIKELY);	//pinned memory
 	data_out.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 	data_out.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 	data_out_golden.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 	data_out_golden.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 
-	const size_t wavelen = 100000;
+	const size_t wavelen = 10 * 1000 * 1000;
 	data_in.resize(wavelen);
 	data_out.resize(wavelen);
 	data_out_golden.resize(wavelen);
@@ -140,9 +140,6 @@ TEST_CASE("Primitive_Convert8BitSamples")
 			//Vulkan implementation
 			if(pipe)
 			{
-				data_out.PrepareForGpuAccess();
-				data_in.PrepareForGpuAccess();
-
 				start = GetTime();
 				cmdbuf.begin({});
 				pipe->BindBufferNonblocking(0, data_out, cmdbuf, true);
