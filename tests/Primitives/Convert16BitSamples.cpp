@@ -68,13 +68,13 @@ TEST_CASE("Primitive_Convert16BitSamples")
 	AcceleratorBuffer<float> data_out_golden;
 
 	data_in.SetCpuAccessHint(AcceleratorBuffer<int16_t>::HINT_LIKELY);
-	data_in.SetGpuAccessHint(AcceleratorBuffer<int16_t>::HINT_LIKELY);
+	data_in.SetGpuAccessHint(AcceleratorBuffer<int16_t>::HINT_UNLIKELY);	//pinned memory
 	data_out.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 	data_out.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 	data_out_golden.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 	data_out_golden.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 
-	const size_t wavelen = 100000;
+	const size_t wavelen = 10 * 1000 * 1000;
 	data_in.resize(wavelen);
 	data_out.resize(wavelen);
 	data_out_golden.resize(wavelen);
@@ -89,6 +89,9 @@ TEST_CASE("Primitive_Convert16BitSamples")
 		pipe = make_unique<ComputePipeline>(
 			"shaders/Convert16BitSamples.spv", 2, sizeof(ConvertRawSamplesShaderArgs) );
 	}
+
+	unique_ptr<ComputePipeline> pipe2 = make_unique<ComputePipeline>(
+		"shaders/Convert16BitSamplesDual.spv", 2, sizeof(ConvertRawSamplesShaderArgs) );
 
 	const size_t niter = 8;
 	for(size_t i=0; i<niter; i++)
@@ -175,9 +178,6 @@ TEST_CASE("Primitive_Convert16BitSamples")
 			//Vulkan implementation
 			if(pipe)
 			{
-				data_out.PrepareForGpuAccess();
-				data_in.PrepareForGpuAccess();
-
 				start = GetTime();
 				cmdbuf.begin({});
 				pipe->BindBufferNonblocking(0, data_out, cmdbuf, true);
@@ -193,10 +193,29 @@ TEST_CASE("Primitive_Convert16BitSamples")
 				data_out.MarkModifiedFromGpu();
 
 				data_out.PrepareForCpuAccess();
-				LogVerbose("GPU           : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+				LogVerbose("GPU (16 bit)  : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 				for(size_t j=0; j<wavelen; j++)
 					REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 2e-3f);
 			}
+
+			start = GetTime();
+			cmdbuf.begin({});
+			pipe2->BindBufferNonblocking(0, data_out, cmdbuf, true);
+			pipe2->BindBufferNonblocking(1, data_in, cmdbuf);
+			ConvertRawSamplesShaderArgs args;
+			args.size = wavelen;
+			args.gain = gain;
+			args.offset = off;
+			pipe2->Dispatch(cmdbuf, args, GetComputeBlockCount(wavelen, 64*2));	//2 samples per shader thread
+			cmdbuf.end();
+			queue->SubmitAndBlock(cmdbuf);
+			float dt = GetTime() - start;
+			data_out.MarkModifiedFromGpu();
+
+			data_out.PrepareForCpuAccess();
+			LogVerbose("GPU (32 bit)  : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+			for(size_t j=0; j<wavelen; j++)
+				REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 2e-3f);
 		}
 	}
 
