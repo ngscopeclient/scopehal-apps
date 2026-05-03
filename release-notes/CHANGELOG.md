@@ -7,6 +7,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Core: Changed rate limiting sleep in InstrumentThread loop from 10ms to 1ms to avoid bogging down high performance instruments like the ThunderScope
 * Core: Scopesession loading now uses multithreaded IO for significant performance gains especially when many channels and deep history are involved
 * Core: Significant rewrite of Vulkan queue allocation logic to reduce unnecessary locking and mutex contention on GPUs without a lot of Vulkan queues (most non-NVIDIA platforms)
+* Core: Restructured int8 to float32 conversion to enable GPU acceleration on all Vulkan-capable GPUs without needing CPU fallback, as well as significantly improve performance on already-supported platforms. Not yet deployed to all drivers (https://github.com/ngscopeclient/scopehal/issues/1083)
 * Drivers: Added support for many more PicoScope models
 * Drivers: Added R&S RTB2000 driver (https://github.com/ngscopeclient/scopehal/pull/1048/)
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
