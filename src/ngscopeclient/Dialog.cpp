@@ -390,7 +390,14 @@ bool Dialog::UnitInputWithExplicitApply(
    @param digitHeight the height of a digit (if 0 (defualt), will use ImGui::GetFontSize())
    @param clickable true (default) if the displayed value should be clickable
  */
-void Dialog::renderNumericValue(const std::string& value, bool &clicked, bool &hovered, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay, float digitHeight, bool clickable)
+void Dialog::renderNumericValue(
+	const string& value,
+	bool &clicked,
+	bool &hovered,
+	optional<ImVec4> optcolor,
+	bool allow7SegmentDisplay,
+	float digitHeight,
+	bool clickable)
 {
 	bool use7Segment = false;
 	bool changeFont = false;
@@ -407,7 +414,10 @@ void Dialog::renderNumericValue(const std::string& value, bool &clicked, bool &h
 		use7Segment = (displayType == NumericValueDisplay::NUMERIC_DISPLAY_7SEGMENT);
 		if(!use7Segment && m_parent)
 		{
-			font = m_parent->GetFontPref(displayType == NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT ? "Appearance.General.default_font" : "Appearance.General.console_font");
+			font = m_parent->GetFontPref(
+				(displayType == NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT) ?
+					"Appearance.General.default_font" :
+					"Appearance.General.console_font");
 			changeFont = true;
 		}
 	}
@@ -498,9 +508,24 @@ template<typename T>
    @param explicitApply (defaults to false) true if the input value needs to explicitly be applied (by clicking the apply button)
    @return true if the value has changed
  */
-bool Dialog::renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay, bool explicitApply)
+bool Dialog::renderEditableProperty(
+	float width,
+	const string& label,
+	string& currentValue,
+	T& committedValue,
+	Unit unit,
+	const char* tooltip,
+	optional<ImVec4> optcolor,
+	bool allow7SegmentDisplay,
+	bool explicitApply)
 {
-    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, int64_t> || std::is_same_v<T, std::string>,"renderEditableProperty only supports string, int64_t, float or double");
+    static_assert(
+		std::is_same_v<T, float> ||
+		std::is_same_v<T, double> ||
+		std::is_same_v<T, int64_t> ||
+		std::is_same_v<T, std::string>,
+		"renderEditableProperty only supports string, int64_t, float or double");
+
 	bool use7Segment = false;
 	bool changeFont = false;
 	int64_t displayType = NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT;
@@ -522,7 +547,10 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 		use7Segment = (displayType == NumericValueDisplay::NUMERIC_DISPLAY_7SEGMENT);
 		if(!use7Segment && m_parent)
 		{
-			font = m_parent->GetFontPref(displayType == NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT ? "Appearance.General.default_font" : "Appearance.General.console_font");
+			font = m_parent->GetFontPref(
+				(displayType == NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT) ?
+				"Appearance.General.default_font" :
+				"Appearance.General.console_font");
 			changeFont = true;
 		}
 	}
@@ -571,11 +599,11 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 		if(changeFont) ImGui::PopFont();
 		ImGui::PopStyleColor();
 		ImGui::PopItemFlag();
-		if(explicitApply)
+		if(explicitApply && dirty)
 		{	// Add Apply button
 			float buttonWidth = ImGui::GetFontSize() * 2;
 			// Position the button just before the right side of the text input
-			ImGui::SameLine(inputXPos+inputWidth-ImGui::GetCursorPosX()-buttonWidth+2*ImGui::GetStyle().ItemInnerSpacing.x);
+			ImGui::SameLine(/*inputXPos+inputWidth-ImGui::GetCursorPosX()-buttonWidth+2*ImGui::GetStyle().ItemInnerSpacing.x*/);
 			ImVec4 buttonColorHovered = buttonColor;
 			float bgmul = 0.8f;
 			ImVec4 buttonColorDefault = ImVec4(buttonColor.x*bgmul, buttonColor.y*bgmul, buttonColor.z*bgmul, buttonColor.w);
@@ -584,13 +612,12 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 			ImGui::PushStyleColor(ImGuiCol_Button, buttonColorDefault);
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, buttonColorHovered);
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonColorActive);
-			ImGui::BeginDisabled(!dirty);
-			if(ImGui::Button(CARRIAGE_RETURN_CHAR)) // Carriage return symbol
+
+			if(ImGui::Button("Apply"))
 			{	// Apply button click
 				validateChange = true;
 			}
-			ImGui::EndDisabled();
-			if(dirty && ImGui::IsItemHovered() && m_parent)
+			if(ImGui::IsItemHovered() && m_parent)
 			{	// Help to explain apply button
 				m_parent->AddStatusHelp("mouse_lmb", "Apply value changes and send them to the instrument");
 			}
@@ -608,7 +635,13 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 				//Prevent focus from going to parent node
 				ImGui::ActivateItemByID(0);
 			}
-			else if((ImGui::GetActiveID() != editId) && (!explicitApply || !ImGui::IsItemActive() /* This is here to prevent detecting focus lost when apply button is clicked */))
+			else if(
+				(ImGui::GetActiveID() != editId) &&
+				(!explicitApply || !ImGui::IsItemActive() /*
+														This is here to prevent detecting focus lost
+														when apply button is clicked
+														*/
+				))
 			{	// Detect focus lost => stop editing too
 				if(explicitApply)
 				{	// Cancel on focus lost
