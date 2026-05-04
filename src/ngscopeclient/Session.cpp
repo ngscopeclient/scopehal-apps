@@ -415,6 +415,7 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 	//then refresh the filter graph
 	if(m_history.empty())
 	{
+		LogTrace("Forcing graph refresh for history-less session\n");
 		StartWaveformThreadIfNeeded();
 		RefreshAllFiltersNonblocking();
 	}
@@ -479,6 +480,7 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 
 		RefreshAllFilters();
 	}
+
 	double hdt = GetTime() - hstart;
 	LogTrace("History replay took %.3f ms\n", hdt * 1000);
 	if(converted)
