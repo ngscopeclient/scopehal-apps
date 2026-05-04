@@ -142,8 +142,8 @@ TEST_CASE("Primitive_Convert8BitSamples")
 			args.size = wavelen;
 			args.gain = gain;
 			args.offset = off;
-			pipe2->Dispatch(cmdbuf, args, GetComputeBlockCount(wavelen/4, 64*4)); //64 threads per block *
-			cmdbuf.end();														  //4 samples per thread
+			pipe2->Dispatch(cmdbuf, args, GetComputeBlockCount(wavelen, 64*4)); //64 threads per block *
+			cmdbuf.end();														//4 samples per thread
 			queue->SubmitAndBlock(cmdbuf);
 			float dt = GetTime() - start;
 			data_out.MarkModifiedFromGpu();
