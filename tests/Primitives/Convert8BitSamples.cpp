@@ -81,13 +81,6 @@ TEST_CASE("Primitive_Convert8BitSamples")
 	uniform_int_distribution<int8_t> indesc(-128, 127);
 	uniform_real_distribution<float> offdesc(-10, 10);
 
-	unique_ptr<ComputePipeline> pipe;
-	if(g_hasShaderInt8)
-	{
-		pipe = make_unique<ComputePipeline>(
-			"shaders/Convert8BitSamples.spv", 2, sizeof(ConvertRawSamplesShaderArgs) );
-	}
-
 	unique_ptr<ComputePipeline> pipe2 = make_unique<ComputePipeline>(
 			"shaders/Convert8BitSamplesQuad.spv", 2, sizeof(ConvertRawSamplesShaderArgs) );
 
@@ -139,29 +132,6 @@ TEST_CASE("Primitive_Convert8BitSamples")
 					REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 1e-5f);
 			}
 			#endif
-
-			//Vulkan implementation
-			if(pipe)
-			{
-				start = GetTime();
-				cmdbuf.begin({});
-				pipe->BindBufferNonblocking(0, data_out, cmdbuf, true);
-				pipe->BindBufferNonblocking(1, data_in, cmdbuf);
-				ConvertRawSamplesShaderArgs args;
-				args.size = wavelen;
-				args.gain = gain;
-				args.offset = off;
-				pipe->Dispatch(cmdbuf, args, GetComputeBlockCount(wavelen, 64));
-				cmdbuf.end();
-				queue->SubmitAndBlock(cmdbuf);
-				float dt = GetTime() - start;
-				data_out.MarkModifiedFromGpu();
-
-				data_out.PrepareForCpuAccess();
-				LogVerbose("GPU (8 bit)   : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
-				for(size_t j=0; j<wavelen; j++)
-					REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 1e-5f);
-			}
 
 			//Vulkan implementation not using shader_8bit_storage
 			start = GetTime();

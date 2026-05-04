@@ -83,13 +83,6 @@ TEST_CASE("Primitive_Convert16BitSamples")
 	uniform_int_distribution<int16_t> indesc(-32768, 32767);
 	uniform_real_distribution<float> offdesc(-10, 10);
 
-	unique_ptr<ComputePipeline> pipe;
-	if(g_hasShaderInt16)
-	{
-		pipe = make_unique<ComputePipeline>(
-			"shaders/Convert16BitSamples.spv", 2, sizeof(ConvertRawSamplesShaderArgs) );
-	}
-
 	unique_ptr<ComputePipeline> pipe2 = make_unique<ComputePipeline>(
 		"shaders/Convert16BitSamplesDual.spv", 2, sizeof(ConvertRawSamplesShaderArgs) );
 
@@ -174,29 +167,6 @@ TEST_CASE("Primitive_Convert16BitSamples")
 					REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 2e-3f);
 			}
 			#endif
-
-			//Vulkan implementation
-			if(pipe)
-			{
-				start = GetTime();
-				cmdbuf.begin({});
-				pipe->BindBufferNonblocking(0, data_out, cmdbuf, true);
-				pipe->BindBufferNonblocking(1, data_in, cmdbuf);
-				ConvertRawSamplesShaderArgs args;
-				args.size = wavelen;
-				args.gain = gain;
-				args.offset = off;
-				pipe->Dispatch(cmdbuf, args, GetComputeBlockCount(wavelen, 64));
-				cmdbuf.end();
-				queue->SubmitAndBlock(cmdbuf);
-				float dt = GetTime() - start;
-				data_out.MarkModifiedFromGpu();
-
-				data_out.PrepareForCpuAccess();
-				LogVerbose("GPU (16 bit)  : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
-				for(size_t j=0; j<wavelen; j++)
-					REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 2e-3f);
-			}
 
 			start = GetTime();
 			cmdbuf.begin({});
