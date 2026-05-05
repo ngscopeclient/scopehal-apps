@@ -10,6 +10,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Core: Restructured int8 to float32 conversion to enable GPU acceleration on all Vulkan-capable GPUs without needing CPU fallback, as well as significantly improve performance on already-supported platforms. Not yet deployed to all drivers (https://github.com/ngscopeclient/scopehal/issues/1083)
 * Drivers: Added support for many more PicoScope models
 * Drivers: Added R&S RTB2000 driver (https://github.com/ngscopeclient/scopehal/pull/1048/)
+* Drivers: Added Rigol MHO900/98 series (https://github.com/ngscopeclient/scopehal/pull/1085)
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
 * Filters: Added GPU acceleration and/or optimized many more filters (https://github.com/ngscopeclient/scopehal/issues/977) including. Typical performance improvements (RTX 2080 Ti vs Xeon 6144):
   * 8B/10B (IBM) (12.1x speedup)
