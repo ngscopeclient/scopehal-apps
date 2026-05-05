@@ -45,14 +45,15 @@
 
 using namespace std;
 
+void Convert16BitSamplesGeneric(float* pout, const int16_t* pin, float gain, float offset, size_t count);
+void Convert16BitSamplesGeneric(float* pout, const int16_t* pin, float gain, float offset, size_t count)
+{
+	for(size_t j=0; j<count; j++)
+		pout[j] = gain*pin[j] - offset;
+}
+
 TEST_CASE("Primitive_Convert16BitSamples")
 {
-	#ifdef __x86_64__
-	bool reallyHasAvx2 = g_hasAvx2;
-	bool reallyHasFMA = g_hasFMA;
-	bool reallyHasAvx512F = g_hasAvx512F;
-	#endif
-
 	//Create a queue and command buffer
 	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Primitive_Convert16BitSamples.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
@@ -107,69 +108,15 @@ TEST_CASE("Primitive_Convert16BitSamples")
 			data_in.PrepareForGpuAccess();
 
 			//Baseline with CPU reference implementation
-			#ifdef __x86_64__
-				g_hasAvx2 = false;
-				g_hasFMA = false;
-				g_hasAvx512F = false;
-			#endif
 			data_out_golden.PrepareForCpuAccess();
 			double start = GetTime();
-			Oscilloscope::Convert16BitSamplesGeneric(&data_out_golden[0], &data_in[0], gain, off, wavelen);
+			Convert16BitSamplesGeneric(&data_out_golden[0], &data_in[0], gain, off, wavelen);
 			double tbase = GetTime() - start;
 
 			data_out_golden.MarkModifiedFromCpu();
 			data_out_golden.PrepareForCpuAccess();
 
-			LogVerbose("CPU (no AVX)  : %6.2f ms\n", tbase * 1000);
-
-			#ifdef __x86_64__
-			if(reallyHasAvx2)
-			{
-				g_hasAvx2 = true;
-
-				data_out.PrepareForCpuAccess();
-				start = GetTime();
-				Oscilloscope::Convert16BitSamplesAVX2(&data_out[0], &data_in[0], gain, off, wavelen);
-				float dt = GetTime() - start;
-
-				data_out.MarkModifiedFromCpu();
-				data_out.PrepareForCpuAccess();
-				LogVerbose("CPU (AVX2)    : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
-				for(size_t j=0; j<wavelen; j++)
-					REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 2e-3f);
-
-				if(reallyHasFMA)
-				{
-					g_hasFMA = true;
-
-					data_out.PrepareForCpuAccess();
-					start = GetTime();
-					Oscilloscope::Convert16BitSamplesFMA(&data_out[0], &data_in[0], gain, off, wavelen);
-					dt = GetTime() - start;
-
-					data_out.MarkModifiedFromCpu();
-					data_out.PrepareForCpuAccess();
-					LogVerbose("CPU (FMA)     : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
-					for(size_t j=0; j<wavelen; j++)
-						REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 2e-3f);
-				}
-			}
-			if(reallyHasAvx512F)
-			{
-				g_hasAvx512F = true;
-
-				data_out.PrepareForCpuAccess();
-				start = GetTime();
-				Oscilloscope::Convert16BitSamplesAVX512F(&data_out[0], &data_in[0], gain, off, wavelen);
-				float dt = GetTime() - start;
-
-				data_out.MarkModifiedFromCpu();
-				data_out.PrepareForCpuAccess();
-				LogVerbose("CPU (AVX512F) : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
-				for(size_t j=0; j<wavelen; j++)
-					REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 2e-3f);
-			}
-			#endif
+			LogVerbose("CPU           : %6.2f ms\n", tbase * 1000);
 
 			start = GetTime();
 			cmdbuf.begin({});
@@ -213,10 +160,4 @@ TEST_CASE("Primitive_Convert16BitSamples")
 				REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 2e-3f);
 		}
 	}
-
-	#ifdef __x86_64__
-		g_hasAvx2 = reallyHasAvx2;
-		g_hasFMA = reallyHasFMA;
-		g_hasAvx512F = reallyHasAvx512F;
-	#endif
 }
