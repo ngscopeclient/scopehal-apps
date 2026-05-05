@@ -81,6 +81,9 @@ TEST_CASE("Primitive_Convert8BitSamples")
 	uniform_int_distribution<int8_t> indesc(-128, 127);
 	uniform_real_distribution<float> offdesc(-10, 10);
 
+	unique_ptr<ComputePipeline> pipe = make_unique<ComputePipeline>(
+			"shaders/Convert8BitSamplesQuadOffset.spv", 2, sizeof(ConvertRawSamplesOffsetShaderArgs) );
+
 	unique_ptr<ComputePipeline> pipe2 = make_unique<ComputePipeline>(
 			"shaders/Convert8BitSamplesQuad.spv", 2, sizeof(ConvertRawSamplesShaderArgs) );
 
@@ -133,7 +136,7 @@ TEST_CASE("Primitive_Convert8BitSamples")
 			}
 			#endif
 
-			//Vulkan implementation not using shader_8bit_storage
+			//Vulkan implementation
 			start = GetTime();
 			cmdbuf.begin({});
 			pipe2->BindBufferNonblocking(0, data_out, cmdbuf, true);
@@ -152,6 +155,33 @@ TEST_CASE("Primitive_Convert8BitSamples")
 			LogVerbose("GPU (32 bit)  : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 			for(size_t j=0; j<wavelen; j++)
 				REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 1e-5f);
+
+			//Run it again with offset
+			//TODO: test nonzero offsets
+			start = GetTime();
+			cmdbuf.begin({});
+			pipe->BindBufferNonblocking(0, data_out, cmdbuf, true);
+			pipe->BindBufferNonblocking(1, data_in, cmdbuf);
+			ConvertRawSamplesOffsetShaderArgs argsOffset;
+			argsOffset.size = wavelen;
+			argsOffset.gain = gain;
+			argsOffset.offset = off;
+			argsOffset.inputBufferOffset = 0;
+			pipe->Dispatch(cmdbuf, argsOffset, GetComputeBlockCount(wavelen, 64*4)); //64 threads per block *
+			cmdbuf.end();															//4 samples per thread
+			queue->SubmitAndBlock(cmdbuf);
+			dt = GetTime() - start;
+			data_out.MarkModifiedFromGpu();
+
+			data_out.PrepareForCpuAccess();
+			LogVerbose("GPU (offset)  : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+			for(size_t j=0; j<wavelen; j++)
+			{
+				if(fabs(data_out_golden[j] - data_out[j]) >= 1e-5f)
+					LogVerbose("error at j=%zu\n", j);
+
+				REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 1e-5f);
+			}
 		}
 	}
 
