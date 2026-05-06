@@ -25,4 +25,5 @@ brew install \
 	hidapi \
 	fftw
 
+source ./Validation.sh
 ctest -S ctest-custom.cmake

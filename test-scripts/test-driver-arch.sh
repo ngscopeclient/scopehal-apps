@@ -31,5 +31,5 @@ sudo pacman -Syu --noconfirm --needed \
 	shaderc \
 	glslang \
 	vulkan-tools
-
+source ./Validation.sh
 ctest -S ctest-custom.cmake

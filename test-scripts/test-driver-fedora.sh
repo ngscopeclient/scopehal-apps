@@ -37,4 +37,5 @@ sudo dnf install -y \
 	glslc \
 	spirv-tools-devel
 
+source ./Validation.sh
 ctest -S ctest-custom.cmake
