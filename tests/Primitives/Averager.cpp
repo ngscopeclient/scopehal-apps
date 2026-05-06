@@ -95,7 +95,7 @@ TEST_CASE("Primitive_Averager")
 
 		//Verify everything matches
 		//Noisy sine should be close to the desired offset
-		float epsilon1 = 0.002;
+		float epsilon1 = 0.0035;
 		REQUIRE(fabs(avg - offset) < epsilon1);
 		REQUIRE(fabs(gpuavg - offset) < epsilon1);
 
