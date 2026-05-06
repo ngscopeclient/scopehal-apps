@@ -38,5 +38,6 @@ sudo dnf install -y \
 	spirv-tools-devel \
 	vulkan-validation-layers
 
+export VK_LOADER_LAYERS_ENABLE=VK_LAYER_KHRONOS_validation
 source ./test-scripts/Validation.sh
 ctest -S ctest-custom.cmake

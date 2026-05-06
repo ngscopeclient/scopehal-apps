@@ -26,5 +26,6 @@ brew install \
 	fftw \
 	vulkan-validationlayers
 
+export VK_LOADER_LAYERS_ENABLE=VK_LAYER_KHRONOS_validation
 source ./test-scripts/Validation.sh
 ctest -S ctest-custom.cmake

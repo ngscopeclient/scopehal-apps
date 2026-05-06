@@ -32,5 +32,7 @@ sudo pacman -Syu --noconfirm --needed \
 	glslang \
 	vulkan-validation-layers \
 	vulkan-tools
+
+export VK_LOADER_LAYERS_ENABLE=VK_LAYER_KHRONOS_validation
 source ./test-scripts/Validation.sh
 ctest -S ctest-custom.cmake
