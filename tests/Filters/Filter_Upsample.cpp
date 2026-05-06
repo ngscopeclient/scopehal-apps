@@ -45,6 +45,29 @@
 
 using namespace std;
 
+float sinc(float x, float width);
+float blackman(float x, float width);
+
+float sinc(float x, float width)
+{
+	float xi = x - width/2;
+
+	if(fabs(xi) < 1e-7)
+		return 1.0f;
+	else
+	{
+		float px = M_PI*xi;
+		return sin(px) / px;
+	}
+}
+
+float blackman(float x, float width)
+{
+	if(x > width)
+		return 0;
+	return 0.42 - 0.5*cos(2*M_PI * x / width) + 0.08 * cos(4*M_PI*x/width);
+}
+
 TEST_CASE("Filter_Upsample")
 {
 	auto filter = dynamic_cast<UpsampleFilter*>(Filter::CreateFilter("Upsample", "#ffffff"));
@@ -84,26 +107,58 @@ TEST_CASE("Filter_Upsample")
 			ua.PrepareForGpuAccess();
 			ua.PrepareForCpuAccess();
 
-			//Run the filter once on CPU and GPU each
-			//without looking at results, to make sure caches are hot and buffers are allocated etc
-			g_gpuFilterEnabled = false;
-			filter->Refresh(cmdbuf, queue);
-			g_gpuFilterEnabled = true;
-			filter->Refresh(cmdbuf, queue);
-
-			//Baseline on the CPU
-			g_gpuFilterEnabled = false;
 			double start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+
+			//TODO: poke the filter to make sure this is right
+			const int upsample_factor = 10;
+
+			//Create the interpolation filter
+			vector<float> coeffs;
+			size_t window = 5;
+			size_t kernel = window*upsample_factor;
+			float frac_kernel = kernel * 1.0f / upsample_factor;
+			coeffs.resize(kernel);
+			for(size_t j=0; j<kernel; j++)
+			{
+				float frac = j*1.0f / upsample_factor;
+				coeffs[j] = sinc(frac, frac_kernel) * blackman(frac, frac_kernel);
+			}
+
+			//Generate the golden output
+			AcceleratorBuffer<float> golden;
+			size_t len = ua.size();
+			size_t imax = len - window;
+			size_t outlen = imax*upsample_factor;
+			golden.resize(outlen);
+			golden.PrepareForCpuAccess();
+			for(size_t m=0; m < imax; m++)
+			{
+				size_t offset = m * upsample_factor;
+				for(size_t j=0; j<upsample_factor; j++)
+				{
+					size_t nstart = 0;
+					size_t sstart = 0;
+					if(j > 0)
+					{
+						sstart = 1;
+						nstart = upsample_factor - j;
+					}
+
+					float f = 0;
+					for(size_t k = nstart; k<kernel; k += upsample_factor, sstart ++)
+						f += coeffs[k] * ua.m_samples[m + sstart];
+
+					golden[offset + j] = f;
+				}
+			}
+			golden.MarkModifiedFromCpu();
 			double tbase = GetTime() - start;
 			LogVerbose("CPU: %.2f ms\n", tbase * 1000);
 
-			//Copy the result
-			AcceleratorBuffer<float> golden;
-			golden.CopyFrom(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
+			//Run the filter once to get shaders loaded etc
+			filter->Refresh(cmdbuf, queue);
 
-			//Try again on the GPU
-			g_gpuFilterEnabled = true;
+			//Run the real filter for score
 			start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
