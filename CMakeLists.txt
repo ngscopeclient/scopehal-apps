@@ -23,6 +23,9 @@ if(DEFINED ENV{VULKAN_SDK})
 	endif()
 endif()
 
+# Needed for vk::PhysicalDevicePortabilitySubsetFeaturesKHR
+add_compile_definitions(VK_ENABLE_BETA_EXTENSIONS=1)
+
 # Git is used for git-describe based version generation if we have it
 find_package(Git)
 
