@@ -2437,7 +2437,7 @@ void FilterGraphEditor::HandleDoubleClicks()
 		return;
 
 	//Spawn the appropriate dialog
-	auto node = m_session->m_idtable.Lookup<FlowGraphNode*>(static_cast<uintptr_t>(id));
+	auto node = m_session->m_idtable.Lookup<FlowGraphNode>(static_cast<uintptr_t>(id));
 	auto trig = dynamic_cast<Trigger*>(node);
 	auto ochan = dynamic_cast<OscilloscopeChannel*>(node);
 	auto bo = dynamic_cast<BERTOutputChannel*>(node);
@@ -2484,7 +2484,7 @@ bool FilterGraphEditor::HandleNodeProperties()
 
 		else
 		{
-			auto node = m_session->m_idtable.Lookup<FlowGraphNode*>(static_cast<uintptr_t>(id));
+			auto node = m_session->m_idtable.Lookup<FlowGraphNode>(static_cast<uintptr_t>(id));
 			auto trig = dynamic_cast<Trigger*>(node);
 			auto o = dynamic_cast<OscilloscopeChannel*>(node);
 			auto f = dynamic_cast<Filter*>(o);
