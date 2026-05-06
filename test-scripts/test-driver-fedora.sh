@@ -35,7 +35,8 @@ sudo dnf install -y \
 	libshaderc-devel \
 	glslang-devel \
 	glslc \
-	spirv-tools-devel
+	spirv-tools-devel \
+	vulkan-validation-layers
 
-source ./Validation.sh
+source ./test-scripts/Validation.sh
 ctest -S ctest-custom.cmake

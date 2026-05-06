@@ -30,6 +30,7 @@ sudo pacman -Syu --noconfirm --needed \
 	vulkan-icd-loader \
 	shaderc \
 	glslang \
+	vulkan-validation-layers \
 	vulkan-tools
-source ./Validation.sh
+source ./test-scripts/Validation.sh
 ctest -S ctest-custom.cmake

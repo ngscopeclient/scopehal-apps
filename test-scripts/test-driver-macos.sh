@@ -23,7 +23,8 @@ brew install \
 	molten-vk \
 	ninja \
 	hidapi \
-	fftw
+	fftw \
+	vulkan-validationlayers
 
-source ./Validation.sh
+source ./test-scripts/Validation.sh
 ctest -S ctest-custom.cmake
