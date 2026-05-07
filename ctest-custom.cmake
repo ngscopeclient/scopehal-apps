@@ -42,7 +42,7 @@ elseif(${HOSTNAME} STREQUAL "arch" )
 	message(STATUS "Found known CI config: arch")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON")
 
 # CI Debian Trixie
 elseif(${HOSTNAME} STREQUAL "debian-stable" )
@@ -53,7 +53,7 @@ elseif(${HOSTNAME} STREQUAL "debian-stable" )
 	message(STATUS "Found known CI config: debian-stable")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON")
 
 # CI Debian Bookworm
 elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
@@ -64,7 +64,7 @@ elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
 	message(STATUS "Found known CI config: debian-oldstable")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON")
 
 # CI Ubuntu Noble
 elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
@@ -75,7 +75,7 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
 	message(STATUS "Found known CI config: ubuntu-oldlts")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON")
 
 # CI Ubuntu Resolute
 elseif(${HOSTNAME} STREQUAL "ubuntu-lts" )
@@ -88,12 +88,12 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-lts" )
 		set(CTEST_BUILD_NAME x86_64-linux-ubuntu-26-04-llvmpipe-asan)
 		message(STATUS "Building debug version with sanitizers")
 		set(CTEST_BUILD_CONFIGURATION "DebugNoOpt")
-		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DSANITIZE=ON")
+		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DSANITIZE=ON")
 	else()
 		set(CTEST_BUILD_NAME x86_64-linux-ubuntu-26-04-llvmpipe)
 		message(STATUS "Building optimized release version")
 		set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
+		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON")
 	endif()
 
 # CI Fedora 43
@@ -105,7 +105,7 @@ elseif(${HOSTNAME} STREQUAL "fedora" )
 	message(STATUS "Found known CI config: fedora")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON")
 
 # CI Windows 11
 elseif(${HOSTNAME} STREQUAL "win11" )
@@ -119,7 +119,7 @@ elseif(${HOSTNAME} STREQUAL "win11" )
 	message(STATUS "Found known CI config: win11")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON")
 
 # CI MacOS ARM64, for whatever reason it reports the FQDN not just the hostname
 elseif(${HOSTNAME} STREQUAL "macos.cidmz.poulsbo.antikernel.net" )
