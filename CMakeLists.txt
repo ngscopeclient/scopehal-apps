@@ -160,6 +160,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(SANITIZE)
+	message(STATUS "SANITIZE set, enabling sanitizers")
 	add_compile_options(-fsanitize=address -fsanitize=undefined)
 	add_link_options(-fsanitize=address -fsanitize=undefined)
 endif()
