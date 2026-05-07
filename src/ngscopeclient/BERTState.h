@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -43,17 +43,15 @@ class BERTState
 public:
 
 	BERTState(size_t n = 0)
+		: m_horzBathtubScanPending(std::make_unique<std::atomic<bool>[] >(n))
+		, m_eyeScanPending(std::make_unique<std::atomic<bool>[] >(n))
+		, m_firstUpdateDone(false)
 	{
-		m_horzBathtubScanPending = std::make_unique<std::atomic<bool>[] >(n);
-		m_eyeScanPending = std::make_unique<std::atomic<bool>[] >(n);
-
 		for(size_t i=0; i<n; i++)
 		{
 			m_horzBathtubScanPending[i] = false;
 			m_eyeScanPending[i] = false;
 		}
-
-		m_firstUpdateDone = false;
 	}
 
 	std::unique_ptr<std::atomic<bool>[]> m_horzBathtubScanPending;

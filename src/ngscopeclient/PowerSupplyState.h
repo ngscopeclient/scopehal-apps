@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -43,27 +43,24 @@ class PowerSupplyState
 public:
 
 	PowerSupplyState(size_t n = 0)
+		: m_masterEnable(false)
+		, m_channelNumber(n)
+		, m_channelVoltage(std::make_unique<std::atomic<float>[] >(n))
+		, m_channelCurrent(std::make_unique<std::atomic<float>[] >(n))
+		, m_channelConstantCurrent(std::make_unique<std::atomic<bool>[] >(n))
+		, m_channelFuseTripped(std::make_unique<std::atomic<bool>[] >(n))
+		, m_channelOn(std::make_unique<std::atomic<bool>[] >(n))
+		, m_needsUpdate(std::make_unique<std::atomic<bool>[] >(n))
+		, m_overcurrentShutdownEnabled(std::make_unique<std::atomic<bool>[] >(n))
+		, m_softStartEnabled(std::make_unique<std::atomic<bool>[] >(n))
+		, m_committedSetVoltage(std::make_unique<float[]>(n))
+		, m_setVoltage(std::make_unique<std::string[]>(n))
+		, m_committedSetCurrent(std::make_unique<float[]>(n))
+		, m_setCurrent(std::make_unique<std::string[]>(n))
+		, m_committedSSRamp(std::make_unique<float[]>(n))
+		, m_setSSRamp(std::make_unique<std::string[]>(n))
+		, m_firstUpdateDone(false)
 	{
-		m_masterEnable = false;
-		m_channelNumber = n;
-
-		m_channelVoltage = std::make_unique<std::atomic<float>[] >(n);
-		m_channelCurrent = std::make_unique<std::atomic<float>[] >(n);
-		m_channelConstantCurrent = std::make_unique<std::atomic<bool>[] >(n);
-		m_channelFuseTripped = std::make_unique<std::atomic<bool>[] >(n);
-		m_channelOn = std::make_unique<std::atomic<bool>[] >(n);
-
-		m_needsUpdate = std::make_unique<std::atomic<bool>[] >(n);
-
-		m_overcurrentShutdownEnabled = std::make_unique<std::atomic<bool>[] >(n);
-		m_softStartEnabled = std::make_unique<std::atomic<bool>[] >(n);
-		m_committedSetVoltage = std::make_unique<float[]>(n);
-		m_setVoltage = std::make_unique<std::string[]>(n);
-		m_committedSetCurrent = std::make_unique<float[]>(n);
-		m_setCurrent = std::make_unique<std::string[]>(n);
-		m_committedSSRamp = std::make_unique<float[]>(n);
-		m_setSSRamp = std::make_unique<std::string[]>(n);
-
 		for(size_t i=0; i<n; i++)
 		{
 			m_channelVoltage[i] = 0;
@@ -79,8 +76,6 @@ public:
 			m_committedSetCurrent[i] = FLT_MIN;
 			m_committedSSRamp[i] = FLT_MIN;
 		}
-
-		m_firstUpdateDone = false;
 	}
 
 	void FlushConfigCache()
