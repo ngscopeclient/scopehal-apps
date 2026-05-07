@@ -43,9 +43,7 @@ class PowerSupplyState
 public:
 
 	PowerSupplyState(size_t n = 0)
-		: m_masterEnable(false)
-		, m_channelNumber(n)
-		, m_channelVoltage(std::make_unique<std::atomic<float>[] >(n))
+		: m_channelVoltage(std::make_unique<std::atomic<float>[] >(n))
 		, m_channelCurrent(std::make_unique<std::atomic<float>[] >(n))
 		, m_channelConstantCurrent(std::make_unique<std::atomic<bool>[] >(n))
 		, m_channelFuseTripped(std::make_unique<std::atomic<bool>[] >(n))
@@ -60,6 +58,8 @@ public:
 		, m_committedSSRamp(std::make_unique<float[]>(n))
 		, m_setSSRamp(std::make_unique<std::string[]>(n))
 		, m_firstUpdateDone(false)
+		, m_masterEnable(false)
+		, m_channelNumber(n)
 	{
 		for(size_t i=0; i<n; i++)
 		{
