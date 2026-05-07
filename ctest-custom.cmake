@@ -80,7 +80,7 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON")
 
 # CI Ubuntu Resolute
-elseif(${HOSTNAME} STREQUAL "ubuntu-lts" )
+elseif(${HOSTNAME} MATCHES "ubuntu-lts" )
 	set(CTEST_SITE ci-ubuntu-lts)
 	set(CTEST_DASHBOARD Continuous)
 	set(CTEST_GIT_COMMAND "/usr/bin/git")
