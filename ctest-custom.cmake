@@ -93,7 +93,9 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-lts" )
 		set(CTEST_BUILD_NAME x86_64-linux-ubuntu-26-04-llvmpipe)
 		message(STATUS "Building optimized release version")
 		set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON")
+		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=OFF")	# extractbb seems to not be found even though
+																		# we installed texlive-binaries, so for now
+																		# turn it off to avoid build problems
 	endif()
 
 # CI Fedora 43
@@ -119,7 +121,7 @@ elseif(${HOSTNAME} STREQUAL "win11" )
 	message(STATUS "Found known CI config: win11")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON") # don't build docs on windows for now, TODO figure that out
 
 # CI MacOS ARM64, for whatever reason it reports the FQDN not just the hostname
 elseif(${HOSTNAME} STREQUAL "macos.cidmz.poulsbo.antikernel.net" )
