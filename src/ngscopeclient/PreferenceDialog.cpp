@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -323,7 +323,7 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 				}
 
 				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 15);
-				if(Combo(label.c_str(), names, selection))
+				if(Combo(label, names, selection))
 					pref.SetEnumRaw(map.GetValue(names[selection]));
 			}
 			break;

@@ -71,6 +71,7 @@ public:
 	, m_stream(stream)
 	, m_ramp(ramp)
 	, m_streamGroup(nullptr)
+	, m_singleArea(false)
 	{
 		auto schan = dynamic_cast<OscilloscopeChannel*>(stream.m_channel);
 		if(schan)
@@ -611,9 +612,6 @@ protected:
 		@brief True if we should clear persistence on the next render pass
 	 */
 	std::atomic<bool> m_clearPersistence;
-
-	///@brief Command pool for allocating our command buffers
-	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
 
 	///@brief Command buffer used during rendering operations
 	std::unique_ptr<vk::raii::CommandBuffer> m_cmdBuffer;

@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -354,7 +354,7 @@ void PreferenceCategory::AddPreference(impl::PreferenceBuilder&& pref)
 	this->AddPreference(std::move(pref).Build());
 }
 
-PreferenceCategory& PreferenceCategory::AddCategory(string identifier)
+PreferenceCategory& PreferenceCategory::AddCategory(const string& identifier)
 {
 	if(this->m_children.count(identifier) > 0)
 		throw runtime_error("Preference category already contains child with given name");

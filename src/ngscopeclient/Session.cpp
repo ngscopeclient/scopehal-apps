@@ -978,7 +978,7 @@ void Session::DoLoadWaveformDataForStream(WaveformBase* cap, const string& forma
 		//Read sample data
 		if(uacap)
 			memcpy(uacap->m_samples.GetCpuPointer(), buf, nsamples*sizeof(float));
-		else
+		else if(udcap)
 			memcpy(udcap->m_samples.GetCpuPointer(), buf, nsamples*sizeof(bool));
 	}
 
@@ -1109,7 +1109,7 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 		{
 			m_mainWindow->ShowErrorPopup(
 				"File load error",
-				string("Instrument ") + nick.c_str() + " is of unknown type " + type.c_str());
+				string("Instrument ") + nick + " is of unknown type " + type);
 			return false;
 		}
 	}

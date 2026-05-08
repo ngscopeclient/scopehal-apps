@@ -139,12 +139,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue, bool maximized, bool resto
 	//Initialize memory pressure callback
 	g_memoryPressureHandlers.emplace(&OnMemoryPressureStatic);
 
-	//Initialize command pool/buffer
-	vk::CommandPoolCreateInfo poolInfo(
-	vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		queue->GetQueue()->m_family );
-	m_cmdPool = make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
-
+	//Initialize command buffer from the pool
 	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
 	m_cmdBuffer = make_unique<vk::raii::CommandBuffer>(
 		std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
@@ -198,7 +193,6 @@ MainWindow::~MainWindow()
 	m_texmgr.clear();
 
 	m_cmdBuffer = nullptr;
-	m_cmdPool = nullptr;
 
 	CloseSession();
 }

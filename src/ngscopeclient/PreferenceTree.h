@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -146,7 +146,7 @@ public:
     virtual Preference& GetLeaf(const internal::PreferencePath& path);
     void AddPreference(Preference pref);
     void AddPreference(impl::PreferenceBuilder&& pref);
-    PreferenceCategory& AddCategory(std::string identifier);
+    PreferenceCategory& AddCategory(const std::string& identifier);
     map_type& GetChildren();
     const seq_type& GetOrdering() const;
     virtual bool IsVisible() const;
