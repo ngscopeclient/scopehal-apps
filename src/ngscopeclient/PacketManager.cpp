@@ -408,7 +408,7 @@ bool ProtocolDisplayFilter::Validate(const vector<string>& headers, bool nakedLi
 		return false;
 
 	//Operators must make sense. For now only equal/unequal and boolean and/or allowed
-	for(auto op : m_operators)
+	for(auto& op : m_operators)
 	{
 		if( (op != "==") &&
 			(op != "!=") &&
@@ -549,6 +549,8 @@ ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(const string& str, size
 			m_string += str[i];
 			i++;
 		}
+		if(i >= str.length())
+			return;
 
 		if(str[i] != '\"')
 			m_type = TYPE_ERROR;
@@ -565,6 +567,8 @@ ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(const string& str, size
 			tmp += str[i];
 			i++;
 		}
+		if(i >= str.length())
+			return;
 
 		//Hex string
 		if(tmp.find("0x") == 0)
@@ -598,6 +602,8 @@ ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(const string& str, size
 			m_identifier += str[i];
 			i++;
 		}
+		if(i >= str.length())
+			return;
 
 		//Opening square bracket
 		if(str[i] == '[')
@@ -726,7 +732,7 @@ bool ProtocolDisplayFilterClause::Validate(const vector<string>& headers)
 		//If we're an identifier, we must be a valid header field
 		//TODO: support comparisons on data
 		case TYPE_IDENTIFIER:
-			for(auto h : headers)
+			for(auto& h : headers)
 			{
 				//Match, removing spaces from header names if needed
 				//Note that m_identifier is now the real, un-spaced version of the identifier name

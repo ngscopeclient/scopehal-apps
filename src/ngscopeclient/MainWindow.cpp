@@ -1470,7 +1470,7 @@ void MainWindow::NavigateToTimestamp(int64_t stamp, int64_t duration, StreamDesc
 
 void MainWindow::ShowSyncWizard(shared_ptr<TriggerGroup> group, shared_ptr<Oscilloscope> secondary)
 {
-	AddDialog(make_shared<ScopeDeskewWizard>(group, secondary, this, m_session));
+	AddDialog(make_shared<ScopeDeskewWizard>(group, secondary, this, &m_session));
 }
 
 void MainWindow::ShowManageInstruments()
@@ -3125,7 +3125,8 @@ void MainWindow::LoadLabNotes(const string& dataDir)
 		fseek(fp, 0, SEEK_SET);
 
 		auto buf = new char[len+1];
-		fread(buf, 1, len, fp);
+		if(len != fread(buf, 1, len, fp))
+			LogWarning("failed to read setup file %s\n", setupfile.c_str());
 		buf[len] = 0;
 
 		m_session.m_setupNotes = buf;
@@ -3144,7 +3145,8 @@ void MainWindow::LoadLabNotes(const string& dataDir)
 		fseek(fp, 0, SEEK_SET);
 
 		auto buf = new char[len+1];
-		fread(buf, 1, len, fp);
+		if(len != fread(buf, 1, len, fp))
+			LogWarning("failed to read lab notes file %s\n", genfile.c_str());
 		buf[len] = 0;
 
 		m_session.m_generalNotes = buf;

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -47,8 +47,9 @@ SCPIConsoleDialog::SCPIConsoleDialog(MainWindow* parent, shared_ptr<SCPIInstrume
 	: Dialog(
 		("SCPI Console: ") + inst->m_nickname,
 		("SCPI Console: ") + inst->m_nickname,
-		ImVec2(500, 300))
-	, m_parent(parent)
+		ImVec2(500, 300),
+		nullptr,
+		parent)
 	, m_inst(inst)
 	, m_commandPending(false)
 {

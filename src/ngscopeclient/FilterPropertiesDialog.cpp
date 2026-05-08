@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -317,7 +317,7 @@ bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, ma
 
 				//Input path
 				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
-				if(Dialog::UnitInputWithImplicitApply(name.c_str(), tempValues[name], nval, param.GetUnit()))
+				if(Dialog::UnitInputWithImplicitApply(name, tempValues[name], nval, param.GetUnit()))
 				{
 					param.SetIntVal(nval);
 					return true;
@@ -370,7 +370,7 @@ bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, ma
 				}
 
 				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
-				if(Dialog::Combo(name.c_str(), enumValues, nsel))
+				if(Dialog::Combo(name, enumValues, nsel))
 				{
 					param.ParseString(enumValues[nsel]);
 					return true;

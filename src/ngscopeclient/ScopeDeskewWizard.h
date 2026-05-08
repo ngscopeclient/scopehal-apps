@@ -62,7 +62,7 @@ public:
 		std::shared_ptr<TriggerGroup> group,
 		std::shared_ptr<Oscilloscope> secondary,
 		MainWindow* parent,
-		Session& session);
+		Session* session);
 	virtual ~ScopeDeskewWizard();
 
 	virtual bool DoRender();
@@ -93,9 +93,6 @@ protected:
 
 	std::shared_ptr<TriggerGroup> m_group;
 	std::shared_ptr<Oscilloscope> m_secondary;
-
-	MainWindow* m_parent;
-	Session& m_session;
 
 	bool m_useExtRefPrimary;
 	bool m_useExtRefSecondary;

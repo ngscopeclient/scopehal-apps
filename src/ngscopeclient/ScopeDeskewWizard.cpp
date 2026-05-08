@@ -63,16 +63,16 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 	shared_ptr<TriggerGroup> group,
 	shared_ptr<Oscilloscope> secondary,
 	MainWindow* parent,
-	Session& session)
+	Session* session)
 	: Dialog(
 		string("Deskew Oscilloscope: ") + secondary->m_nickname,
 		"Deskew" + secondary->m_nickname,
-		ImVec2(700, 400))
+		ImVec2(700, 400),
+		session,
+		parent)
 	, m_state(STATE_WELCOME_1)
 	, m_group(group)
 	, m_secondary(secondary)
-	, m_parent(parent)
-	, m_session(session)
 	, m_useExtRefPrimary(true)
 	, m_useExtRefSecondary(true)
 	, m_measureCycle(0)
@@ -119,7 +119,7 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 	m_gpuCorrelationAvailable = g_hasShaderInt64;
 
 	//Clear out any existing skew calibration
-	m_session.SetDeskew(m_secondary, 0);
+	m_session->SetDeskew(m_secondary, 0);
 }
 
 ScopeDeskewWizard::~ScopeDeskewWizard()
@@ -278,7 +278,7 @@ bool ScopeDeskewWizard::DoRender()
 				//Record the current waveform timestamp on each channel (if any)
 				//so we can check if new data has shown up
 				{
-					shared_lock<shared_mutex> lock(m_session.GetWaveformDataMutex());
+					shared_lock<shared_mutex> lock(m_session->GetWaveformDataMutex());
 					auto data = m_primaryStream.GetData();
 					if(data)
 					{
@@ -459,7 +459,7 @@ void ScopeDeskewWizard::DoMainProcessingFlow()
 	{
 		case STATE_ACQUIRE:
 			{
-				shared_lock<shared_mutex> lock(m_session.GetWaveformDataMutex());
+				shared_lock<shared_mutex> lock(m_session->GetWaveformDataMutex());
 
 				//Make sure we have a waveform
 				auto data = m_primaryStream.GetData();
@@ -516,7 +516,7 @@ void ScopeDeskewWizard::DoMainProcessingFlow()
 
 				if(ImGui::Button("Apply"))
 				{
-					m_session.SetDeskew(m_secondary, m_medianSkew);
+					m_session->SetDeskew(m_secondary, m_medianSkew);
 					m_state = STATE_CLOSE;
 				}
 			}
@@ -593,7 +593,7 @@ void ScopeDeskewWizard::StartCorrelation()
 
 void ScopeDeskewWizard::DoProcessWaveformSparse(SparseAnalogWaveform* ppri, SparseAnalogWaveform* psec)
 {
-	shared_lock<shared_mutex> lock(m_session.GetWaveformDataMutex());
+	shared_lock<shared_mutex> lock(m_session->GetWaveformDataMutex());
 
 	//Calculate cross-correlation between the primary and secondary waveforms at up to +/- half the waveform length
 	int64_t len = ppri->size();
@@ -765,7 +765,7 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateGeneric()
 */
 void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRate(UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec)
 {
-	shared_lock<shared_mutex> lock(m_session.GetWaveformDataMutex());
+	shared_lock<shared_mutex> lock(m_session->GetWaveformDataMutex());
 
 	double start = GetTime();
 

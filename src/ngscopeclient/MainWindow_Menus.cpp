@@ -188,7 +188,7 @@ void MainWindow::FileRecentMenu()
 		for(auto t : timestamps)
 		{
 			auto paths = reverseMap[t];
-			for(auto path : paths)
+			for(auto& path : paths)
 			{
 				if(ImGui::BeginMenu(path.c_str()))
 				{
@@ -472,7 +472,7 @@ void MainWindow::AddImportMenu()
 		std::sort(sortedNames.begin(), sortedNames.end());
 
 		//Do all of the menu items
-		for(auto fname : sortedNames)
+		for(auto& fname : sortedNames)
 		{
 			//Hide everything but import filters
 			if(fname.find("Import") == string::npos)
@@ -507,7 +507,7 @@ void MainWindow::AddGenerateMenu()
 		std::sort(sortedNames.begin(), sortedNames.end());
 
 		//Do all of the menu items
-		for(auto fname : sortedNames)
+		for(auto& fname : sortedNames)
 		{
 			//Hide import filters
 			if(fname.find("Import") != string::npos)
