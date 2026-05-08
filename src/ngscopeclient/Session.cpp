@@ -738,22 +738,17 @@ bool Session::LoadWaveformDataForScope(
 
 			//TODO: support non-analog/digital captures (eyes, spectrograms, etc)
 			WaveformBase* cap = nullptr;
-			SparseAnalogWaveform* sacap = nullptr;
-			UniformAnalogWaveform* uacap = nullptr;
-			SparseDigitalWaveform* sdcap = nullptr;
-			UniformDigitalWaveform* udcap = nullptr;
-			CANWaveform* sccap = nullptr;
 
 			//if datatype is specified, use that
 			if( (format == "sparsev1") && ch["datatype"] )
 			{
 				auto dtype = ch["datatype"].as<string>();
 				if(dtype == "analog")
-					cap = sacap = new SparseAnalogWaveform;
+					cap = new SparseAnalogWaveform;
 				else if(dtype == "digital")
-					cap = sdcap = new SparseDigitalWaveform;
+					cap = new SparseDigitalWaveform;
 				else if(dtype == "can")
-					cap = sccap = new CANWaveform;
+					cap = new CANWaveform;
 				else
 					LogError("Unrecognized sparsev1 datatype %s\n", dtype.c_str());
 			}
@@ -762,16 +757,16 @@ bool Session::LoadWaveformDataForScope(
 			else if(chan->GetType(0) == Stream::STREAM_TYPE_ANALOG)
 			{
 				if(dense)
-					cap = uacap = new UniformAnalogWaveform;
+					cap = new UniformAnalogWaveform;
 				else
-					cap = sacap = new SparseAnalogWaveform;
+					cap = new SparseAnalogWaveform;
 			}
 			else
 			{
 				if(dense)
-					cap = udcap = new UniformDigitalWaveform;
+					cap = new UniformDigitalWaveform;
 				else
-					cap = sdcap = new SparseDigitalWaveform;
+					cap = new SparseDigitalWaveform;
 			}
 
 			//Channel waveform metadata

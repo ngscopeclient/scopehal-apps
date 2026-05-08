@@ -54,11 +54,14 @@ class InstrumentConnectionState
 {
 public:
 	InstrumentConnectionState(InstrumentThreadArgs args)
+		: m_shuttingDown(false)
+		, m_lastTriggerState(Oscilloscope::TRIGGER_MODE_WAIT)
 	{
-		m_shuttingDown = false;
 		args.shuttingDown = &m_shuttingDown;
+
+		//Can't initialize this in initializer list because we need args.shuttingDown set first
+		//cppcheck-suppress useInitializationList
 		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
-		m_lastTriggerState = Oscilloscope::TRIGGER_MODE_WAIT;
 	}
 
 	~InstrumentConnectionState()

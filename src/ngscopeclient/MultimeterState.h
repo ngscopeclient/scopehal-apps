@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -43,15 +43,14 @@ class MultimeterState
 public:
 
 	MultimeterState()
-	{
-		m_started = false;
-		m_selectedChannel = 0;
-		m_primaryMeasurement = 0;
-		m_secondaryMeasurement = 0;
-		m_firstUpdateDone = false;
-		m_autoRange = true;
-		m_needsUpdate = true;
-	}
+		: m_started(false)
+		, m_selectedChannel(0)
+		, m_primaryMeasurement(0)
+		, m_secondaryMeasurement(0)
+		, m_firstUpdateDone(false)
+		, m_autoRange(true)
+		, m_needsUpdate(true)
+	{}
 
 	void FlushConfigCache()
 	{
