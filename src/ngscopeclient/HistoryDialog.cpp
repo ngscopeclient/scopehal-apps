@@ -51,6 +51,10 @@ string TimePoint::PrettyPrintDate() const
 	if(offset > FS_PER_SECOND)
 	{
 		base += (offset / FS_PER_SECOND);
+
+		//cppcheck seems to think this is a divide by zero for some reason, it's obviously not
+		//(FS_PER_SECOND is 1e15 which is only 50 bits long and comfortably fits in a signed int64)
+		//cppcheck-suppress zerodiv
 		offset = offset % (int64_t)FS_PER_SECOND;
 	}
 
@@ -79,6 +83,10 @@ string TimePoint::PrettyPrint() const
 	if(offset > FS_PER_SECOND)
 	{
 		base += (offset / FS_PER_SECOND);
+
+		//cppcheck seems to think this is a divide by zero for some reason, it's obviously not
+		//(FS_PER_SECOND is 1e15 which is only 50 bits long and comfortably fits in a signed int64)
+		//cppcheck-suppress zerodiv
 		offset = offset % (int64_t)FS_PER_SECOND;
 	}
 
@@ -103,11 +111,9 @@ string TimePoint::PrettyPrint() const
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-HistoryDialog::HistoryDialog(HistoryManager& mgr, Session& session, MainWindow& wnd)
-	: Dialog("History", "History", ImVec2(425, 350))
+HistoryDialog::HistoryDialog(HistoryManager& mgr, Session* session, MainWindow* wnd)
+	: Dialog("History", "History", ImVec2(425, 350), session, wnd)
 	, m_mgr(mgr)
-	, m_session(session)
-	, m_parent(wnd)
 	, m_rowHeight(0)
 	, m_selectionChanged(false)
 	, m_selectedMarker(nullptr)
@@ -191,7 +197,7 @@ bool HistoryDialog::DoRender()
 			}
 
 			//Force pin if we have a nickname or markers
-			auto& markers = m_session.GetMarkers(point->m_time);
+			auto& markers = m_session->GetMarkers(point->m_time);
 			bool forcePin = false;
 			if(!point->m_nickname.empty() || !markers.empty())
 			{
@@ -297,7 +303,7 @@ bool HistoryDialog::DoRender()
 							m_selectionChanged = true;
 						}
 
-						m_parent.NavigateToTimestamp(m.m_offset);
+						m_parent->NavigateToTimestamp(m.m_offset);
 					}
 
 					if(ImGui::BeginPopupContextItem())
@@ -316,7 +322,7 @@ bool HistoryDialog::DoRender()
 					//Nickname box
 					ImGui::TableSetColumnIndex(2);
 					if(ImGui::InputText("###nick", &m.m_name))
-						m_parent.GetSession().OnMarkerChanged();
+						m_session->OnMarkerChanged();
 
 					ImGui::PopID();
 				}
@@ -325,7 +331,7 @@ bool HistoryDialog::DoRender()
 				if(deletingMarker)
 				{
 					markers.erase(markers.begin() + markerToDelete);
-					m_parent.GetSession().OnMarkerChanged();
+					m_session->OnMarkerChanged();
 				}
 
 				ImGui::TreePop();
@@ -344,8 +350,8 @@ bool HistoryDialog::DoRender()
 
 			//Delete the selected row
 			//(manual delete applies even if we have markers or a pin)
-			m_session.RemoveMarkers((*itDelete)->m_time);
-			m_session.RemovePackets((*itDelete)->m_time);
+			m_session->RemoveMarkers((*itDelete)->m_time);
+			m_session->RemovePackets((*itDelete)->m_time);
 			m_mgr.m_history.erase(itDelete);
 
 			if(deletedSelection)

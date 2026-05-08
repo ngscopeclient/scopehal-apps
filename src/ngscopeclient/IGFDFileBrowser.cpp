@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -55,7 +55,10 @@ IGFDFileBrowser::IGFDFileBrowser(
 	//If linux read ~/.config/gtk-3.0/bookmarks
 	//TODO: read bookmarks on other OSes
 	#ifdef __linux__
-		string home = getenv("HOME");
+		string home;
+		auto phome = getenv("HOME");
+		if(phome)
+			home = phome;
 		string path = home + "/.config/gtk-3.0/bookmarks";
 		FILE* fp = fopen(path.c_str(), "r");
 		if(fp)

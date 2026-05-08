@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -41,13 +41,12 @@ class MainWindow;
 class PersistenceSettingsDialog : public Dialog
 {
 public:
-	PersistenceSettingsDialog(MainWindow& parent);
+	PersistenceSettingsDialog(MainWindow* parent);
 	virtual ~PersistenceSettingsDialog();
 
 	virtual bool DoRender();
 
 protected:
-	MainWindow& m_parent;
 };
 
 #endif

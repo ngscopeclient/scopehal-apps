@@ -225,7 +225,7 @@ void MainWindow::ViewMenu()
 
 		if(ImGui::MenuItem("Persistence Setup"))
 		{
-			m_persistenceDialog = make_shared<PersistenceSettingsDialog>(*this);
+			m_persistenceDialog = make_shared<PersistenceSettingsDialog>(this);
 			AddDialog(m_persistenceDialog);
 		}
 
@@ -645,7 +645,7 @@ void MainWindow::WindowMenu()
 			ImGui::BeginDisabled();
 		if(ImGui::MenuItem("History"))
 		{
-			m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), m_session, *this);
+			m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), &m_session, this);
 			AddDialog(m_historyDialog);
 		}
 		if(hasHistory)

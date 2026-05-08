@@ -1091,7 +1091,7 @@ void MainWindow::ToolbarButtons()
 		ImGui::BeginDisabled();
 	if(ImGui::ImageButton("history", GetTexture("history"), buttonsize))
 	{
-		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), m_session, *this);
+		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), &m_session, this);
 		AddDialog(m_historyDialog);
 	}
 	if(hasHist)
@@ -2967,7 +2967,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 	auto hist = node["history"];
 	if(hist && hist.as<bool>())
 	{
-		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), m_session, *this);
+		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), &m_session, this);
 		AddDialog(m_historyDialog);
 	}
 
@@ -2978,7 +2978,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 	auto persist = node["persistence"];
 	if(persist && persist.as<bool>())
 	{
-		m_persistenceDialog = make_shared<PersistenceSettingsDialog>(*this);
+		m_persistenceDialog = make_shared<PersistenceSettingsDialog>(this);
 		AddDialog(m_persistenceDialog);
 	}
 
@@ -3579,7 +3579,7 @@ void MainWindow::SaveRecentFileList()
 	for(auto t : timestamps)
 	{
 		auto paths = reverseMap[t];
-		for(auto fpath : paths)
+		for(auto& fpath : paths)
 		{
 			YAML::Node child;
 			child["path"] = fpath;

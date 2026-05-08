@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -42,9 +42,8 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-PersistenceSettingsDialog::PersistenceSettingsDialog(MainWindow& parent)
-	: Dialog("Persistence", "Persistence", ImVec2(600, 150))
-	, m_parent(parent)
+PersistenceSettingsDialog::PersistenceSettingsDialog(MainWindow* parent)
+	: Dialog("Persistence", "Persistence", ImVec2(600, 150), nullptr, parent)
 {
 
 }
@@ -64,9 +63,9 @@ PersistenceSettingsDialog::~PersistenceSettingsDialog()
  */
 bool PersistenceSettingsDialog::DoRender()
 {
-	float decay = m_parent.GetPersistDecay();
+	float decay = m_parent->GetPersistDecay();
 	if(ImGui::SliderFloat("Decay Coefficient", &decay, 0, 1, "%.3f", ImGuiSliderFlags_AlwaysClamp))
-		m_parent.SetPersistDecay(decay);
+		m_parent->SetPersistDecay(decay);
 
 	return true;
 }

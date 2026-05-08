@@ -92,7 +92,7 @@ bool LogViewerDialog::DoRender()
 			ImGui::TableSetupColumn("Function", ImGuiTableColumnFlags_WidthStretch, 0.0f);
 			ImGui::TableHeadersRow();
 
-			for(auto filter : g_trace_filters)
+			for(auto& filter : g_trace_filters)
 			{
 				ImGui::TableNextRow(ImGuiTableRowFlags_None);
 				ImGui::TableSetColumnIndex(0);
