@@ -60,7 +60,7 @@ public:
 	const std::string GetID()
 	{ return m_title + "###" + m_id; }
 
-	const std::string GetRawID()
+	const std::string& GetRawID()
 	{ return m_id; }
 
 	const std::string& GetTitle()

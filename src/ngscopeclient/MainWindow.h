@@ -180,7 +180,7 @@ public:
 		std::shared_ptr<WaveformGroup> group,
 		ImGuiDir direction,
 		StreamDescriptor stream,
-		std::string colorRamp)
+		const std::string& colorRamp)
 	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream, colorRamp)); }
 
 	void QueueSplitGroup(std::shared_ptr<WaveformGroup> group, ImGuiDir direction, std::shared_ptr<StreamGroupDescriptor> streamGroup, bool singleArea)
@@ -269,7 +269,7 @@ public:
 	const std::vector<std::string>& GetEyeGradients()
 	{ return m_eyeGradients; }
 
-	std::string GetEyeGradientFriendlyName(std::string internalName)
+	std::string GetEyeGradientFriendlyName(const std::string& internalName)
 	{ return m_eyeGradientFriendlyNames[internalName]; }
 
 	/**
@@ -282,7 +282,7 @@ public:
 	/**
 		@brief Returns the groups we have configured for our graph editor
 	 */
-	std::map<uintptr_t, std::string> GetGraphEditorGroups()
+	const std::map<uintptr_t, std::string>& GetGraphEditorGroups()
 	{ return m_graphEditorGroups; }
 
 	void SetStartupSession(const std::string& path)
@@ -543,7 +543,7 @@ protected:
 	std::string m_lastWindowTitle;
 
 public:
-	std::string GetDataDir()
+	const std::string& GetDataDir()
 	{ return m_sessionDataDir; }
 
 protected:
@@ -629,7 +629,7 @@ public:
 	 */
 	FontWithSize GetFontPref(const std::string& name)
 	{
-		auto desc = m_session.GetPreferences().GetFont(name.c_str());
+		auto desc = m_session.GetPreferences().GetFont(name);
 		return std::pair<ImFont*, float>(m_fontmgr.GetFont(desc), desc.second);
 	}
 

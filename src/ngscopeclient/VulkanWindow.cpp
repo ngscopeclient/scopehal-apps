@@ -183,10 +183,10 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 			int windowYPositionPref = preferences.GetInt("Appearance.Startup.startup_pos_y");
 			string monitorName = preferences.GetString("Appearance.Startup.monitor_name");
 			int monitorWidth = preferences.GetInt("Appearance.Startup.monitor_width");
-			int monitorHeigth = preferences.GetInt("Appearance.Startup.monitor_heigth");
+			int monitorHeight = preferences.GetInt("Appearance.Startup.monitor_heigth");
 			fullscreen = preferences.GetBool("Appearance.Startup.startup_fullscreen");
 			maximized = preferences.GetBool("Appearance.Startup.startup_maximized");
-			if(windowWidthPref != 0 && windowHeigthPref != 0 && IsPositionValid(monitorName, monitorWidth, monitorHeigth, windowXPositionPref, windowYPositionPref))
+			if(windowWidthPref != 0 && windowHeigthPref != 0 && IsPositionValid(monitorName, monitorWidth, monitorHeight, windowXPositionPref, windowYPositionPref))
 			{	// We have stored position and size: use them
 				windowWidth = windowWidthPref;
 				windowHeigth = windowHeigthPref;
@@ -781,7 +781,12 @@ GLFWmonitor* VulkanWindow::GetCurrentMonitor()
 
 #define MINIMUM_WINDOW_VISIBLE_AREA_SIZE 100
 
-bool VulkanWindow::IsPositionValid(const std::string monitorName, int monitorWidth, int monitorHeigth, int windowXPos, int windowYPos)
+bool VulkanWindow::IsPositionValid(
+	const std::string& monitorName,
+	int monitorWidth,
+	int monitorHeight,
+	int windowXPos,
+	int windowYPos)
 {
     int monitorNumber;
     GLFWmonitor** monitors = glfwGetMonitors(&monitorNumber);
@@ -789,13 +794,13 @@ bool VulkanWindow::IsPositionValid(const std::string monitorName, int monitorWid
     {
 		int mx, my, mw, mh;
 		glfwGetMonitorWorkarea(monitors[i], &mx, &my, &mw, &mh);
-		LogTrace("Checking monitor with position and size: %d %d %d %d for window pos %d %d and orginal monotir size %d %d\n", mx, my, mx, mh, windowXPos, windowYPos, monitorWidth, monitorHeigth);
+		LogTrace("Checking monitor with position and size: %d %d %d %d for window pos %d %d and orginal monotir size %d %d\n", mx, my, mx, mh, windowXPos, windowYPos, monitorWidth, monitorHeight);
 		if (windowXPos >= mx && windowXPos + MINIMUM_WINDOW_VISIBLE_AREA_SIZE < mx + mw
 			&& windowYPos >= my && windowYPos + MINIMUM_WINDOW_VISIBLE_AREA_SIZE < my + mh)
 		{	// Check position name since several monitors can share the same name
 			string name = string(glfwGetMonitorName(monitors[i]));
 			LogTrace("Found match for name %s (original %s)\n", name.c_str(), monitorName.c_str());
-			if(name == monitorName && mw == monitorWidth && mh == monitorHeigth)
+			if(name == monitorName && mw == monitorWidth && mh == monitorHeight)
 			{	// Monitor name and size match
 				return true;
 			}
@@ -875,16 +880,16 @@ void VulkanWindow::SaveWindowPositionAndSize()
 	preferences.GetPreference("Appearance.Startup.startup_fullscreen").SetBool(m_fullscreen);
 	bool maximized = (glfwGetWindowAttrib(m_window, GLFW_MAXIMIZED) == GLFW_TRUE);
 	preferences.GetPreference("Appearance.Startup.startup_maximized").SetBool(maximized);
-	int monitorWidth = 0, monitorHeigth = 0;
+	int monitorWidth = 0, monitorHeight = 0;
 	string monitorName = "";
 	GLFWmonitor* currentMonitor = GetCurrentMonitor();
 	if(currentMonitor)
 	{
 		monitorName = glfwGetMonitorName(currentMonitor);
-		glfwGetMonitorWorkarea(currentMonitor,&x,&y,&monitorWidth,&monitorHeigth);
+		glfwGetMonitorWorkarea(currentMonitor,&x,&y,&monitorWidth,&monitorHeight);
 	}
 	preferences.GetPreference("Appearance.Startup.monitor_width").SetInt(monitorWidth);
-	preferences.GetPreference("Appearance.Startup.monitor_heigth").SetInt(monitorHeigth);
+	preferences.GetPreference("Appearance.Startup.monitor_heigth").SetInt(monitorHeight);
 	preferences.GetPreference("Appearance.Startup.monitor_name").SetString(monitorName);
 }
 

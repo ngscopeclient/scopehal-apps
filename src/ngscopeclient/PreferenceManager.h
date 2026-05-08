@@ -73,7 +73,7 @@ public:
     PreferenceCategory& AllPreferences();
     Preference& GetPreference(const std::string& path);
 
-    std::string GetConfigDirectory()
+    const std::string& GetConfigDirectory()
     { return m_configDir; }
 
     // Value retrieval methods

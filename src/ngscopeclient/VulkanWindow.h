@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -70,7 +70,12 @@ protected:
 	bool UpdateFramebuffer();
 	void SetFullscreen(bool fullscreen);
 	GLFWmonitor* GetCurrentMonitor();
-	bool IsPositionValid(const std::string monitorName, int monitorWidth, int monitorHeigth, int windowXPos, int windowYPos);
+	bool IsPositionValid(
+		const std::string& monitorName,
+		int monitorWidth,
+		int monitorHeight,
+		int windowXPos,
+		int windowYPos);
 
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 	virtual void RenderUI();
