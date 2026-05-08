@@ -154,7 +154,7 @@ void TriggerPropertiesPage::Render(bool graphEditorMode)
 				}
 
 				//The actual combo box
-				if(Dialog::Combo(trig->GetInputName(i).c_str(), names, sel))
+				if(Dialog::Combo(trig->GetInputName(i), names, sel))
 				{
 					trig->SetInput(i, matchingInputs[sel]);
 					updated = true;
@@ -262,8 +262,7 @@ void TriggerPropertiesPage::FindAllStreams(vector<StreamDescriptor>& streams)
 // Construction / destruction
 
 TriggerPropertiesDialog::TriggerPropertiesDialog(Session* session)
-	: Dialog("Trigger", "Trigger", ImVec2(300, 400))
-	, m_session(session)
+	: Dialog("Trigger", "Trigger", ImVec2(300, 400), session)
 {
 	Refresh();
 }

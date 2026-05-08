@@ -689,7 +689,7 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 	int modeSelector = 0;
 	for(unsigned int i=0; i<32; i++)
 	{
-		auto mode = static_cast<Multimeter::MeasurementTypes>(1 << i);
+		auto mode = static_cast<Multimeter::MeasurementTypes>(1U << i);
 		if(modemask & mode)
 		{
 			modes.push_back(mode);
@@ -1339,8 +1339,13 @@ void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
 void StreamBrowserDialog::DoSpectrometerSettings(shared_ptr<SCPISpectrometer> spec)
 {
 	auto scope = dynamic_pointer_cast<SCPIOscilloscope>(spec);
+
+	//Create the object only when necessary
+	//cppcheck doesn't like this but doesn't realize we're creating a new object if it's not there already
+	//cppcheck-suppress stlFindInsert
 	if(m_timebaseConfig.find(scope) == m_timebaseConfig.end())
 		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
+
 	auto config = m_timebaseConfig[scope];
 
 	auto width = ImGui::GetFontSize() * 5;

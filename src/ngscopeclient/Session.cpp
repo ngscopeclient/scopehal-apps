@@ -855,7 +855,7 @@ bool Session::LoadWaveformDataForScope(
 	return true;
 }
 
-void Session::DoLoadWaveformDataForStream(WaveformBase* cap, string format, string fname)
+void Session::DoLoadWaveformDataForStream(WaveformBase* cap, const string& format, const string& fname)
 {
 	auto sacap = dynamic_cast<SparseAnalogWaveform*>(cap);
 	auto uacap = dynamic_cast<UniformAnalogWaveform*>(cap);

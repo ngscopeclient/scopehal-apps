@@ -58,8 +58,11 @@ class Session;
 class InstrumentThreadArgs
 {
 public:
+
 	InstrumentThreadArgs(std::shared_ptr<SCPIInstrument> p, Session* sess)
 	: inst(p)
+	, shuttingDown(nullptr)	//initialize here to avoid static analysis warning, but must be overwritten
+							//with a valid shutdown flag pointer before spawning the InstrumentThread
 	, session(sess)
 	{}
 

@@ -422,7 +422,7 @@ protected:
 		int version,
 		const YAML::Node& node,
 		const std::string& dataDir);
-	void DoLoadWaveformDataForStream(WaveformBase* cap, std::string format, std::string fname);
+	void DoLoadWaveformDataForStream(WaveformBase* cap, const std::string& format, const std::string& fname);
 	bool ConvertLegacyUniformWaveforms();
 
 	///@brief Version of the file being loaded

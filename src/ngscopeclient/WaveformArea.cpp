@@ -1502,6 +1502,10 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 			else
 				npeak.m_labelYpos = p.m_y - PixelsToYAxisUnits(3*ImGui::GetFontSize());
 
+			//Default sizes to 0 until we render it, just so we don't have uninitialized junk floating around
+			npeak.m_labelXsize = 0;
+			npeak.m_labelYsize = 0;
+
 			//Default to 100% alpha
 			npeak.m_peakAlpha = 255;
 
@@ -3078,13 +3082,11 @@ void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 	//If the mismatched stream isn't part of a scope, don't bother showing any warnings etc
 	//Filters can't be overdriven, so just silently clip
 	auto ochan = dynamic_cast<OscilloscopeChannel*>(mismatchStream.m_channel);
-	Oscilloscope* scope = nullptr;
-	if(ochan)
-	{
-		scope = ochan->GetScope();
-		if(!scope)
-			return;
-	}
+	if(!ochan)
+		return;
+	auto scope = ochan->GetScope();
+	if(!scope)
+		return;
 
 	//If we get here, we had a mismatch. Prepare to draw the warning message centered in the plot
 	//above everything else
@@ -4138,7 +4140,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 				ImVec2 gradsize(8*height, height);
 
 				auto list = ImGui::GetWindowDrawList();
-				for(auto internalName : gradients)
+				for(auto& internalName : gradients)
 				{
 					auto displayName = m_parent->GetEyeGradientFriendlyName(internalName);
 
