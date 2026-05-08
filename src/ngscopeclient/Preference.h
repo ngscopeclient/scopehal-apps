@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -199,7 +199,7 @@ public:
 	void SetBool(bool value);
 	void SetReal(double value);
 	void SetInt(std::int64_t value);
-	void SetString(std::string value);
+	void SetString(const std::string& value);
 	void SetColor(const ImU32& value);
 	void SetColorRaw(const impl::Color& value);
 	void SetLabel(std::string label);

@@ -95,17 +95,17 @@ class ProtocolDisplayFilter;
 class ProtocolDisplayFilterClause
 {
 public:
-	ProtocolDisplayFilterClause(std::string str, size_t& i);
+	ProtocolDisplayFilterClause(const std::string& str, size_t& i);
 	ProtocolDisplayFilterClause(const ProtocolDisplayFilterClause&) =delete;
 	ProtocolDisplayFilterClause& operator=(const ProtocolDisplayFilterClause&) =delete;
 
 	virtual ~ProtocolDisplayFilterClause();
 
-	bool Validate(std::vector<std::string> headers);
+	bool Validate(const std::vector<std::string>& headers);
 
 	std::string Evaluate(const Packet* pack);
 
-	static std::string EatSpaces(std::string str);
+	static std::string EatSpaces(const std::string& str);
 
 	enum
 	{
@@ -129,14 +129,14 @@ public:
 class ProtocolDisplayFilter
 {
 public:
-	ProtocolDisplayFilter(std::string str, size_t& i);
+	ProtocolDisplayFilter(const std::string& str, size_t& i);
 	ProtocolDisplayFilter(const ProtocolDisplayFilterClause&) =delete;
 	ProtocolDisplayFilter& operator=(const ProtocolDisplayFilter&) =delete;
 	virtual ~ProtocolDisplayFilter();
 
-	static void EatSpaces(std::string str, size_t& i);
+	static void EatSpaces(const std::string& str, size_t& i);
 
-	bool Validate(std::vector<std::string> headers, bool nakedLiteralOK = false);
+	bool Validate(const std::vector<std::string>& headers, bool nakedLiteralOK = false);
 
 	bool Match(const Packet* pack);
 	std::string Evaluate(const Packet* pack);

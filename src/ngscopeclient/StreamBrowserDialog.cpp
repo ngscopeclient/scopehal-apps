@@ -275,7 +275,7 @@ bool StreamBrowserDialog::renderCombo(
 			while((m_badgeXCur - xsz) < m_badgeXMin)
 			{
 				// Try and crop text
-				resizedLabel = resizedLabel.substr(0,resizedLabel.size()-1);
+				resizedLabel.resize(resizedLabel.size()-1);
 				if(resizedLabel.size() < cropTextTo)
 					break; // We don't want to make the text that short
 				xsz = ImGui::CalcTextSize((resizedLabel + ELLIPSIS_CHAR).c_str()).x + padding;
@@ -1342,9 +1342,11 @@ void StreamBrowserDialog::DoSpectrometerSettings(shared_ptr<SCPISpectrometer> sp
 
 	//Create the object only when necessary
 	//cppcheck doesn't like this but doesn't realize we're creating a new object if it's not there already
-	//cppcheck-suppress stlFindInsert
 	if(m_timebaseConfig.find(scope) == m_timebaseConfig.end())
+	{
+		//cppcheck-suppress stlFindInsert
 		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
+	}
 
 	auto config = m_timebaseConfig[scope];
 
@@ -1499,7 +1501,10 @@ void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
    @param channelIndex the index of the channel to render
    @param isLast true if this is the last channel of the instrument
  */
-void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, size_t channelIndex, bool isLast)
+void StreamBrowserDialog::renderChannelNode(
+	shared_ptr<Instrument> instrument,
+	size_t channelIndex,
+	[[maybe_unused]] bool isLast)
 {
 	// Get preferences for colors
 	auto& prefs = m_session->GetPreferences();

@@ -365,7 +365,11 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 					auto id = pref.GetIdentifier();
 					auto unit = pref.GetUnit();
 					if(m_preferenceTemporaries.find(id) == m_preferenceTemporaries.end())
+					{
+						//Don't want to evaluate the PrettyPrint if the item isn't in the list
+						//cppcheck-suppress stlFindInsert
 						m_preferenceTemporaries[id] = unit.PrettyPrint(pref.GetReal());
+					}
 
 					//Input box
 					if(ImGui::InputText(label.c_str(), &m_preferenceTemporaries[id]))

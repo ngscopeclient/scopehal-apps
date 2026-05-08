@@ -360,7 +360,7 @@ void PacketManager::RemoveChildHistoryFrom(Packet* pack)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ProtocolDisplayFilter
 
-ProtocolDisplayFilter::ProtocolDisplayFilter(string str, size_t& i)
+ProtocolDisplayFilter::ProtocolDisplayFilter(const string& str, size_t& i)
 {
 	//One or more clauses separated by operators
 	while(i < str.length())
@@ -397,7 +397,7 @@ ProtocolDisplayFilter::~ProtocolDisplayFilter()
 		delete c;
 }
 
-bool ProtocolDisplayFilter::Validate(vector<string> headers, bool nakedLiteralOK)
+bool ProtocolDisplayFilter::Validate(const vector<string>& headers, bool nakedLiteralOK)
 {
 	//No clauses? valid all-pass filter
 	if(m_clauses.empty())
@@ -443,7 +443,7 @@ bool ProtocolDisplayFilter::Validate(vector<string> headers, bool nakedLiteralOK
 	return true;
 }
 
-void ProtocolDisplayFilter::EatSpaces(string str, size_t& i)
+void ProtocolDisplayFilter::EatSpaces(const string& str, size_t& i)
 {
 	while( (i < str.length()) && isspace(str[i]) )
 		i++;
@@ -499,7 +499,7 @@ string ProtocolDisplayFilter::Evaluate(const Packet* pack)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ProtocolDisplayFilterClause
 
-ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(string str, size_t& i)
+ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(const string& str, size_t& i)
 {
 	ProtocolDisplayFilter::EatSpaces(str, i);
 
@@ -637,7 +637,7 @@ ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(string str, size_t& i)
 /**
 	@brief Returns a copy of the input string with spaces removed
  */
-string ProtocolDisplayFilterClause::EatSpaces(string str)
+string ProtocolDisplayFilterClause::EatSpaces(const string& str)
 {
 	string ret;
 	for(auto c : str)
@@ -713,7 +713,7 @@ ProtocolDisplayFilterClause::~ProtocolDisplayFilterClause()
 		delete m_expression;
 }
 
-bool ProtocolDisplayFilterClause::Validate(vector<string> headers)
+bool ProtocolDisplayFilterClause::Validate(const vector<string>& headers)
 {
 	switch(m_type)
 	{

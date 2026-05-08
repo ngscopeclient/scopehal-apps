@@ -89,17 +89,14 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 			m_queue->GetQueue()->m_family ))
 	, m_cmdBuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice,
 		vk::CommandBufferAllocateInfo(*m_pool, vk::CommandBufferLevel::ePrimary, 1)).front()))
+	, m_uniform4xRatePipeline(make_shared<ComputePipeline>(
+		"shaders/ScopeDeskewUniform4xRate.spv", 3, sizeof(UniformCrossCorrelateArgs)))
+	, m_uniformUnequalRatePipeline(make_shared<ComputePipeline>(
+		"shaders/ScopeDeskewUniformUnequalRate.spv", 3, sizeof(UniformCrossCorrelateArgs)))
+	, m_uniformEqualRatePipeline(make_shared<ComputePipeline>(
+		"shaders/ScopeDeskewUniformEqualRate.spv", 3, sizeof(UniformCrossCorrelateArgs)))
 	, m_corrOut("corrOut")
 {
-	m_uniformUnequalRatePipeline = make_shared<ComputePipeline>(
-		"shaders/ScopeDeskewUniformUnequalRate.spv", 3, sizeof(UniformCrossCorrelateArgs));
-
-	m_uniformEqualRatePipeline = make_shared<ComputePipeline>(
-		"shaders/ScopeDeskewUniformEqualRate.spv", 3, sizeof(UniformCrossCorrelateArgs));
-
-	m_uniform4xRatePipeline = make_shared<ComputePipeline>(
-		"shaders/ScopeDeskewUniform4xRate.spv", 3, sizeof(UniformCrossCorrelateArgs));
-
 	if(g_hasDebugUtils)
 	{
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
