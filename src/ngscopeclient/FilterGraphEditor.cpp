@@ -52,9 +52,9 @@ using namespace std;
 // FilterGraphGroup
 
 FilterGraphGroup::FilterGraphGroup(FilterGraphEditor& ed)
-	: m_parent(ed)
-	, m_outputId(ed.AllocateID())
+	: m_outputId(ed.AllocateID())
 	, m_inputId(ed.AllocateID())
+	, m_parent(ed)
 {
 }
 
