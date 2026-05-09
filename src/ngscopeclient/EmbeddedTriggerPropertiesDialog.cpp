@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -36,7 +36,12 @@ using namespace std;
 // Construction / destruction
 
 EmbeddedTriggerPropertiesDialog::EmbeddedTriggerPropertiesDialog(shared_ptr<Oscilloscope> scope)
-	: EmbeddableDialog("Trigger", string("Trigger properties: ") + scope->m_nickname, ImVec2(300, 400), true)
+	: EmbeddableDialog(
+		"Trigger",
+		string("Trigger properties: ") + scope->m_nickname,
+		ImVec2(300, 400),
+		nullptr,
+		true)
 	, m_scope(scope)
 {
 	m_page = make_unique<TriggerPropertiesPage>(scope);
@@ -73,13 +78,15 @@ bool EmbeddedTriggerPropertiesDialog::DoRender()
 	if(Combo("Type", types, m_triggerTypeIndex))
 	{
 		//Save the level and inputs of the old trigger so we can reuse it
-		auto oldTrig = m_scope->GetTrigger();
 		float level = 0;
-		if(oldTrig)
-			level = oldTrig->GetLevel();
 		vector<StreamDescriptor> inputs;
-		for(size_t j=0; j<oldTrig->GetInputCount(); j++)
-			inputs.push_back(oldTrig->GetInput(j));
+		auto oldTrig = m_scope->GetTrigger();
+		if(oldTrig)
+		{
+			level = oldTrig->GetLevel();
+			for(size_t j=0; j<oldTrig->GetInputCount(); j++)
+				inputs.push_back(oldTrig->GetInput(j));
+		}
 
 		//Create the new trigger
 		auto newTrig = Trigger::CreateTrigger(types[m_triggerTypeIndex], m_scope.get());

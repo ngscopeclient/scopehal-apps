@@ -184,7 +184,7 @@ bool FilterPropertiesDialog::DoRender()
 
 				//The actual combo box
 				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
-				if(Combo(f->GetInputName(i).c_str(), names, sel))
+				if(Combo(f->GetInputName(i), names, sel))
 				{
 					f->SetInput(i, matchingInputs[sel]);
 					reconfigured = true;
@@ -219,7 +219,7 @@ bool FilterPropertiesDialog::DoRender()
 					//Input path
 					ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
 					string tname = string("###path") + name;
-					if(TextInputWithImplicitApply(tname.c_str(), m_paramTempValues[name], s))
+					if(TextInputWithImplicitApply(tname, m_paramTempValues[name], s))
 					{
 						param.SetStringVal(s);
 						reconfigured = true;
@@ -261,7 +261,7 @@ bool FilterPropertiesDialog::DoRender()
 		if(ImGui::CollapsingHeader("Actions", defaultOpenFlags))
 		{
 			auto actions = ap->EnumActions();
-			for(auto a : actions)
+			for(auto& a : actions)
 			{
 				if(ImGui::Button(a.c_str()))
 				{
@@ -300,7 +300,7 @@ bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, ma
 
 				//Input path
 				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
-				if(Dialog::UnitInputWithImplicitApply(name.c_str(), tempValues[name], nval, param.GetUnit()))
+				if(Dialog::UnitInputWithImplicitApply(name, tempValues[name], nval, param.GetUnit()))
 				{
 					param.SetFloatVal(nval);
 					return true;
@@ -312,8 +312,7 @@ bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, ma
 			{
 				//If we don't have a temporary value, make one
 				int64_t nval = param.GetIntVal();
-				if(tempValues.find(name) == tempValues.end())
-					tempValues[name] = param.GetUnit().PrettyPrintInt64(nval);
+				tempValues.try_emplace(name, param.GetUnit().PrettyPrintInt64(nval));
 
 				//Input path
 				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
@@ -339,13 +338,12 @@ bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, ma
 		case FilterParameter::TYPE_STRING:
 			{
 				//If we don't have a temporary value, make one
-				string s = param.ToString();
-				if(tempValues.find(name) == tempValues.end())
-					tempValues[name] = s;
+				auto s = param.ToString();
+				tempValues.try_emplace(name, s);
 
 				//Input path
 				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
-				if(Dialog::TextInputWithImplicitApply(name.c_str(), tempValues[name], s))
+				if(Dialog::TextInputWithImplicitApply(name, tempValues[name], s))
 				{
 					param.SetStringVal(s);
 					return true;
