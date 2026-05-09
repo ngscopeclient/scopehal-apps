@@ -25,6 +25,9 @@ set(CTEST_CUSTOM_MAXIMUM_PASSED_TEST_OUTPUT_SIZE "131072")
 set(CTEST_CUSTOM_MAXIMUM_NUMBER_OF_ERRORS 999)
 set(CTEST_CUSTOM_MAXIMUM_NUMBER_OF_WARNINGS 999)
 
+# Ignore this warning generated during static analysis
+list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "linker input file unused because linking not done")
+
 # azonenberg's dev box for testing
 if(${HOSTNAME} STREQUAL "havequick" )
 	set(CTEST_SITE dev-havequick)
