@@ -76,7 +76,7 @@ AddInstrumentDialog::AddInstrumentDialog(
 	if(!driver.empty())
 	{
 		int i = 0;
-		for(auto driverName: m_drivers)
+		for(auto& driverName : m_drivers)
 		{
 			if(driverName == driver)
 			{
@@ -92,7 +92,7 @@ AddInstrumentDialog::AddInstrumentDialog(
 	if(!transport.empty())
 	{
 		int i = 0;
-		for(auto transportName: m_transports)
+		for(auto& transportName : m_transports)
 		{
 			if(transportName == transport)
 			{
@@ -325,7 +325,7 @@ void AddInstrumentDialog::UpdateCombos()
 		int modelIndex = 0;
 		auto selectedModel = supportedModels[0];
 		// Model list
-		for(auto model : supportedModels)
+		for(auto& model : supportedModels)
 		{
 			m_models.push_back(model.modelName);
 			if(modelIndex == m_selectedModel)
@@ -343,7 +343,7 @@ void AddInstrumentDialog::UpdateCombos()
 
 		// Transport list
 		int transportIndex = 0;
-		for(auto transport : selectedModel.supportedTransports)
+		for(auto& transport : selectedModel.supportedTransports)
 		{
 			string transportName = to_string(transport.transportType);
 			// Prepare transport type for default value
@@ -372,7 +372,7 @@ void AddInstrumentDialog::UpdateCombos()
 		// Update endpoint list
 		auto endpoints = SCPITransport::EnumEndpoints(m_transports[m_selectedTransport]);
 		int endpointIndex = 0;
-		for(auto endpoint : endpoints)
+		for(auto& endpoint : endpoints)
 		{
 			m_endpoints.push_back(endpoint);
 			m_endpointNames.push_back(endpoint.path + " ("+ endpoint.description +")");

@@ -50,13 +50,12 @@ using namespace std;
 AboutDialog::AboutDialog(MainWindow* parent)
 	: Dialog("About ngscopeclient", to_string_hex(reinterpret_cast<uintptr_t>(this)), ImVec2(600, 400))
 	, m_parent(parent)
-{
+
 	//this file is currently maintained by hand and updated for each release
 	//TODO: make a script for this using https://api.github.com/repos/ngscopeclient/scopehal-apps/contributors
-	m_authorsMarkdown = ReadDataFile("md/authors.md");
-
-	m_licenseMarkdown = ReadDataFile("md/licenses.md");
-
+	, m_authorsMarkdown(ReadDataFile("md/authors.md"))
+	, m_licenseMarkdown(ReadDataFile("md/licenses.md"))
+{
 	InitVulkanInfo();
 }
 

@@ -53,9 +53,9 @@ using namespace std;
 
 FilterGraphGroup::FilterGraphGroup(FilterGraphEditor& ed)
 	: m_parent(ed)
+	, m_outputId(ed.AllocateID())
+	, m_inputId(ed.AllocateID())
 {
-	m_outputId = ed.AllocateID();
-	m_inputId = ed.AllocateID();
 }
 
 /**
@@ -2616,7 +2616,7 @@ void FilterGraphEditor::DoAddMenu()
 		ImGui::PushFont(nullptr, 0);
 
 		//Do all of the menu items
-		for(auto fname : sortedNames)
+		for(auto& fname : sortedNames)
 		{
 			//Hide everything but import filters
 			if(fname.find("Import") == string::npos)

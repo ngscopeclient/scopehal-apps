@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -42,15 +42,14 @@ using namespace std;
 // Construction / destruction
 
 MeasurementsDialog::MeasurementsDialog(Session& session)
-	: Dialog("Measurements", "Measurements", ImVec2(300, 400))
-	, m_session(session)
+	: Dialog("Measurements", "Measurements", ImVec2(300, 400), &session)
 {
 
 }
 
 MeasurementsDialog::~MeasurementsDialog()
 {
-	for(auto s : m_streams)
+	for(auto& s : m_streams)
 	{
 		auto ochan = dynamic_cast<OscilloscopeChannel*>(s.m_channel);
 		if(ochan)

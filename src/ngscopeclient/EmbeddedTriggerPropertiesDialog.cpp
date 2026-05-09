@@ -42,12 +42,11 @@ EmbeddedTriggerPropertiesDialog::EmbeddedTriggerPropertiesDialog(shared_ptr<Osci
 		ImVec2(300, 400),
 		nullptr,
 		true)
+	, m_page(make_unique<TriggerPropertiesPage>(scope))
+	, m_triggerTypeIndex(0)
 	, m_scope(scope)
 {
-	m_page = make_unique<TriggerPropertiesPage>(scope);
-
 	//Figure out combo index for active trigger
-	m_triggerTypeIndex = 0;
 	vector<string> types = scope->GetTriggerTypes();
 	auto trig = scope->GetTrigger();
 	string ttype;
