@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -49,8 +49,6 @@ public:
 	virtual bool DoRender() override;
 
 protected:
-	Session& m_session;
-	MainWindow* m_parent;
 
 	std::vector<std::string> m_categoryNames;
 	std::vector<Filter::Category> m_categoryValues;

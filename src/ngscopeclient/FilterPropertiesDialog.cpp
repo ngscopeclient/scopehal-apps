@@ -213,8 +213,7 @@ bool FilterPropertiesDialog::DoRender()
 					auto& param = it->second;
 
 					string s = param.GetFileName();
-					if(m_paramTempValues.find(name) == m_paramTempValues.end())
-						m_paramTempValues[name] = s;
+					m_paramTempValues.try_emplace(name, s);
 
 					//Input path
 					ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
