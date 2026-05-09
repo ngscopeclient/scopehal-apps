@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -61,7 +61,7 @@ NFDFileBrowser::NFDFileBrowser(
 	//Trim off filter name
 	size_t iparen = m_filterName.find('(');
 	if(iparen != string::npos)
-		m_filterName = m_filterName.substr(0, iparen);
+		m_filterName.resize(iparen);
 
 	m_filterMask = filterMask.substr(2);
 

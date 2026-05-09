@@ -294,8 +294,7 @@ bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, ma
 			{
 				//If we don't have a temporary value, make one
 				auto nval = param.GetFloatVal();
-				if(tempValues.find(name) == tempValues.end())
-					tempValues[name] = param.GetUnit().PrettyPrint(nval);
+				tempValues.try_emplace(name, param.GetUnit().PrettyPrint(nval));
 
 				//Input path
 				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
