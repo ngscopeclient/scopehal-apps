@@ -1,0 +1,126 @@
+app-id: org.ngscopeclient.ngscopeclient
+runtime: org.gnome.Platform
+runtime-version: "50"
+sdk: org.gnome.Sdk
+command: ngscopeclient
+rename-desktop-file: ngscopeclient.desktop
+rename-icon: ngscopeclient
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --device=all
+  - --filesystem=xdg-documents:rw
+  - --filesystem=xdg-download:rw
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/doc
+  - /share/man
+modules:
+  - name: yaml-cpp
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+      - -DYAML_BUILD_SHARED_LIBS=ON
+      - -DYAML_CPP_BUILD_TESTS=OFF
+      - -DYAML_CPP_BUILD_TOOLS=OFF
+    sources:
+      - type: git
+        url: https://github.com/jbeder/yaml-cpp.git
+        commit: f7320141120f720aecc4c32be25586e7da9eb978
+      - type: patch
+        path: patches/yaml-cpp-gcc15-cstdint.patch
+
+  - name: libsigcplusplus
+    buildsystem: meson
+    config-opts:
+      - -Dbuild-documentation=false
+      - -Dbuild-examples=false
+      - -Dbuild-tests=false
+      - -Dmaintainer-mode=false
+    sources:
+      - type: git
+        url: https://github.com/libsigcplusplus/libsigcplusplus.git
+        commit: eb7db8ef3b5cba44ec4b46d158ec03e2aa3c537a
+
+  - name: hidapi
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_SHARED_LIBS=ON
+      - -DHIDAPI_BUILD_HIDTEST=OFF
+      - -DHIDAPI_WITH_HIDRAW=ON
+      - -DHIDAPI_WITH_LIBUSB=OFF
+    sources:
+      - type: git
+        url: https://github.com/libusb/hidapi.git
+        commit: dbff4ea89f55a572aeb0c53a7b32ea70853ec260
+
+  - name: glfw
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DGLFW_BUILD_DOCS=OFF
+      - -DGLFW_BUILD_EXAMPLES=OFF
+      - -DGLFW_BUILD_TESTS=OFF
+    sources:
+      - type: git
+        url: https://github.com/glfw/glfw.git
+        commit: a74efa0d5628b74adc0426af4c5710e287fa7c2c
+
+  - name: spirv-headers
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+    sources:
+      - type: git
+        url: https://github.com/KhronosGroup/SPIRV-Headers.git
+        commit: 09913f088a1197aba4aefd300a876b2ebbaa3391
+
+  - name: spirv-tools
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DSPIRV_SKIP_TESTS=ON
+      - -DSPIRV_WERROR=OFF
+    sources:
+      - type: git
+        url: https://github.com/KhronosGroup/SPIRV-Tools.git
+        commit: f289d047f49fb60488301ec62bafab85573668cc
+      - type: git
+        url: https://github.com/KhronosGroup/SPIRV-Headers.git
+        commit: 09913f088a1197aba4aefd300a876b2ebbaa3391
+        dest: external/spirv-headers
+
+  - name: glslang
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_TESTING=OFF
+      - -DBUILD_EXTERNAL=OFF
+      - -DALLOW_EXTERNAL_SPIRV_TOOLS=ON
+      - -DENABLE_OPT=ON
+    sources:
+      - type: git
+        url: https://github.com/KhronosGroup/glslang.git
+        commit: 7200bc12a8979d13b22cd52de80ffb7d41939615
+
+  - name: ngscopeclient
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DDISABLE_PCH=ON
+      - -DBUILD_TESTING=OFF
+      - -DBUILD_DOCS=OFF
+      - -DBUILD_DEVDOCS=OFF
+      - -DNGSCOPECLIENT_PACKAGE_VERSION=v0.1
+      - -DNGSCOPECLIENT_PACKAGE_VERSION_LONG=v0.1-0
+    sources:
+      - type: dir
+        path: ../..

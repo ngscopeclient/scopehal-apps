@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.ngscopeclient.ngscopeclient</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>BSD-3-Clause</project_license>
+  <name>ngscopeclient</name>
+  <summary>Remote-control and signal-analysis suite for test equipment</summary>
+  <description>
+    <p>
+      ngscopeclient provides cross-platform remote control, waveform analysis,
+      protocol decoding, and visualization for oscilloscopes and other test and
+      measurement instruments.
+    </p>
+  </description>
+  <launchable type="desktop-id">org.ngscopeclient.ngscopeclient.desktop</launchable>
+  <url type="homepage">https://www.ngscopeclient.org/</url>
+  <url type="bugtracker">https://github.com/ngscopeclient/scopehal-apps/issues</url>
+  <developer id="org.ngscopeclient">
+    <name>ngscopeclient.org project</name>
+  </developer>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="0.1" date="2026-05-12" />
+  </releases>
+</component>

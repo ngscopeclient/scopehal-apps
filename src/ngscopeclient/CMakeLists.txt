@@ -259,6 +259,8 @@ if(LINUX)
 		DESTINATION share/applications)
 	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.xml
 		DESTINATION share/mime/packages)
+	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/org.ngscopeclient.ngscopeclient.metainfo.xml
+		DESTINATION share/metainfo)
 endif()
 
 if(APPLE)
@@ -357,4 +359,3 @@ if(WIXPATH AND WIN32)
 elseif(WIN32)
 	message("Skipping MSI package build; define WIXPATH to enable")
 endif()
-
