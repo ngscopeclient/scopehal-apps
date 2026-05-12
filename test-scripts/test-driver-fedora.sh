@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 sudo dnf upgrade -y
 sudo dnf install -y \
 	git \

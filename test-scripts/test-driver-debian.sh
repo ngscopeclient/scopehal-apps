@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Install dependencies
 sudo apt -y update

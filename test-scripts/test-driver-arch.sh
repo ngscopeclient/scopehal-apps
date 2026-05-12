@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # do not use vulkan-swrast like github actions script did - the test VM has a nvidia card
 sudo pacman -Syu --noconfirm --needed \
 	git \
