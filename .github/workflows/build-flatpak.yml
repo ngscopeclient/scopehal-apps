@@ -16,8 +16,15 @@ jobs:
     - name: Check Out Code
       uses: actions/checkout@v6
       with:
-        submodules: recursive
+        submodules: false
         fetch-depth: 0
+
+    - name: Check Out Submodules
+      run: |
+        git config submodule.lib.url https://github.com/ngscopeclient/scopehal.git
+        git config submodule.doc.url https://github.com/ngscopeclient/scopehal-docs.git
+        git submodule sync --recursive
+        git submodule update --init --recursive
 
     - name: Build Flatpak bundle
       uses: flatpak/flatpak-github-actions/flatpak-builder@v6
