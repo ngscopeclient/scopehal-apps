@@ -15,3 +15,8 @@ ctest -S ctest-custom.cmake
 # Make the CPack .deb package
 cd build
 make package
+
+# Copy the package to the output path
+mkdir ~/artifacts
+mv *.deb ~/artifacts/
+mv doc/*.pdf ~/artifacts/
