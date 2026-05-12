@@ -12,5 +12,6 @@ source ./test-scripts/Validation.sh
 # Build and run tests
 ctest -S ctest-custom.cmake
 
-# Make the package
+# Make the CPack .deb package
+cd build
 make package

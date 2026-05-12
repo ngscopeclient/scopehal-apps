@@ -58,7 +58,7 @@ elseif(${HOSTNAME} STREQUAL "debian-stable" )
 	message(STATUS "Found known CI config: debian-stable")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON -DCPACK_GENERATOR=DEB")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
 
 # CI Debian Bookworm
 elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
@@ -69,7 +69,7 @@ elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
 	message(STATUS "Found known CI config: debian-oldstable")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON -DCPACK_GENERATOR=DEB")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
 
 # CI Ubuntu Noble
 elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
@@ -80,7 +80,7 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
 	message(STATUS "Found known CI config: ubuntu-oldlts")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON -DCPACK_GENERATOR=DEB")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
 
 # CI Ubuntu Resolute
 elseif(${HOSTNAME} MATCHES "ubuntu-lts" )
