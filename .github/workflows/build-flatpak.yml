@@ -21,10 +21,10 @@ jobs:
 
     - name: Check Out Submodules
       run: |
-        git config submodule.lib.url https://github.com/ngscopeclient/scopehal.git
-        git config submodule.doc.url https://github.com/ngscopeclient/scopehal-docs.git
-        git submodule sync --recursive
-        git submodule update --init --recursive
+        git -C "$GITHUB_WORKSPACE" config submodule.lib.url https://github.com/ngscopeclient/scopehal.git
+        git -C "$GITHUB_WORKSPACE" config submodule.doc.url https://github.com/ngscopeclient/scopehal-docs.git
+        git -C "$GITHUB_WORKSPACE" submodule sync --recursive
+        git -C "$GITHUB_WORKSPACE" submodule update --init --recursive
 
     - name: Build Flatpak bundle
       uses: flatpak/flatpak-github-actions/flatpak-builder@v6
