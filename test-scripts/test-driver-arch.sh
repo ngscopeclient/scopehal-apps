@@ -1,4 +1,6 @@
 #!/bin/bash
+
+# Install dependencies
 # do not use vulkan-swrast like github actions script did - the test VM has a nvidia card
 sudo pacman -Syu --noconfirm --needed \
 	git \
@@ -33,6 +35,18 @@ sudo pacman -Syu --noconfirm --needed \
 	vulkan-validation-layers \
 	vulkan-tools
 
+# Enable Vulkan validation layers
 export VK_LOADER_LAYERS_ENABLE=VK_LAYER_KHRONOS_validation
 source ./test-scripts/Validation.sh
+
+# Build and run tests
 ctest -S ctest-custom.cmake
+
+# Make the CPack .tgz package
+cd build
+make package
+
+# Copy the package to the output path
+mkdir ~/artifacts
+mv *.tgz ~/artifacts/
+mv doc/*.pdf ~/artifacts/

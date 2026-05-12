@@ -47,7 +47,7 @@ elseif(${HOSTNAME} STREQUAL "arch" )
 	message(STATUS "Found known CI config: arch")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=TGZ")
 
 # CI Debian Trixie
 elseif(${HOSTNAME} STREQUAL "debian-stable" )
