@@ -106,7 +106,7 @@ elseif(${HOSTNAME} MATCHES "ubuntu-lts" )
 
 		# extractbb seems to not be found even though we installed texlive-binaries, so for now
 		# turn it off to avoid build problems
-		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=OFF -DCPACK_GENERATOR=DEB")
+		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=OFF" "-DCPACK_GENERATOR=DEB")
 	endif()
 
 # CI Fedora 43
