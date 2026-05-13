@@ -604,6 +604,9 @@ bool Session::LoadWaveformDataForFilters(
 				else
 					cap = new SparseDigitalWaveform;
 				*/
+
+				//don't try to load since we didn't create the waveform
+				return false;
 			}
 
 			//Channel waveform metadata
