@@ -31,6 +31,7 @@ source ./test-scripts/Validation.sh
 ctest -S ctest-custom.cmake
 
 # Make the CPack .dmg package
+cd build
 cpack -G Bundle
 
 # Copy the package to the output path
