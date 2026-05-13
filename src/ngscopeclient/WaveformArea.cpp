@@ -3698,19 +3698,16 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 			lineColor,
 			2);
 
-		//If trying to drop into the center marker, display warning if incompatible scales
+		//Display warning if incompatible scales
 		//(new signal has significantly wider range) and not a filter
-		if(hover)
-		{
-			if(stream.GetType() != Stream::STREAM_TYPE_ANALOG)
-				return;
-			auto chan = stream.m_channel;
-			if(dynamic_cast<Filter*>(chan) != nullptr)
-				return;
+		if(stream.GetType() != Stream::STREAM_TYPE_ANALOG)
+			return;
+		auto chan = stream.m_channel;
+		if(dynamic_cast<Filter*>(chan) != nullptr)
+			return;
 
-			center.x += fillSize;
-			DrawDropRangeMismatchMessage(draw_list, center, GetFirstAnalogStream(), stream);
-		}
+		center.x += fillSize;
+		DrawDropRangeMismatchMessage(draw_list, center, GetFirstAnalogStream(), stream);
 	}
 }
 
@@ -4336,7 +4333,7 @@ void WaveformArea::OnMouseUp()
 					}
 				}
 
-				else
+				else if(m_triggerDuringDrag)
 				{
 					m_triggerDuringDrag->SetLevel(m_triggerLevelDuringDrag);
 					m_triggerDuringDrag->GetScope()->PushTrigger();
