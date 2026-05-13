@@ -1,7 +1,4 @@
 #!/bin/bash
-export BRANCH=$1
-export COMMIT=$2
-
 # Install dependencies
 # do not use vulkan-swrast like github actions script did - the test VM has a nvidia card
 sudo pacman -Syu --noconfirm --needed \

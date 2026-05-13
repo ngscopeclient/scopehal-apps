@@ -1,7 +1,4 @@
 #!/bin/bash
-export BRANCH=$1
-export COMMIT=$2
-
 sudo dnf upgrade -y
 sudo dnf install -y \
 	git \

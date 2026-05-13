@@ -1,7 +1,4 @@
 #!/bin/bash
-export BRANCH=$1
-export COMMIT=$2
-
 # Install dependencies
 sudo apt -y update
 sudo apt -y full-upgrade
