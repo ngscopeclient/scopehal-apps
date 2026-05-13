@@ -30,6 +30,8 @@ sudo dnf install -y \
 	texlive-gensymb \
 	texlive-newtx \
 	texlive-upquote\
+	texlive-make4ht \
+	texlive-luaxml \
 	vulkan-headers \
 	vulkan-loader-devel \
 	libshaderc-devel \
