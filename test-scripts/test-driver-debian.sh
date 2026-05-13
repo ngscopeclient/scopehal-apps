@@ -19,3 +19,6 @@ make package
 mkdir ~/artifacts
 mv *.deb ~/artifacts/
 mv doc/*.pdf ~/artifacts/
+
+# Write the hostname to the output path for debugging
+hostname > ~/artifacts/builder-hostname

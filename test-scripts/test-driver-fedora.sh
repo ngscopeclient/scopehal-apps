@@ -41,3 +41,15 @@ sudo dnf install -y \
 export VK_LOADER_LAYERS_ENABLE=VK_LAYER_KHRONOS_validation
 source ./test-scripts/Validation.sh
 ctest -S ctest-custom.cmake
+
+# Make the CPack .rpm package
+cd build
+make package
+
+# Copy the package to the output path
+mkdir ~/artifacts
+mv *.rpm ~/artifacts/
+mv doc/*.pdf ~/artifacts/
+
+# Write the hostname to the output path for debugging
+hostname > ~/artifacts/builder-hostname

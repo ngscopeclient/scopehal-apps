@@ -29,3 +29,14 @@ brew install \
 export VK_LOADER_LAYERS_ENABLE=VK_LAYER_KHRONOS_validation
 source ./test-scripts/Validation.sh
 ctest -S ctest-custom.cmake
+
+# Make the CPack .dmg package
+cpack -G Bundle
+
+# Copy the package to the output path
+mkdir ~/artifacts
+mv *.dmg ~/artifacts/
+mv doc/*.pdf ~/artifacts/
+
+# Write the hostname to the output path for debugging
+hostname > ~/artifacts/builder-hostname
