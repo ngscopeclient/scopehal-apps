@@ -47,7 +47,7 @@ make package
 
 # Copy the package to the output path
 mkdir ~/artifacts
-mv *.tgz ~/artifacts/
+mv *.tar.gz ~/artifacts/
 mv doc/*.pdf ~/artifacts/
 
 # Write the hostname to the output path for debugging
