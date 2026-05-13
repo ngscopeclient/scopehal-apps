@@ -117,8 +117,9 @@ elseif(${HOSTNAME} STREQUAL "fedora" )
 	set(CTEST_GIT_COMMAND "/usr/bin/git")
 	message(STATUS "Found known CI config: fedora")
 
+	# texlive is crashing with a buffer overflow so for now turn doc build off
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=RPM")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=OFF" "-DCPACK_GENERATOR=RPM")
 
 # CI Windows 11
 elseif(${HOSTNAME} STREQUAL "win11" )
