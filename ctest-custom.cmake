@@ -132,7 +132,7 @@ elseif(${HOSTNAME} STREQUAL "win11" )
 	message(STATUS "Found known CI config: win11")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DWIXPATH=\"C:\\Program Files (x86)\\WiX Toolset v3.14\\bin\"") # don't build docs on windows for now, TODO figure that out
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DWIXPATH=\\"C:\\Program Files (x86)\\WiX Toolset v3.14\\bin\\"") # don't build docs on windows for now, TODO figure that out
 
 # CI MacOS ARM64, for whatever reason it reports the FQDN not just the hostname
 elseif(${HOSTNAME} STREQUAL "macos.cidmz.poulsbo.antikernel.net" )
