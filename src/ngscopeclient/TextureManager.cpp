@@ -456,6 +456,8 @@ GLFWimage TextureManager::LoadPNGToGLFWImage(const string& path)
 	for(size_t y=0; y<height; y++)
 		memcpy(img.pixels + (y*rowSize), rowPtrs[y], rowSize);
 
+	//Clean up
+	png_destroy_read_struct(&png, &info, &end);
 	return img;
 }
 
