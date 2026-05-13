@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -54,9 +54,6 @@ public:
 	void RefreshFromHardware();
 
 protected:
-
-	///@brief Session handle so we can remove the load when closed
-	Session* m_session;
 
 	///@brief Timestamp of when we opened the dialog
 	double m_tstart;

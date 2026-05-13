@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -47,8 +47,8 @@ BERTDialog::BERTDialog(shared_ptr<SCPIBERT> bert, shared_ptr<BERTState> state, S
 	: Dialog(
 		string("BERT: ") + bert->m_nickname,
 		string("BERT: ") + bert->m_nickname,
-		ImVec2(500, 400))
-	, m_session(session)
+		ImVec2(500, 400),
+		session)
 	, m_tstart(GetTime())
 	, m_bert(bert)
 	, m_state(state)
