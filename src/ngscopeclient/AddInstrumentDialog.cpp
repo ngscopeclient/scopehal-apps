@@ -257,7 +257,7 @@ bool AddInstrumentDialog::DoRender()
 		auto pos = ImGui::GetCursorScreenPos();
 		ImVec2 anchorPos(pos.x + 2*ImGui::GetFontSize(), pos.y);
 		tutorial->DrawSpeechBubble(anchorPos, ImGuiDir_Up, "Add the scope to your session");
-		showedBubble = true;
+		//showedBubble = true;
 	}
 
 	return true;

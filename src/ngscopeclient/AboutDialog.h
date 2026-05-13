@@ -51,7 +51,6 @@ public:
 	virtual bool DoRender();
 
 protected:
-	MainWindow* m_parent;
 
 	void InitVulkanInfo();
 

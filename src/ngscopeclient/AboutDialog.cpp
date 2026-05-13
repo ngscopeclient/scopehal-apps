@@ -48,8 +48,12 @@ using namespace std;
 // Construction / destruction
 
 AboutDialog::AboutDialog(MainWindow* parent)
-	: Dialog("About ngscopeclient", to_string_hex(reinterpret_cast<uintptr_t>(this)), ImVec2(600, 400))
-	, m_parent(parent)
+	: Dialog(
+		"About ngscopeclient",
+		to_string_hex(reinterpret_cast<uintptr_t>(this)),
+		ImVec2(600, 400),
+		nullptr,
+		parent)
 
 	//this file is currently maintained by hand and updated for each release
 	//TODO: make a script for this using https://api.github.com/repos/ngscopeclient/scopehal-apps/contributors

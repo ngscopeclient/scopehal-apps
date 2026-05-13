@@ -87,9 +87,9 @@ TEST_CASE("Primitive_Averager")
 		//Do the GPU version
 		//Run twice, second time for score, so we don't count deferred init or allocations in the benchmark
 		Averager acomp;
-		float gpuavg = acomp.Average(&wfm, cmdBuf, queue);
+		acomp.Average(&wfm, cmdBuf, queue);
 		start = GetTime();
-		gpuavg = acomp.Average(&wfm, cmdBuf, queue);
+		float gpuavg = acomp.Average(&wfm, cmdBuf, queue);
 		double gpudt = GetTime() - start;
 		LogNotice("GPU: %6.3f ms, average = %.7f, %.2fx speedup\n", gpudt*1000, gpuavg, dt / gpudt);
 

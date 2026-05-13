@@ -192,6 +192,8 @@ TEST_CASE("Filter_EyePattern")
 void DumpEye(EyeWaveform* wfm, const char* path, size_t width, size_t height)
 {
 	FILE* fp = fopen(path, "w");
+	if(!fp)
+		return;
 
 	for(size_t y = 0; y < height; y++)
 	{
@@ -208,6 +210,8 @@ void DumpEye(EyeWaveform* wfm, const char* path, size_t width, size_t height)
 void DumpEyeMask(vector<uint8_t>& pixels, const char* path, size_t width, size_t height)
 {
 	FILE* fp = fopen(path, "w");
+	if(!fp)
+		return;
 
 	for(size_t y = 0; y < height; y++)
 	{

@@ -576,11 +576,11 @@ bool Dialog::renderEditableProperty(
 	ImGuiID editId = ImGui::GetID(editLabel.c_str());
 	ImGuiID labelId = ImGui::GetID(label.c_str());
 	if(m_editedItemId == editId)
-	{	// Item currently beeing edited
+	{	// Item currently being edited
 		ImGui::BeginGroup();
-		float inputXPos = ImGui::GetCursorPosX();
-	    ImGuiContext& g = *GImGui;
-		float inputWidth = g.NextItemData.Width;
+		//float inputXPos = ImGui::GetCursorPosX();
+	    //ImGuiContext& g = *GImGui;
+		//float inputWidth = g.NextItemData.Width;
 		// Allow overlap for apply button
 		ImGui::PushItemFlag(ImGuiItemFlags_AllowOverlap, true);
 		ImGui::PushStyleColor(ImGuiCol_Text, color);
@@ -601,7 +601,7 @@ bool Dialog::renderEditableProperty(
 		ImGui::PopItemFlag();
 		if(explicitApply && dirty)
 		{	// Add Apply button
-			float buttonWidth = ImGui::GetFontSize() * 2;
+			//float buttonWidth = ImGui::GetFontSize() * 2;
 			// Position the button just before the right side of the text input
 			ImGui::SameLine(/*inputXPos+inputWidth-ImGui::GetCursorPosX()-buttonWidth+2*ImGui::GetStyle().ItemInnerSpacing.x*/);
 			ImVec4 buttonColorHovered = buttonColor;

@@ -55,7 +55,7 @@ string TimePoint::PrettyPrintDate() const
 		//cppcheck seems to think this is a divide by zero for some reason, it's obviously not
 		//(FS_PER_SECOND is 1e15 which is only 50 bits long and comfortably fits in a signed int64)
 		//cppcheck-suppress zerodiv
-		offset = offset % (int64_t)FS_PER_SECOND;
+		//offset = offset % (int64_t)FS_PER_SECOND;
 	}
 
 	//Format timestamp
