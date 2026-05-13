@@ -588,25 +588,21 @@ bool Session::LoadWaveformDataForFilters(
 			//TODO: support non-analog/digital captures (eyes, spectrograms, etc)
 
 			WaveformBase* cap = nullptr;
-			SparseAnalogWaveform* sacap = nullptr;
-			UniformAnalogWaveform* uacap = nullptr;
-			//SparseDigitalWaveform* sdcap = nullptr;
-			//UniformDigitalWaveform* udcap = nullptr;
 			if(f->GetType(0) == Stream::STREAM_TYPE_ANALOG)
 			{
 				if(dense)
-					cap = uacap = new UniformAnalogWaveform;
+					cap = new UniformAnalogWaveform;
 				else
-					cap = sacap = new SparseAnalogWaveform;
+					cap = new SparseAnalogWaveform;
 			}
 			else
 			{
 				LogError("unknown stream type loading waveform\n");
 				/*
 				if(dense)
-					cap = udcap = new UniformDigitalWaveform;
+					cap = new UniformDigitalWaveform;
 				else
-					cap = sdcap = new SparseDigitalWaveform;
+					cap = new SparseDigitalWaveform;
 				*/
 			}
 
