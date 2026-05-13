@@ -440,6 +440,7 @@ GLFWimage TextureManager::LoadPNGToGLFWImage(const string& path)
 		img.width = 0;
 		img.height = 0;
 		img.pixels = nullptr;
+		//fp is closed by LoadPNG in error case
 		return img;
 	}
 
@@ -458,6 +459,7 @@ GLFWimage TextureManager::LoadPNGToGLFWImage(const string& path)
 
 	//Clean up
 	png_destroy_read_struct(&png, &info, &end);
+	fclose(fp);
 	return img;
 }
 
