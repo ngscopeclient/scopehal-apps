@@ -1,4 +1,6 @@
 #!/bin/bash
+export BRANCH=$1
+export COMMIT=$2
 
 # why is this needed when $PATH should be correct in the runner VM already
 export PATH=/opt/homebrew/bin:/opt/homebrew:sbin:$PATH
