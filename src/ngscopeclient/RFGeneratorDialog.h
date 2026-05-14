@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -47,9 +47,6 @@ public:
 
 	std::string m_level;
 	float m_committedLevel;
-
-	std::string m_offset;
-	float m_committedOffset;
 
 	std::string m_frequency;
 	double m_committedFrequency;

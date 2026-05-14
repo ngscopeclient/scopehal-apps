@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -338,8 +338,9 @@ bool ProtocolAnalyzerDialog::DoRender()
 				{
 					m_selectedPacket = pack;
 
-					//row is now selected, we may or may not do something with this flag but write it for consistency
-					//cppcheck-suppress deadcode.DeadStores
+					//row is now selected, we may or may not do something with this flag in the future
+					//but write to it for consistency
+					[[clang::suppress]]
 					rowIsSelected = true;
 
 					visibleRowSelected = true;

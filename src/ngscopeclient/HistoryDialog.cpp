@@ -293,6 +293,9 @@ bool HistoryDialog::DoRender()
 					{
 						//Select the marker
 						m_selectedMarker = &m;
+
+						//We may or may not use the selection value later on
+						[[clang::suppress]]
 						markerIsSelected = true;
 
 						//Navigate to the selected waveform

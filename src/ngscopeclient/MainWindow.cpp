@@ -3284,14 +3284,33 @@ bool MainWindow::SetupDataDirectory(const string& dataDir)
 
 	//Remove any existing waveform data
 	char cwd[PATH_MAX];
-	getcwd(cwd, PATH_MAX);
+	if(nullptr == getcwd(cwd, PATH_MAX))
+	{
+		ShowErrorPopup(
+			"Failed to save session",
+			"Could not get working directory");
+		return false;
+	}
 
-	chdir(dataDir.c_str());
+	if(0 != chdir(dataDir.c_str()))
+	{
+		ShowErrorPopup(
+			"Failed to save session",
+			string("The data directory ") + cwd + " could not be entered!");
+		return false;
+	}
+
 	const auto directories = ::Glob("scope_*", true);
 	for(const auto& directory: directories)
 		::RemoveDirectory(directory);
 
-	chdir(cwd);
+	if(0 != chdir(cwd))
+	{
+		ShowErrorPopup(
+			"Failed to save session",
+			string("The parent directory ") + cwd + " could not be entered!");
+		return false;
+	}
 
 	return true;
 }
