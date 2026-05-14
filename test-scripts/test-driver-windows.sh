@@ -6,7 +6,6 @@ pacman -S --needed --noconfirm \
 	mingw-w64-ucrt-x86_64-vulkan-headers mingw-w64-ucrt-x86_64-vulkan-loader \
 	mingw-w64-ucrt-x86_64-shaderc mingw-w64-ucrt-x86_64-glslang mingw-w64-ucrt-x86_64-spirv-tools \
 	mingw-w64-ucrt-x86_64-fftw
-choco install wixtoolset --force
 source ./test-scripts/Validation.sh
 ctest -S ctest-custom.cmake
 
