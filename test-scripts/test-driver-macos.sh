@@ -38,6 +38,3 @@ cpack -G Bundle
 mkdir ~/artifacts
 mv *.dmg ~/artifacts/
 mv doc/*.pdf ~/artifacts/
-
-# Write the hostname to the output path for debugging
-hostname > ~/artifacts/builder-hostname
