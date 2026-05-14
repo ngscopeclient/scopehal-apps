@@ -340,7 +340,9 @@ bool ProtocolAnalyzerDialog::DoRender()
 
 					//row is now selected, we may or may not do something with this flag in the future
 					//but write to it for consistency
+					#ifdef __clang__
 					[[clang::suppress]]
+					#endif
 					rowIsSelected = true;
 
 					visibleRowSelected = true;

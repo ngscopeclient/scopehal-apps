@@ -122,8 +122,8 @@ StreamBrowserDialog::StreamBrowserDialog(Session& session, MainWindow* parent)
 	: Dialog("Stream Browser", "Stream Browser", ImVec2(550, 400), &session, parent)
 
 	//only used during rendering but static analysis doesn't like leaving them uninitialized until then
-	, m_badgeXmin(0)
-	, m_badgeXcur(0)
+	, m_badgeXMin(0)
+	, m_badgeXCur(0)
 {
 
 }
