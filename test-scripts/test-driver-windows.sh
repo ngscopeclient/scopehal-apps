@@ -17,6 +17,7 @@ cpack
 mkdir ~/artifacts
 mv *.msi ~/artifacts/
 mv doc/*.pdf ~/artifacts/
+cp C:/Users/ci/scopehal-apps/build/_CPack_Packages/win64/WIX/wix.log ~/artifacts/
 
 # Write the hostname to the output path for debugging
 hostname > ~/artifacts/builder-hostname
