@@ -104,8 +104,8 @@ elseif(${HOSTNAME} MATCHES "ubuntu-lts" )
 		message(STATUS "Building optimized release version")
 		set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 
-		# extractbb seems to not be found even though we installed texlive-binaries, so for now
-		# turn it off to avoid build problems
+		# extractbb seems to not be found even though we installed texlive-binaries, so for now turn it off
+		# to avoid build problems
 		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=OFF" "-DCPACK_GENERATOR=DEB")
 	endif()
 
