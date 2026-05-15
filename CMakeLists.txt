@@ -393,9 +393,5 @@ if(APPLE)
 		INSTALL_RPATH "@executable_path/../lib;/usr/local/lib;/opt/homebrew/lib")
 endif()
 
-if(WIN32)
-	set(CPACK_WIX_UPGRADE_GUID "68e3cc49-58a2-4f86-b36e-e40993472e34")
-endif()
-
 # this must be at the very end *after* we've done all the config
 include(CPack)
