@@ -14,9 +14,9 @@ ctest -S ctest-custom.cmake
 
 # Copy the package to the output path
 ARTIFACT_PATH=../artifacts/
-mkdir ARTIFACT_PATH
-mv build/dist/*.msi ARTIFACT_PATH
-mv build/dist/*.zip ARTIFACT_PATH
+mkdir $ARTIFACT_PATH
+mv build/dist/*.msi $ARTIFACT_PATH
+mv build/dist/*.zip $ARTIFACT_PATH
 
 # no PDF generated on windows currently
-#mv doc/*.pdf ARTIFACT_PATH
+#mv doc/*.pdf $ARTIFACT_PATH
