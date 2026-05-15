@@ -9,12 +9,13 @@ pacman -S --needed --noconfirm \
 source ./test-scripts/Validation.sh
 ctest -S ctest-custom.cmake
 
-# Make the CPack .msi package
-cd build
-cpack
+# CPack MSI is automatically generated we don't need to do anything special
 
 # Copy the package to the output path
 ARTIFACT_PATH=artifacts/
 mkdir ARTIFACT_PATH
-mv *.msi ARTIFACT_PATH
-mv doc/*.pdf ARTIFACT_PATH
+mv build/dist/*.msi ARTIFACT_PATH
+mv build/dist/*.zip ARTIFACT_PATH
+
+# no PDF generated on windows currently
+#mv doc/*.pdf ARTIFACT_PATH
