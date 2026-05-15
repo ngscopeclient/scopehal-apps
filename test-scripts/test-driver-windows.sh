@@ -13,7 +13,7 @@ ctest -S ctest-custom.cmake
 # so we don't need to explicitly run CPack currently
 
 # Copy the package to the output path
-ARTIFACT_PATH=~/artifacts/
+ARTIFACT_PATH=../artifacts/
 mkdir ARTIFACT_PATH
 mv build/dist/*.msi ARTIFACT_PATH
 mv build/dist/*.zip ARTIFACT_PATH
