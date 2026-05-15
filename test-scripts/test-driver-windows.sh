@@ -14,7 +14,8 @@ cd build
 cpack
 
 # Copy the package to the output path
-mkdir ~/artifacts
-mv *.msi ~/artifacts/
-mv doc/*.pdf ~/artifacts/
-cp C:/Users/ci/scopehal-apps/build/_CPack_Packages/win64/WIX/wix.log ~/artifacts/
+ARTIFACT_PATH=c:/Users/ci/artifacts/
+mkdir ARTIFACT_PATH
+mv *.msi ARTIFACT_PATH
+mv doc/*.pdf ARTIFACT_PATH
+cp C:/Users/ci/scopehal-apps/build/_CPack_Packages/win64/WIX/wix.log ARTIFACT_PATH
