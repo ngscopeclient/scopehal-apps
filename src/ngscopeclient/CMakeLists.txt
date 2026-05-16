@@ -52,8 +52,10 @@ if(NOT ANALYZE)
 		../imgui-node-editor/crude_json.cpp
 		../ImGuiFileDialog/ImGuiFileDialog.cpp
 		)
+	set(NFD_LIBS nfd)
 else()
 	set(IMGUI_FILES "")
+	set(NFD_LIBS "")
 endif()
 
 ###############################################################################
@@ -217,7 +219,7 @@ endif()
 target_link_libraries(ngscopeclient
 	scopehal
 	scopeprotocols
-	nfd
+	${NFD_LIBS}
 	PNG::PNG
 	${PLATFORM_LIBS}
 	)
