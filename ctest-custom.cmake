@@ -167,7 +167,12 @@ ctest_update()
 
 ctest_configure(OPTIONS "${CONFIGURE_OPTIONS}")
 ctest_build(FLAGS "-j${N_PROCS}")
-ctest_test()
+
+#Don't run unit tests if doing static analysis
+if(NOT $ENV{ANALYZE})
+	ctest_test()
+endif()
+
 #ctest_coverage()
 set(CTEST_DROP_METHOD https)
 set(CTEST_DROP_SITE dashboard.ngscopeclient.org)
