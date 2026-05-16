@@ -308,7 +308,6 @@ if(ANALYZE)
 	find_program(CLANGANALYZER_CXXANALYZER_PATH "c++-analyzer" HINTS "${CLANGANALYZER_BIN_PATH}/../libexec" DOC "Path to clang-analyzer's c++-analyzer")
 	if(CLANGANALYZER_CXXANALYZER_PATH)
 		set(CMAKE_CXX_COMPILER_LAUNCHER "${CLANGANALYZER_CXXANALYZER_PATH}")
-		#add_compile_options(-Xanalyzer,--exclude,src/imgui)
 		message(STATUS "Found clang-analyzer: ${CLANGANALYZER_CXXANALYZER_PATH}")
 	else()
 		message(FATAL_ERROR "clang-analyzer not found, required for ANALYZE")
@@ -322,7 +321,10 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/ngscopeclient")
 
-add_subdirectory("${PROJECT_SOURCE_DIR}/src/nativefiledialog-extended")
+# Third party libraries don't get built for static analysis to avoid spamming us with warnings we can't do much about
+if(NOT ANALYZE)
+	add_subdirectory("${PROJECT_SOURCE_DIR}/src/nativefiledialog-extended")
+endif()
 
 add_subdirectory(devdoc)
 

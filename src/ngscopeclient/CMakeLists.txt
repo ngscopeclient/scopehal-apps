@@ -35,22 +35,31 @@ if(WIN32)
 	endif()
 endif()
 
+# Third party libraries don't get built for static analysis to avoid spamming us with warnings we can't do much about
+if(NOT ANALYZE)
+	set(IMGUI_FILES
+		../imgui/imgui.cpp
+		../imgui/imgui_demo.cpp
+		../imgui/imgui_draw.cpp
+		../imgui/imgui_tables.cpp
+		../imgui/imgui_widgets.cpp
+		../imgui/backends/imgui_impl_glfw.cpp
+		../imgui/backends/imgui_impl_vulkan.cpp
+		../imgui/misc/cpp/imgui_stdlib.cpp
+		../imgui-node-editor/imgui_node_editor.cpp
+		../imgui-node-editor/imgui_node_editor_api.cpp
+		../imgui-node-editor/imgui_canvas.cpp
+		../imgui-node-editor/crude_json.cpp
+		../ImGuiFileDialog/ImGuiFileDialog.cpp
+		)
+else()
+	set(IMGUI_FILES "")
+endif()
+
 ###############################################################################
 #C++ compilation
 add_executable(ngscopeclient
-	../imgui/imgui.cpp
-	../imgui/imgui_demo.cpp
-	../imgui/imgui_draw.cpp
-	../imgui/imgui_tables.cpp
-	../imgui/imgui_widgets.cpp
-	../imgui/backends/imgui_impl_glfw.cpp
-	../imgui/backends/imgui_impl_vulkan.cpp
-	../imgui/misc/cpp/imgui_stdlib.cpp
-	../imgui-node-editor/imgui_node_editor.cpp
-	../imgui-node-editor/imgui_node_editor_api.cpp
-	../imgui-node-editor/imgui_canvas.cpp
-	../imgui-node-editor/crude_json.cpp
-	../ImGuiFileDialog/ImGuiFileDialog.cpp
+	${IMGUI_FILES}
 
 	pthread_compat.cpp
 
