@@ -28,6 +28,8 @@ set(CTEST_CUSTOM_MAXIMUM_NUMBER_OF_WARNINGS 999)
 # Ignore this warning generated during static analysis
 list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "linker input file unused because linking not done")
 
+set(STATIC_ANALYSIS 0)
+
 # azonenberg's dev box for testing
 if(${HOSTNAME} STREQUAL "havequick" )
 	set(CTEST_SITE dev-havequick)
@@ -97,6 +99,7 @@ elseif(${HOSTNAME} MATCHES "ubuntu-lts" )
 	elseif($ENV{ANALYZE})
 		set(CTEST_BUILD_NAME x86_64-linux-ubuntu-26-04-llvmpipe-analysis)
 		message(STATUS "Building for static analysis")
+		set(STATIC_ANALYSIS 1)
 		set(CTEST_BUILD_CONFIGURATION "DebugNoOpt")
 		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DANALYZE=ON")
 	else()
@@ -169,7 +172,7 @@ ctest_configure(OPTIONS "${CONFIGURE_OPTIONS}")
 ctest_build(FLAGS "-j${N_PROCS}")
 
 #Don't run unit tests if doing static analysis
-if(NOT $ENV{ANALYZE})
+if(NOT ${STATIC_ANALYSIS})
 	ctest_test()
 endif()
 
