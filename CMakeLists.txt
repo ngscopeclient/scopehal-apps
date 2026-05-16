@@ -301,17 +301,6 @@ if(ANALYZE)
 	else()
 		message(FATAL_ERROR "CPPCheck not found, required for ANALYZE")
 	endif()
-	# The actual clang-analyzer compiler wrapper doesn't get installed on $PATH, only scan-build which is useless to us
-	#find_program(CLANGANALYZER_SCANBUILD_PATH scan-build DOC "Path to clang-analyzer's scan-build tool, used as a hint to find the rest of the clang-analyzer")
-	#get_filename_component(CLANGANALYZER_SCANBUILD_BIN ${CLANGANALYZER_SCANBUILD_PATH} REALPATH)
-	#get_filename_component(CLANGANALYZER_BIN_PATH ${CLANGANALYZER_SCANBUILD_BIN} DIRECTORY)
-	#find_program(CLANGANALYZER_CXXANALYZER_PATH "c++-analyzer" HINTS "${CLANGANALYZER_BIN_PATH}/../libexec" DOC "Path to clang-analyzer's c++-analyzer")
-	#if(CLANGANALYZER_CXXANALYZER_PATH)
-	#	set(CMAKE_CXX_COMPILER_LAUNCHER "${CLANGANALYZER_CXXANALYZER_PATH}")
-	#	message(STATUS "Found clang-analyzer: ${CLANGANALYZER_CXXANALYZER_PATH}")
-	#else()
-	#	message(FATAL_ERROR "clang-analyzer not found, required for ANALYZE")
-	#endif()
 endif()
 
 # Main project code
@@ -320,11 +309,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/ngscopeclient")
-
-# Third party libraries don't get built for static analysis to avoid spamming us with warnings we can't do much about
-if(NOT ANALYZE)
-	add_subdirectory("${PROJECT_SOURCE_DIR}/src/nativefiledialog-extended")
-endif()
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/nativefiledialog-extended")
 
 add_subdirectory(devdoc)
 
