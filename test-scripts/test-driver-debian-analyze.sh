@@ -8,9 +8,4 @@ export ANALYZE=1
 # Run the actual static analysis build
 scan-build \
 	--use-cc=clang --use-c++=clang++ \
-	--exclude lib/canvas_ity \
-	--exclude src/imgui \
-	--exclude src/imgui_markdown \
-	--exclude src/imgui-node-editor \
-	--exclude src/nativefiledialog-extended \
 	ctest -S ctest-custom.cmake
