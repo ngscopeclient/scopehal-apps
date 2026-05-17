@@ -106,6 +106,7 @@ elseif(${HOSTNAME} MATCHES "ubuntu-lts" )
 		list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "src/imgui/")
 		list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "src/imgui-node-editor/")
 		list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "src/ImGuiFileDialog/")
+		list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "src/nativefiledialog-extended/")
 
 		set(CTEST_BUILD_CONFIGURATION "DebugNoOpt")
 		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DANALYZE=ON")
