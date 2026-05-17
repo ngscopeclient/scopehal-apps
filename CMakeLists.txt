@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(ngscopeclient VERSION 0.1)
+project(ngscopeclient VERSION 0.1.1)
 include_directories(cmake) #WORKAROUND needed for find_package(Vulkan) for Vulkan SDK
 enable_language(CXX)
 
@@ -341,7 +341,7 @@ set_property(TARGET scopeprotocols PROPERTY POSITION_INDEPENDENT_CODE ON)
 # CPack package generation
 set(CPACK_PACKAGE_NAME "ngscopeclient")
 set(CPACK_PACKAGE_VENDOR "ngscopeclient.org project")
-set(CPACK_PACKAGE_VERSION_PATCH "0+${NGSCOPECLIENT_VERSION}")
+set(CPACK_PACKAGE_VERSION_PATCH "+${NGSCOPECLIENT_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION "Cross platform T&M remote control and signal analysis suite")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://www.ngscopeclient.org/")
 set(CPACK_THREADS 0)
