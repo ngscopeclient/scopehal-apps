@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -128,6 +128,11 @@ optional<string> KDialogFileBrowser::ThreadProc()
 	cmd += string("\"") + m_filterName + "(*." + m_filterMask + ")\" ";
 	LogTrace("Final command: %s\n", cmd.c_str());
 	FILE* fp = popen(cmd.c_str(), "r");
+	if(!fp)
+	{
+		LogeError("Failed to popen: %s\n", cmd.c_str());
+		return {};
+	}
 
 	char tmp[1024] = {0};
 	if(!fgets(tmp, sizeof(tmp), fp))
