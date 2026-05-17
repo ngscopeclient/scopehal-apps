@@ -4,6 +4,7 @@ add_executable(Primitives
 	Averager.cpp
 	Convert8BitSamples.cpp
 	Convert16BitSamples.cpp
+	DualFFT.cpp
 	EdgeDetection.cpp
 	Sampling.cpp
 )
