@@ -216,6 +216,11 @@ if(LINUX)
 	pkg_search_module(WAYLAND_CLIENT wayland-client IMPORTED_TARGET GLOBAL REQUIRED)
 endif()
 
+# Required for glslang on multiple old platforms: not just Fedora 38 as the original comment indicated,
+# but also Debian Bookworm. Can't remove this until we've cut support for all of those
+# (likely when Forky comes out in 2027)
+find_package(Threads MODULE REQUIRED)
+
 # Configure and enable OpenMP
 find_package(OpenMP MODULE)
 if(NOT OpenMP_CXX_FOUND)
