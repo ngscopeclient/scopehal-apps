@@ -28,9 +28,6 @@ set(CTEST_CUSTOM_MAXIMUM_NUMBER_OF_WARNINGS 999)
 # Ignore this warning generated during static analysis
 list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "linker input file unused because linking not done")
 
-# scan-build exclude doesn't seem to work under cmake so just filter out the warnings in the library files
-list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "src/imgui/")
-
 set(STATIC_ANALYSIS 0)
 
 # azonenberg's dev box for testing
@@ -102,7 +99,13 @@ elseif(${HOSTNAME} MATCHES "ubuntu-lts" )
 	elseif($ENV{ANALYZE})
 		set(CTEST_BUILD_NAME x86_64-linux-ubuntu-26-04-llvmpipe-analysis)
 		message(STATUS "Building for static analysis")
+
 		set(STATIC_ANALYSIS 1)
+
+		# scan-build exclude doesn't seem to work under cmake so just filter out the warnings in the library files
+		list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "src/imgui/")
+		list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "src/imgui-node-editor/")
+
 		set(CTEST_BUILD_CONFIGURATION "DebugNoOpt")
 		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DANALYZE=ON")
 	else()
