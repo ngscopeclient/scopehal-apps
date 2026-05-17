@@ -84,9 +84,9 @@ TEST_CASE("Primitive_FindZeroCrossings")
 		//Run twice, second time for score, so we don't count deferred init or allocations in the benchmark
 		LevelCrossingDetector ldet;
 		auto& gpuedges = ldet.GetResults();
-		size_t gpulen = ldet.FindZeroCrossings(&wfm, threshold, cmdBuf, queue);
+		ldet.FindZeroCrossings(&wfm, threshold, cmdBuf, queue);
 		start = GetTime();
-		gpulen = ldet.FindZeroCrossings(&wfm, threshold, cmdBuf, queue);
+		size_t gpulen = ldet.FindZeroCrossings(&wfm, threshold, cmdBuf, queue);
 		double gpudt = GetTime() - start;
 		LogNotice("GPU: %.3f ms, %zu edges, %.2fx speedup\n", gpudt*1000, gpulen, dt / gpudt);
 
