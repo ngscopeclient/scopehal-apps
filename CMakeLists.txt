@@ -216,9 +216,6 @@ if(LINUX)
 	pkg_search_module(WAYLAND_CLIENT wayland-client IMPORTED_TARGET GLOBAL REQUIRED)
 endif()
 
-#WORKAROUND Fedora 38 does not include Threads from the glslang .cmake file, fixed in Fedora 39+
-find_package(Threads MODULE REQUIRED)
-
 # Configure and enable OpenMP
 find_package(OpenMP MODULE)
 if(NOT OpenMP_CXX_FOUND)
