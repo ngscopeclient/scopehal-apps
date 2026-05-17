@@ -105,6 +105,7 @@ elseif(${HOSTNAME} MATCHES "ubuntu-lts" )
 		# scan-build exclude doesn't seem to work under cmake so just filter out the warnings in the library files
 		list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "src/imgui/")
 		list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "src/imgui-node-editor/")
+		list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "src/ImGuiFileDialog/")
 
 		set(CTEST_BUILD_CONFIGURATION "DebugNoOpt")
 		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DANALYZE=ON")
