@@ -130,7 +130,7 @@ optional<string> KDialogFileBrowser::ThreadProc()
 	FILE* fp = popen(cmd.c_str(), "r");
 	if(!fp)
 	{
-		LogeError("Failed to popen: %s\n", cmd.c_str());
+		LogError("Failed to popen: %s\n", cmd.c_str());
 		return {};
 	}
 
