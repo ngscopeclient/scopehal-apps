@@ -164,7 +164,7 @@ void VerifyPeak(
 		uhz.PrettyPrint(peak_uhz, 6).c_str(),
 		uhz.PrettyPrint(expectedPeakUhz, 6).c_str(),
 		uhz.PrettyPrint(error_uhz, 6).c_str());
-	REQUIRE(labs(error_uhz) < toleranceUhz);
+	REQUIRE(fabs(error_uhz) < toleranceUhz);
 }
 
 size_t FindPeak(AcceleratorBuffer<float>& buf, size_t start, size_t end)
