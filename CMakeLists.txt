@@ -370,13 +370,14 @@ if(LINUX)
 endif()
 
 if(APPLE)
-    set(CPACK_BUNDLE "ON")
+	set(CPACK_BUNDLE "ON")
+	set(CPACK_GENERATOR "Bundle")
 	set(CPACK_BUNDLE_PLIST "${PROJECT_SOURCE_DIR}/src/ngscopeclient/macos/Info.plist")
 	# Must be generated with:
 	# iconutil -c icns ngscopeclient.iconset
 	set(CPACK_BUNDLE_ICON "${PROJECT_SOURCE_DIR}/src/ngscopeclient/icons/macos/ngscopeclient.icns")
 	set(CPACK_PACKAGE_ICON "${PROJECT_SOURCE_DIR}/src/ngscopeclient/icons/macos/ngscopeclient.icns")
-    set(CPACK_BUNDLE_NAME "ngscopeclient")
+	set(CPACK_BUNDLE_NAME "ngscopeclient")
 	set(CPACK_BUNDLE_STARTUP_COMMAND "${PROJECT_SOURCE_DIR}/src/ngscopeclient/macos/ngscopeclient.sh")
 	set_target_properties(ngscopeclient PROPERTIES
 		INSTALL_RPATH "@executable_path/../lib;/usr/local/lib;/opt/homebrew/lib")
