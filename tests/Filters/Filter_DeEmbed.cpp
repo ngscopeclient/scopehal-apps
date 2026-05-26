@@ -180,8 +180,8 @@ TEST_CASE("Filter_DeEmbed")
 			VerifyMatchingResult(golden, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples, 1e-2f);
 
 			//Clean up
-			fftwf_free(forwardPlan);
-			fftwf_free(reversePlan);
+			fftwf_destroy_plan(forwardPlan);
+			fftwf_destroy_plan(reversePlan);
 		}
 	}
 

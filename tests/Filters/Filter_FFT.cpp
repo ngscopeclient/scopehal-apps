@@ -185,7 +185,7 @@ TEST_CASE("Filter_FFT")
 			double tbase = tpeak + tfft;
 
 			//Clean up
-			fftwf_free(plan);
+			fftwf_destroy_plan(plan);
 
 			//Try again on the GPU, this time for score
 			start = GetTime();
