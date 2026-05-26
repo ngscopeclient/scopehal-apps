@@ -1751,7 +1751,7 @@ void StreamBrowserDialog::renderChannelNode(
 						m_parent->ShowChannelProperties(scopechan);
 					}
 					renderChannelProperties(scope,scopechan,channelIndex,scopeState);
-				EndBlock();
+					EndBlock();
 				}
 			}
 			size_t streamCount = channel->GetStreamCount();
@@ -1778,15 +1778,25 @@ void StreamBrowserDialog::renderChannelNode(
    @param channelIndex the index of the channel
    @param scopeState the OscilloscopeState
  */
-void StreamBrowserDialog::renderChannelProperties(std::shared_ptr<Oscilloscope> scope, OscilloscopeChannel* scopechan, size_t channelIndex, shared_ptr<OscilloscopeState> scopeState)
+void StreamBrowserDialog::renderChannelProperties(
+	shared_ptr<Oscilloscope> scope,
+	OscilloscopeChannel* scopechan,
+	size_t channelIndex,
+	shared_ptr<OscilloscopeState> scopeState)
 {
 	float fontSize = ImGui::GetFontSize();
-	float width = 6*fontSize;
+	float width = 8*fontSize;
 
 	Unit counts(Unit::UNIT_COUNTS);
-	if(renderEditableProperty(width,"Attenuation",scopeState->m_strAttenuation[channelIndex],scopeState->m_committedAttenuation[channelIndex],counts,
-	"Attenuation setting for the probe (for example, 10 for a 10:1 probe)"))
-	{	// Update offset
+	if(renderEditableProperty(
+		width,
+		"Attenuation",
+		scopeState->m_strAttenuation[channelIndex],
+		scopeState->m_committedAttenuation[channelIndex],
+		counts,
+		"Attenuation setting for the probe (for example, 10 for a 10:1 probe)"))
+	{
+		// Update offset
 		scopechan->SetAttenuation(scopeState->m_committedAttenuation[channelIndex]);
 		scopeState->m_needsUpdate[channelIndex] = true;
 	}
@@ -1823,7 +1833,8 @@ void StreamBrowserDialog::renderChannelProperties(std::shared_ptr<Oscilloscope> 
 			0,
 			false))
 		{
-			scopechan->SetBandwidthLimit(scopeState->m_bandwidthLimits[channelIndex][scopeState->m_channelBandwidthLimit[channelIndex]]);
+			scopechan->SetBandwidthLimit(
+				scopeState->m_bandwidthLimits[channelIndex][scopeState->m_channelBandwidthLimit[channelIndex]]);
 			scopeState->m_needsUpdate[channelIndex] = true;
 		}
 		HelpMarker("Hardware bandwidth limiter setting");
@@ -1840,6 +1851,38 @@ void StreamBrowserDialog::renderChannelProperties(std::shared_ptr<Oscilloscope> 
 		HelpMarker(
 			"When ON, input value is multiplied by -1.\n"
 			"For a differential probe, this is equivalent to swapping the positive and negative inputs."
+			);
+	}
+
+	//Per channel ADC mode switch
+	if(scope->IsADCModeConfigurable() && scope->IsADCModePerChannel())
+	{
+		auto config = GetTimebaseInfoFor(scope);
+		bool nomodes = config->m_adcmodeNames.size() <= 1;
+		if(nomodes)
+			ImGui::BeginDisabled();
+		ImGui::SetNextItemWidth(width);
+
+		if(renderCombo(
+			"ADC mode",
+			false,
+			ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
+			scopeState->m_adcMode[channelIndex],
+			config->m_adcmodeNames,
+			false,
+			0,
+			false))
+		{
+			scope->SetADCMode(channelIndex, scopeState->m_adcMode[channelIndex]);
+		}
+		if(nomodes)
+			ImGui::EndDisabled();
+
+		HelpMarker(
+			"Operating mode for the analog-to-digital converter.\n\n"
+			"Some instruments allow the ADC to operate in several modes, typically trading bit depth "
+			"against sample rate. Available modes may vary depending on the current sample rate and "
+			"which channels are in use."
 			);
 	}
 

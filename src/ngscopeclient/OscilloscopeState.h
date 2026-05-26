@@ -77,6 +77,8 @@ public:
 		m_committedAttenuation = std::make_unique<float[]>(n);
 		m_strAttenuation = std::make_unique<std::string[]>(n);
 
+		m_adcMode = std::make_unique<int[]>(n);
+
 		Unit volts(Unit::UNIT_VOLTS);
 
 		for(size_t i=0; i<n; i++)
@@ -88,6 +90,7 @@ public:
 			m_channelBandwidthLimit[i] = 0;
 			m_channelCoupling[i] = 0;
 			m_channelBandwidthLimit[i] = 0;
+			m_adcMode[i] = 0;
 
 			// Offset and range ar per stream
 			OscilloscopeChannel* chan = dynamic_cast<OscilloscopeChannel*>(scope->GetChannel(i));
@@ -150,6 +153,8 @@ public:
 
 	std::unique_ptr<float[]> m_committedAttenuation;
 	std::unique_ptr<std::string[]> m_strAttenuation;
+
+	std::unique_ptr<int[]> m_adcMode;
 };
 
 #endif

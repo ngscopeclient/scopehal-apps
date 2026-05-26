@@ -174,8 +174,10 @@ void InstrumentThread(InstrumentThreadArgs args)
 								scopestate->m_strOffset[i][j] = unit.PrettyPrint(offset);
 								scopestate->m_strRange[i][j] = unit.PrettyPrint(range);
 							}
+
 							// Get probe name
 							scopestate->m_probeName[i] = scope->GetProbeName(i);
+
 							// Populate bandwidth limit values
 							auto limit = scope->GetChannelBandwidthLimit(i);
 							scopestate->m_bandwidthLimits[i].clear();
@@ -193,6 +195,8 @@ void InstrumentThread(InstrumentThreadArgs args)
 								if(b == limit)
 									scopestate->m_channelBandwidthLimit[i] = j;
 							}
+
+							scopestate->m_adcMode[i] = scope->GetADCMode(i);
 
 							// Populate coupling values
 							auto coupling = scope->GetChannelCoupling(i);

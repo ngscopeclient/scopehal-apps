@@ -563,7 +563,8 @@ bool Dialog::renderEditableProperty(
 	float fontSize = ImGui::GetFontSize();
 	if(width >= 0)
 	{
-		if(width == 0) width = 6*fontSize;
+		if(width == 0)
+			width = 8*fontSize;
 		ImGui::SetNextItemWidth(width);
 	}
 	if constexpr (std::is_same_v<T, int64_t>)
