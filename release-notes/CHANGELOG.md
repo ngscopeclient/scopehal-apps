@@ -11,7 +11,9 @@ This is a running list of significant bug fixes and new features since the last 
 * Drivers: Added support for many more PicoScope models
 * Drivers: Added R&S RTB2000 driver (https://github.com/ngscopeclient/scopehal/pull/1048/)
 * Drivers: Added Rigol MHO900/98 series (https://github.com/ngscopeclient/scopehal/pull/1085)
+* Drivers: Added Teledyne LeCroy SDA6000A support (https://github.com/ngscopeclient/scopehal/issues/1065)
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
+* Drivers: Demo scope now uses xorshift32 instead of glibc LCG for better statistical properties on the simulated noise
 * Filters: Added GPU acceleration and/or optimized many more filters (https://github.com/ngscopeclient/scopehal/issues/977) including. Typical performance improvements (RTX 2080 Ti vs Xeon 6144):
   * 8B/10B (IBM) (12.1x speedup)
   * AC Couple (10x speedup)
@@ -39,6 +41,7 @@ This is a running list of significant bug fixes and new features since the last 
   * Minimum (24.8x speedup)
   * Multiple (44.2x speedup for vector x scalar, 75x for vector x vector)
   * Moving Average (93.5x speedup)
+  * Noise (50x speedup)
   * PAM Edge Detector (21.7x speedup)
   * PRBS generator (21.6x speedup)
   * PRBS checker (211x speedup)
