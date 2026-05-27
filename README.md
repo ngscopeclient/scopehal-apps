@@ -4,6 +4,8 @@ This is the top level repository for ngscopeclient, as well as the unit tests fo
 
 Project website: [https://www.ngscopeclient.org](https://www.ngscopeclient.org)
 
+CI dashboard: [https://dashboard.ngscopeclient.org/index.php?project=ngscopeclient](https://dashboard.ngscopeclient.org/index.php?project=ngscopeclient)
+
 ## Policies
 
 * [C++ coding policy](https://github.com/azonenberg/coding-policy/blob/master/cpp-coding-policy.md)
