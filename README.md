@@ -4,7 +4,14 @@ This is the top level repository for ngscopeclient, as well as the unit tests fo
 
 Project website: [https://www.ngscopeclient.org](https://www.ngscopeclient.org)
 
-CI dashboard: [https://dashboard.ngscopeclient.org/index.php?project=ngscopeclient](https://dashboard.ngscopeclient.org/index.php?project=ngscopeclient)
+## CI platform updates
+
+We are no longer building with GitHub Actions and have switched to an internal CI system. This enables running tests against real GPUs from a range of vendors, and will eventually enable hardware-in-loop testing with real instruments although more infrastructure has to be deployed before that will be available.
+
+Additionally, CI binaries are now available to the public via anonymous HTTP without requiring a GitHub login.
+
+* Status dashboard: [https://dashboard.ngscopeclient.org/index.php?project=ngscopeclient](https://dashboard.ngscopeclient.org/index.php?project=ngscopeclient)
+* Binaries: [https://dl1.ngscopeclient.org/ngscopeclient-ci/](https://dl1.ngscopeclient.org/ngscopeclient-ci/)
 
 ## Policies
 
