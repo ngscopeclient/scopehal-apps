@@ -1,7 +1,0 @@
-paths:
-    - 'src'
-    - 'lib'
-paths-ignore:
-    - 'src/imgui/*'
-    - 'src/imgui-node-editor/*'
-    - 'lib/VkFFT/*'
