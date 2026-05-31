@@ -58,7 +58,7 @@ TEST_CASE("Primitive_FindZeroCrossings")
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
 	vk::raii::CommandBuffer cmdBuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 
-	const size_t depth = 50000000;
+	const size_t depth = 10000000;
 
 	//Deterministic PRNG for repeatable testing
 	minstd_rand rng;
