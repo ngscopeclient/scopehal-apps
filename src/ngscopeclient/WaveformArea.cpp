@@ -738,7 +738,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 
 	ImGui::PushID(to_string(iArea).c_str());
 
-	float totalHeightAvailable = floor(clientArea.y - 3*ImGui::GetFrameHeightWithSpacing());
+	float totalHeightAvailable = floor(clientArea.y - 2*ImGui::GetFrameHeightWithSpacing());
 	float spacing = m_group->GetSpacing();
 	float heightPerArea = totalHeightAvailable / numAreas;
 	float totalSpacing = (numAreas-1)*spacing;
@@ -770,13 +770,14 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	float vtop = 0.0f;
 
 	auto cpos = ImGui::GetCursorPos();
-	ImDrawList* childDrawList = nullptr;
-	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x - yAxisWidthSpaced, unspacedHeightPerArea)))
+	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x/* - yAxisWidthSpaced*/, unspacedHeightPerArea)))
 	{
-		auto csize = ImGui::GetContentRegionAvail();
+		auto startCursor = ImGui::GetCursorScreenPos();
 		auto pos = ImGui::GetWindowPos();
 
-		childDrawList = ImGui::GetWindowDrawList();
+		//Allocate room for the Y axis ourselves since it's no longer a child window of its own in imgui
+		auto csize = ImGui::GetContentRegionAvail();
+		csize.x -= yAxisWidthSpaced;
 
 		m_width = csize.x;
 
@@ -822,21 +823,26 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		RenderEyePatternTooltip(pos, csize);
 
 		//Draw control widgets
-		//This depends on deprecated ImGui::GetWindowContentRegionMin() so we need to fix...
-		//suggested fix breaks, not yet sure why
-		//ImGui::SetCursorPos(ImGui::GetCursorScreenPos() - ImGui::GetWindowPos());
 		m_mouseOverButton = false;
-		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
+		ImGui::SetCursorScreenPos(startCursor);
 		ImGui::BeginGroup();
 
 			for(size_t i=0; i<m_displayedChannels.size(); i++)
 				ChannelButton(m_displayedChannels[i], i);
 
 		ImGui::EndGroup();
-		//ImGui::SetNextItemAllowOverlap();
 
-		//Render Y axis cursors over everything else
-		RenderYAxisCursors(pos, csize, yAxisWidth, childDrawList);
+		//Draw the vertical scale on the right side of the plot
+		ImGui::SetCursorScreenPos(ImVec2(startCursor.x + csize.x, startCursor.y));
+		RenderYAxis(
+			ImVec2(yAxisWidth, unspacedHeightPerArea),
+			gridmap,
+			vbot,
+			vtop);
+
+		//Render Y axis cursors over everything, including the Y axis
+		ImGui::SetCursorScreenPos(startCursor);
+		RenderYAxisCursors(pos, csize, yAxisWidth);
 	}
 	else
 		m_mouseOverButton = false;
@@ -845,9 +851,6 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	//Handle help messages
 	if(ImGui::IsItemHovered() && !m_mouseOverButton)
 		m_parent->AddStatusHelp("mouse_wheel", "Zoom horizontal axis");
-
-	//Draw the vertical scale on the right side of the plot
-	RenderYAxis(ImVec2(yAxisWidth, unspacedHeightPerArea), gridmap, vbot, vtop);
 
 	//Cursor should now be at end of window
 	ImGui::SetCursorPos(ImVec2(cpos.x, cpos.y + unspacedHeightPerArea));
@@ -871,11 +874,8 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 /**
 	@brief Render horizontal cursors over the plot
  */
-void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth, ImDrawList* list)
+void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth)
 {
-	if(!list)
-		return;
-
 	//No cursors? Nothing to do
 	if(m_yAxisCursorMode == Y_CURSOR_NONE)
 	{
@@ -885,10 +885,7 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth,
 		return;
 	}
 
-	float ystart = ImGui::GetCursorScreenPos().y;
-	float yend = ystart + size.y;
-
-	//auto list = ImGui::GetWindowDrawList();
+	auto list = ImGui::GetWindowDrawList();
 
 	auto& prefs = m_parent->GetSession().GetPreferences();
 	auto cursor0_color = prefs.GetColor("Appearance.Cursors.cursor_1_color");
@@ -900,18 +897,12 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth,
 	float ypos0 = round(YAxisUnitsToYPosition(m_yAxisCursorPositions[0]));
 	float ypos1 = round(YAxisUnitsToYPosition(m_yAxisCursorPositions[1]));
 
-	//Clamp cursor positions to visible window size
-	ypos0 = max(ypos0, ystart);
-	ypos1 = max(ypos1, ystart);
-	ypos0 = min(ypos0, yend);
-	ypos1 = min(ypos1, yend);
-
 	//Fill between if dual cursor
 	if(m_yAxisCursorMode == Y_CURSOR_DUAL)
-		list->AddRectFilled(ImVec2(pos.x, ypos0), ImVec2(pos.x + size.x, ypos1), fill_color);
+		list->AddRectFilled(ImVec2(pos.x, ypos0), ImVec2(pos.x + size.x + yAxisWidth, ypos1), fill_color);
 
 	//First cursor
-	list->AddLine(ImVec2(pos.x, ypos0), ImVec2(pos.x + size.x, ypos0), cursor0_color, 1);
+	list->AddLine(ImVec2(pos.x, ypos0), ImVec2(pos.x + size.x + yAxisWidth, ypos0), cursor0_color, 1);
 
 	//Text
 	//Anchor bottom left at the cursor
@@ -920,7 +911,7 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth,
 	float padding = 2;
 	float wrounding = 2;
 	float textTop = ypos0 - (3*padding + tsize.y);
-	float plotRight = pos.x + size.x - yAxisWidth;
+	float plotRight = pos.x + size.x;
 	float textLeft = plotRight - (2*padding + tsize.x);
 	list->AddRectFilled(
 		ImVec2(textLeft, textTop - padding ),
@@ -938,7 +929,7 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth,
 	//Second cursor
 	if(m_yAxisCursorMode == Y_CURSOR_DUAL)
 	{
-		list->AddLine(ImVec2(pos.x, ypos1), ImVec2(pos.x + size.x, ypos1), cursor1_color, 1);
+		list->AddLine(ImVec2(pos.x, ypos1), ImVec2(pos.x + size.x + yAxisWidth, ypos1), cursor1_color, 1);
 
 		float delta = m_yAxisCursorPositions[0] - m_yAxisCursorPositions[1];
 		str = string("Y2: ") + m_yAxisUnit.PrettyPrint(m_yAxisCursorPositions[1]) + "\n" +
@@ -2783,12 +2774,11 @@ void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& grid
  */
 void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vbot, float vtop)
 {
-	ImGui::SameLine(0, 0);
 	ImGui::BeginChild("yaxis", size);
 
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
 	auto origin = ImGui::GetWindowPos();
+
 	float ytop = origin.y;
 	float ybot = origin.y + size.y;
 
