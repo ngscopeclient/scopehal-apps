@@ -2139,7 +2139,8 @@ bool StreamBrowserDialog::BeginBlock(const char* label, bool withButton, const c
 	}
 	ImGui::BeginChild(label, ImVec2(0, 0), flags);
 	if(withButton)
-	{	// Create a "+" button on the top right corner of the box
+	{
+		// Create a "+" button on the top right corner of the box
 		ImVec2 oldPos = ImGui::GetCursorPos();
 		float padding = ImGui::GetStyle().FramePadding.x;
 		float shift = withBorders ? padding*1.5 : 0;

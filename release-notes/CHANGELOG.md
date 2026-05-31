@@ -111,6 +111,8 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 ## Other changes since v0.1.1
 
 * Core: Updated to vkFFT v1.3.4 (https://github.com/ngscopeclient/scopehal-apps/issues/866)
+* Core: Updated to Dear Imgui 1.92.8-docking (from 1.92.5-docking). NOTE: ID hashing changes made in 1.92.6 may break some window layouts in saved .scopesessions.
+* Core: Updated to latest upstream imgui_markdown
 * GUI: General UI overhaul of stream browser to make things more intuitive and reduce the number of clicks needed to perform common tasks
 * GUI: Adjusted tooltip layout code to prevent mouse cursor from blocking the first character of a tooltip
 * Filters: FFT and waterfall now use uHz rather than Hz as internal frequency unit for improved resolution at the cost of not being able to represent frequencies in excess of 9.22 THz

@@ -820,7 +820,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 
 		//Draw control widgets
 		m_mouseOverButton = false;
-		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
+		ImGui::SetCursorPos(ImGui::GetCursorScreenPos() - ImGui::GetWindowPos());
 		ImGui::BeginGroup();
 
 			for(size_t i=0; i<m_displayedChannels.size(); i++)
@@ -885,6 +885,9 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth)
 	//(this is needed so we're above the WaveformArea content in z order, but behind popup windows)
 	if(ImGui::BeginChild("ycursors", size, ImGuiChildFlags_None, ImGuiWindowFlags_NoInputs))
 	{
+		float ystart = ImGui::GetCursorScreenPos().y;
+		float yend = ystart + size.y;
+
 		auto list = ImGui::GetWindowDrawList();
 
 		auto& prefs = m_parent->GetSession().GetPreferences();
@@ -896,6 +899,12 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth)
 
 		float ypos0 = round(YAxisUnitsToYPosition(m_yAxisCursorPositions[0]));
 		float ypos1 = round(YAxisUnitsToYPosition(m_yAxisCursorPositions[1]));
+
+		//Clamp cursor positions to visible window size
+		ypos0 = max(ypos0, ystart);
+		ypos1 = max(ypos1, ystart);
+		ypos0 = min(ypos0, yend);
+		ypos1 = min(ypos1, yend);
 
 		//Fill between if dual cursor
 		if(m_yAxisCursorMode == Y_CURSOR_DUAL)
@@ -1337,9 +1346,9 @@ void WaveformArea::RenderEyeWaveform(shared_ptr<DisplayedChannel> channel, ImVec
 			points.push_back(points[0]);
 
 			if(failed)
-				list->AddPolyline(&points[0], points.size(), borderfailed, 0, 1);
+				list->AddPolyline(&points[0], points.size(), borderfailed, 1.0f, ImDrawFlags_None);
 			else
-				list->AddPolyline(&points[0], points.size(), borderpass, 0, 1);
+				list->AddPolyline(&points[0], points.size(), borderpass, 1.0f, ImDrawFlags_None);
 		}
 	}
 }
@@ -2007,7 +2016,7 @@ void WaveformArea::RenderComplexSignal(
 
 	//Draw the body outline after any filler so it shows up on top
 	MakePathSignalBody(list, xstart, xend, ybot, ymid, ytop);
-	list->PathStroke(color, 0, 2);
+	list->PathStroke(color, 2.0f, ImDrawFlags_None);
 }
 
 void WaveformArea::MakePathSignalBody(ImDrawList* list, float xstart, float xend, float ybot, float ymid, float ytop)

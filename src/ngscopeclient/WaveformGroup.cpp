@@ -143,7 +143,7 @@ size_t WaveformGroup::GetAreaPosition(WaveformArea& area)
 				position = i;
 				break;
 			}
-		}		
+		}
 		return position;
 	}
 }
@@ -996,7 +996,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	//Top line
 	list->PathLineTo(pos);
 	list->PathLineTo(ImVec2(pos.x + width, pos.y));
-	list->PathStroke(color, 0, thickLineWidth);
+	list->PathStroke(color, thickLineWidth, ImDrawFlags_None);
 
 	//Figure out rounding granularity, based on our time scales
 	float xscale = m_pixelsPerXUnit;
@@ -1048,7 +1048,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 
 			list->PathLineTo(ImVec2(subx, pos.y));
 			list->PathLineTo(ImVec2(subx, pos.y + fineTickLength));
-			list->PathStroke(color, 0, thinLineWidth);
+			list->PathStroke(color, thinLineWidth, ImDrawFlags_None);
 		}
 
 		if(x < 0)
@@ -1060,7 +1060,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 		x += pos.x;
 		list->PathLineTo(ImVec2(x, pos.y));
 		list->PathLineTo(ImVec2(x, pos.y + coarseTickLength));
-		list->PathStroke(color, 0, thickLineWidth);
+		list->PathStroke(color, thickLineWidth, ImDrawFlags_None);
 
 		//Render label
 		list->AddText(

@@ -11,6 +11,9 @@ configure_file(ngscopeclient-version.h.in ngscopeclient-version.h)
 # use custom config for imguifiledialog
 add_compile_definitions(CUSTOM_IMGUIFILEDIALOG_CONFIG="../ngscopeclient/IGFDConfig.h")
 
+# periodically uncomment this to lint for use of deprecated functions that we can remove before they're deleted
+# add_compile_definitions(IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1)
+
 if(WIN32)
 	set(CMAKE_RC_COMPILER_INIT windres)
 	ENABLE_LANGUAGE(RC)
