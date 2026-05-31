@@ -62,6 +62,17 @@ elseif(${HOSTNAME} STREQUAL "debian-stable" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
 
+# CI Debian Trixie aarch64
+elseif(${HOSTNAME} STREQUAL "debian-stable-aarch64" )
+	set(CTEST_SITE ci-debian-stable-aarch64)
+	set(CTEST_BUILD_NAME aarch64-linux-debian-13-llvmpipe)
+	set(CTEST_DASHBOARD Continuous)
+	set(CTEST_GIT_COMMAND "/usr/bin/git")
+	message(STATUS "Found known CI config: debian-stable-aarch64")
+
+	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
+
 # CI Debian Bookworm
 elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
 	set(CTEST_SITE ci-debian-oldstable)
