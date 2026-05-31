@@ -1389,7 +1389,8 @@ void MainWindow::DockingArea()
 	//Allocate space for the status bar before doing anything else
 	auto avail = ImGui::GetContentRegionAvail();
 	auto statusBarHeight = ImGui::GetFontSize()*1.75 + 2*ImGui::GetStyle().FramePadding.y;
-	auto dockSpaceHeight = avail.y - statusBarHeight - ImGui::GetStyle().FramePadding.y;
+	auto dockSpaceHeight = avail.y - statusBarHeight -
+		(ImGui::GetStyle().FramePadding.y + ImGui::GetStyle().ItemSpacing.y);
 
 	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, dockSpaceHeight), /*dockspace_flags*/0, /*window_class*/nullptr);
 
