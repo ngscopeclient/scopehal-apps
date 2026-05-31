@@ -163,6 +163,11 @@ DisplayedChannel::~DisplayedChannel()
  */
 bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 {
+	//Sanity check and bail if size is negative
+	//(can happen during the first frame after loading older scopesessions when imgui padding has changed)
+	if( (newSize.x < 0) || (newSize.y < 0) )
+		return false;
+
 	size_t x = newSize.x;
 	size_t y = newSize.y;
 
@@ -1279,6 +1284,10 @@ void WaveformArea::RenderEyeWaveform(shared_ptr<DisplayedChannel> channel, ImVec
 		return;
 
 	auto list = ImGui::GetWindowDrawList();
+
+	//If size is implausible, bail out
+	if( (size.x <= 0) || (size.y <= 0) )
+		return;
 
 	//Mark the waveform as resized
 	if(channel->UpdateSize(size, m_parent))
