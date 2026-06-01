@@ -4,6 +4,7 @@ This is a running list of significant bug fixes and new features since the last 
 
 ## New features since v0.1.1
 
+* Core: added official support and binary release for Debian aarch64
 * Core: Changed rate limiting sleep in InstrumentThread loop from 10ms to 1ms to avoid bogging down high performance instruments like the ThunderScope
 * Core: Scopesession loading now uses multithreaded IO for significant performance gains especially when many channels and deep history are involved
 * Core: Significant rewrite of Vulkan queue allocation logic to reduce unnecessary locking and mutex contention on GPUs without a lot of Vulkan queues (most non-NVIDIA platforms)
@@ -54,6 +55,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
 * Filters: CDR PLL now has an "edges" input allowing you to replace the default thresholding edge detector with an external block, e.g. for locking to a PAM signal. This was possible in the past by passing the PAM edge detector block to the input, but this would result in the sampled data output just being a copy of the edge detector. By splitting these, the CDR can now output sampled data from PAM signals as well.
 * Filters: FFT now works with arbitrary length input rather than truncating to next lowest power of two
+* Filters: Improved floating point numerical stability in many blocks when working with deep memory
 * Filters: Peak detector for FFT etc now does quadratic interpolation for sub-sample peak fitting
 * Filters: Horizontal bathtub curve now works properly with MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
 * Filters: PcapNG export now has an additional mode selector for use with named pipes, allowing live streaming of PcapNG formatted data to WireShark
