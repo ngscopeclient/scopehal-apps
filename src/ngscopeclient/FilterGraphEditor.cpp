@@ -1815,7 +1815,7 @@ void FilterGraphEditor::FilterSubmenu(StreamDescriptor stream, const string& nam
 		{
 			auto it = refs.find(fname);
 			bool valid = false;
-			if(!stream || it->second->GetInputCount() == 0)		//No inputs or ne stream ? Always valid
+			if(!stream || it->second->GetInputCount() == 0)		//No inputs or new stream ? Always valid
 				valid = true;
 			else
 				valid = it->second->ValidateChannel(0, stream);

@@ -2106,13 +2106,12 @@ Filter* MainWindow::CreateFilter(
 
 	//Give it an initial name, may change later
 	f->SetDefaultName();
+	m_session.MarkChannelDirty(f);
 
 	//Find a home for each of its streams
 	if(addToArea)
 	{
-		m_session.MarkChannelDirty(f);
 		m_pendingChannelDisplayRequests.emplace(pair<OscilloscopeChannel*, WaveformArea*>(f, area));
-
 		f->AddRef();
 	}
 
