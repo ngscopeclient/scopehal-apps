@@ -1873,18 +1873,18 @@ ImGui::MarkdownConfig MainWindow::GetMarkdownConfig()
 
 	ImGui::MarkdownConfig mdConfig
 	{
-		nullptr,						//linkCallback
-		nullptr,						//tooltipCallback
-		nullptr,						//imageCallback
-		"",								//linkIcon (not used)
+		nullptr,								//linkCallback
+		nullptr,								//tooltipCallback
+		nullptr,								//imageCallback
+		"",										//linkIcon (not used)
 		{
 						{ headings[0].first, true, headings[0].second},
 						{ headings[1].first, true, headings[1].second },
 						{ headings[2].first, false, headings[2].second }
 		},
-		nullptr,						//userData
-		nullptr,						//formatCallback
-		ImGuiMarkdownFormatFlags_None	//formatFlags
+		nullptr,								//userData
+		&ImGui::defaultMarkdownFormatCallback,	//formatCallback
+		ImGuiMarkdownFormatFlags_None			//formatFlags
 	};
 
 	return mdConfig;
