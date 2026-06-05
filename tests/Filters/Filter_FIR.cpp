@@ -45,6 +45,8 @@
 
 using namespace std;
 
+void DoFilterKernelGeneric(UniformAnalogWaveform* din, AcceleratorBuffer<float>& cap, AcceleratorBuffer<float>& coeffs);
+
 TEST_CASE("Filter_FIR")
 {
 	auto filter = dynamic_cast<FIRFilter*>(Filter::CreateFilter("FIR Filter", "#ffffff"));
@@ -103,24 +105,15 @@ TEST_CASE("Filter_FIR")
 			ua.PrepareForCpuAccess();
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
-			g_gpuFilterEnabled = false;
 			filter->Refresh(cmdbuf, queue);
 
-			//Baseline on the CPU
-			g_gpuFilterEnabled = false;
+			//Golden reference implementation on the CPU
+			//(use coefficients from the filter, we don't currently validate them)
+			AcceleratorBuffer<float> golden;
 			double start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+			DoFilterKernelGeneric(&ua, golden, filter->GetCoefficients());
 			double tbase = GetTime() - start;
 			LogVerbose("CPU: %5.2f ms\n", tbase * 1000);
-
-			//Copy the result
-			AcceleratorBuffer<float> golden;
-			golden.CopyFrom(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
-			filter->SetData(nullptr, 0);
-
-			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
-			g_gpuFilterEnabled = true;
-			filter->Refresh(cmdbuf, queue);
 
 			//Try again on the GPU, this time for score
 			start = GetTime();
@@ -139,4 +132,29 @@ TEST_CASE("Filter_FIR")
 	g_scope->GetOscilloscopeChannel(0)->Detach(0);
 
 	filter->Release();
+}
+
+void DoFilterKernelGeneric(UniformAnalogWaveform* din, AcceleratorBuffer<float>& cap, AcceleratorBuffer<float>& coeffs)
+{
+	din->PrepareForCpuAccess();
+	cap.PrepareForCpuAccess();
+	coeffs.PrepareForCpuAccess();
+
+	//Setup
+	size_t len = din->size();
+	size_t filterlen = coeffs.size();
+	size_t end = len - filterlen;
+	cap.resize(end);
+
+	//Do the filter
+	for(size_t i=0; i<end; i++)
+	{
+		float v = 0;
+		for(size_t j=0; j<filterlen; j++)
+			v += din->m_samples[i + j] * coeffs[j];
+
+		cap[i]	= v;
+	}
+
+	cap.MarkModifiedFromCpu();
 }

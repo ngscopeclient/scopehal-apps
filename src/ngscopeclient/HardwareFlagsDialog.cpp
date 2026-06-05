@@ -82,7 +82,6 @@ bool HardwareFlagsDialog::DoRender()
 
 	if(ImGui::CollapsingHeader("GPU"))
 	{
-		ImGui::Checkbox("Legacy GPU filter enable", &g_gpuFilterEnabled);
 		ImGui::Checkbox("Shader float64", &g_hasShaderFloat64);
 		ImGui::Checkbox("Shader int64", &g_hasShaderInt64);
 		ImGui::Checkbox("Shader atomic int64", &g_hasShaderAtomicInt64);
