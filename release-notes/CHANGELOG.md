@@ -51,6 +51,7 @@ This is a running list of significant bug fixes and new features since the last 
   * Vector Frequency (1040x speedup)
   * Vector Magnitude (73x speedup)
   * Vector Phase (243x speedup)
+* Filters: Invert now works on digital signals as well as analog (https://github.com/ngscopeclient/scopehal/issues/1088)
 * Filters: 100baseT1 now has configurable decision thresholds for better decoding of weak signals
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
 * Filters: CDR PLL now has an "edges" input allowing you to replace the default thresholding edge detector with an external block, e.g. for locking to a PAM signal. This was possible in the past by passing the PAM edge detector block to the input, but this would result in the sampled data output just being a copy of the edge detector. By splitting these, the CDR can now output sampled data from PAM signals as well.
