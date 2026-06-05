@@ -138,7 +138,8 @@ bool AboutDialog::DoRender()
 
 void AboutDialog::InitVulkanInfo()
 {
-	m_vulkanInfoMarkdown = "";
+	m_vulkanInfoMarkdown = "This page displays the GPU configuration and properties detected by ngscopeclient.\n";
+	m_vulkanInfoMarkdown += "Not all GPU settings are displayed, only those which are used to enable particular features or work around driver bugs.\n";
 
 	auto availableVersion = g_vkContext.enumerateInstanceVersion();
 	uint32_t loader_major = VK_VERSION_MAJOR(availableVersion);
@@ -150,6 +151,51 @@ void AboutDialog::InitVulkanInfo()
 	//auto features = g_vkComputePhysicalDevice->getFeatures();
 	auto properties = g_vkComputePhysicalDevice->getProperties();
 	m_vulkanInfoMarkdown += string("# Vulkan device (") + &properties.deviceName[0] + ")\n";
+
+	m_vulkanInfoMarkdown += "## Attributes\n";
+
+	if(g_vulkanDeviceIsIntelMesa)
+		m_vulkanInfoMarkdown += "* Intel Mesa\n";
+	if(g_vulkanDeviceIsAnyMesa)
+		m_vulkanInfoMarkdown += "* Mesa\n";
+	if(g_vulkanDeviceIsMoltenVK)
+		m_vulkanInfoMarkdown += "* MoltenVK\n";
+	if(g_vulkanDeviceIsApplePV)
+		m_vulkanInfoMarkdown += "* Apple PV\n";
+	if(g_vulkanDeviceHasUnifiedMemory)
+		m_vulkanInfoMarkdown += "* Unified memory\n";
+
+	m_vulkanInfoMarkdown += "## Feature flags\n";
+	if(g_hasShaderFloat64)
+		m_vulkanInfoMarkdown += "* float64\n";
+	if(g_hasShaderInt64)
+		m_vulkanInfoMarkdown += "* int64\n";
+	if(g_hasShaderAtomicInt64)
+		m_vulkanInfoMarkdown += "* atomic int64\n";
+	if(g_hasShaderInt16)
+		m_vulkanInfoMarkdown += "* int16\n";
+	if(g_hasShaderInt8)
+		m_vulkanInfoMarkdown += "* int8\n";
+	if(g_hasShaderAtomicFloat)
+		m_vulkanInfoMarkdown += "* atomic float\n";
+	if(g_hasDebugUtils)
+		m_vulkanInfoMarkdown += "* debug utils\n";
+	if(g_hasMemoryBudget)
+		m_vulkanInfoMarkdown += "* memory budget\n";
+	if(g_hasPushDescriptor)
+		m_vulkanInfoMarkdown += "* push descriptor\n";
+
+	m_vulkanInfoMarkdown += "## Limits\n";
+
+	m_vulkanInfoMarkdown += string("* Max compute group: ") +
+		to_string(g_maxComputeGroupCount[0]) + " x " +
+		to_string(g_maxComputeGroupCount[1]) + " x " +
+		to_string(g_maxComputeGroupCount[2]) + "\n";
+
+	m_vulkanInfoMarkdown += "## Heaps\n";
+	m_vulkanInfoMarkdown += string("* Pinned: ") + to_string(g_vkPinnedMemoryHeap) + "\n";
+	m_vulkanInfoMarkdown += string("* Local: ") + to_string(g_vkLocalMemoryHeap) + "\n";
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
