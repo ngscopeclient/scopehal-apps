@@ -146,7 +146,7 @@ void AboutDialog::InitVulkanInfo()
 	uint32_t loader_minor = VK_VERSION_MINOR(availableVersion);
 	m_vulkanInfoMarkdown +=
 		string("# Vulkan loader\n") +
-		"* Version " + to_string(loader_major) + "." + to_string(loader_minor) + "\n";
+		"  * Version " + to_string(loader_major) + "." + to_string(loader_minor) + "\n";
 
 	//auto features = g_vkComputePhysicalDevice->getFeatures();
 	auto properties = g_vkComputePhysicalDevice->getProperties();
@@ -155,46 +155,46 @@ void AboutDialog::InitVulkanInfo()
 	m_vulkanInfoMarkdown += "## Attributes\n";
 
 	if(g_vulkanDeviceIsIntelMesa)
-		m_vulkanInfoMarkdown += "* Intel Mesa\n";
+		m_vulkanInfoMarkdown += "  * Intel Mesa\n";
 	if(g_vulkanDeviceIsAnyMesa)
-		m_vulkanInfoMarkdown += "* Mesa\n";
+		m_vulkanInfoMarkdown += "  * Mesa\n";
 	if(g_vulkanDeviceIsMoltenVK)
-		m_vulkanInfoMarkdown += "* MoltenVK\n";
+		m_vulkanInfoMarkdown += "  * MoltenVK\n";
 	if(g_vulkanDeviceIsApplePV)
-		m_vulkanInfoMarkdown += "* Apple PV\n";
+		m_vulkanInfoMarkdown += "  * Apple PV\n";
 	if(g_vulkanDeviceHasUnifiedMemory)
-		m_vulkanInfoMarkdown += "* Unified memory\n";
+		m_vulkanInfoMarkdown += "  * Unified memory\n";
 
 	m_vulkanInfoMarkdown += "## Feature flags\n";
 	if(g_hasShaderFloat64)
-		m_vulkanInfoMarkdown += "* float64\n";
+		m_vulkanInfoMarkdown += "  * float64\n";
 	if(g_hasShaderInt64)
-		m_vulkanInfoMarkdown += "* int64\n";
+		m_vulkanInfoMarkdown += "  * int64\n";
 	if(g_hasShaderAtomicInt64)
-		m_vulkanInfoMarkdown += "* atomic int64\n";
+		m_vulkanInfoMarkdown += "  * atomic int64\n";
 	if(g_hasShaderInt16)
-		m_vulkanInfoMarkdown += "* int16\n";
+		m_vulkanInfoMarkdown += "  * int16\n";
 	if(g_hasShaderInt8)
-		m_vulkanInfoMarkdown += "* int8\n";
+		m_vulkanInfoMarkdown += "  * int8\n";
 	if(g_hasShaderAtomicFloat)
-		m_vulkanInfoMarkdown += "* atomic float\n";
+		m_vulkanInfoMarkdown += "  * atomic float\n";
 	if(g_hasDebugUtils)
-		m_vulkanInfoMarkdown += "* debug utils\n";
+		m_vulkanInfoMarkdown += "  * debug utils\n";
 	if(g_hasMemoryBudget)
-		m_vulkanInfoMarkdown += "* memory budget\n";
+		m_vulkanInfoMarkdown += "  * memory budget\n";
 	if(g_hasPushDescriptor)
-		m_vulkanInfoMarkdown += "* push descriptor\n";
+		m_vulkanInfoMarkdown += "  * push descriptor\n";
 
 	m_vulkanInfoMarkdown += "## Limits\n";
 
-	m_vulkanInfoMarkdown += string("* Max compute group: ") +
+	m_vulkanInfoMarkdown += string("  * Max compute group: ") +
 		to_string(g_maxComputeGroupCount[0]) + " x " +
 		to_string(g_maxComputeGroupCount[1]) + " x " +
 		to_string(g_maxComputeGroupCount[2]) + "\n";
 
 	m_vulkanInfoMarkdown += "## Heaps\n";
-	m_vulkanInfoMarkdown += string("* Pinned: ") + to_string(g_vkPinnedMemoryHeap) + "\n";
-	m_vulkanInfoMarkdown += string("* Local: ") + to_string(g_vkLocalMemoryHeap) + "\n";
+	m_vulkanInfoMarkdown += string("  * Pinned: ") + to_string(g_vkPinnedMemoryHeap) + "\n";
+	m_vulkanInfoMarkdown += string("  * Local: ") + to_string(g_vkLocalMemoryHeap) + "\n";
 
 }
 
