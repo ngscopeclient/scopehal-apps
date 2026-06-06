@@ -2873,6 +2873,11 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 		{
 			LogTrace("Start dragging Y axis\n");
 			m_dragState = DRAG_STATE_Y_AXIS;
+
+			//If in the tutorial, ungate the wizard
+			auto tutorial = m_parent->GetTutorialWizard();
+			if(tutorial && (tutorial->GetCurrentStep() == TutorialWizard::TUTORIAL_05_YAXIS) )
+				tutorial->EnableNextStep();
 		}
 
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
@@ -4503,6 +4508,11 @@ void WaveformArea::OnMouseWheelPlotArea(float delta, float delta_h)
  */
 void WaveformArea::OnMouseWheelYAxis(float delta)
 {
+	//If in the tutorial, ungate the wizard
+	auto tutorial = m_parent->GetTutorialWizard();
+	if(tutorial && (tutorial->GetCurrentStep() == TutorialWizard::TUTORIAL_05_YAXIS) )
+		tutorial->EnableNextStep();
+
 	//Cannot zoom eye patterns
 	auto stream = GetFirstEyeStream();
 	if(stream)
@@ -4634,6 +4644,7 @@ void WaveformArea::AutofitVertical()
 {
 	//Find the min and max of all currently displayed analog channels
 	//TODO: do we want to not allow autoscale on instrument inputs?
+	//TODO: GPU accelerate
 	float vmax = FLT_MIN;
 	float vmin = FLT_MAX;
 	bool found = false;
