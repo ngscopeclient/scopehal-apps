@@ -10,6 +10,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Core: Significant rewrite of Vulkan queue allocation logic to reduce unnecessary locking and mutex contention on GPUs without a lot of Vulkan queues (most non-NVIDIA platforms)
 * Core: Restructured int8 to float32 conversion to enable GPU acceleration on all Vulkan-capable GPUs without needing CPU fallback, as well as significantly improve performance on already-supported platforms. Not yet deployed to all drivers (https://github.com/ngscopeclient/scopehal/issues/1083)
 * Drivers: Added support for many more PicoScope models
+* Drivers: Added Agilent 34401A 6.5 digit DMM driver (https://github.com/ngscopeclient/scopehal/pull/1076/)
 * Drivers: Added R&S RTB2000 driver (https://github.com/ngscopeclient/scopehal/pull/1048/)
 * Drivers: Added Rigol MHO900/98 series (https://github.com/ngscopeclient/scopehal/pull/1085)
 * Drivers: Added Teledyne LeCroy SDA6000A support (https://github.com/ngscopeclient/scopehal/issues/1065)
