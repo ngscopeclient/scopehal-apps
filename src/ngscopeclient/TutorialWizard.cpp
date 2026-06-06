@@ -55,6 +55,7 @@ TutorialWizard::TutorialWizard(Session* session, MainWindow* parent)
 	m_markdownText.push_back(ReadDataFile("md/tutorial_03_acquire.md"));
 	m_markdownText.push_back(ReadDataFile("md/tutorial_04_scrollzoom.md"));
 	m_markdownText.push_back(ReadDataFile("md/tutorial_05_yaxis.md"));
+	m_markdownText.push_back(ReadDataFile("md/tutorial_06_filter_graph.md"));
 
 	m_markdownText.push_back(ReadDataFile("md/tutorial_99_final.md"));
 
