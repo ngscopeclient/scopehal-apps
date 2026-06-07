@@ -85,7 +85,8 @@ bool SCPIConsoleDialog::DoRender()
 		ImGui::TextWrapped(
 			"This is a low-level debug interface!\n\n"
 			"If you are not a driver developer or testing something at a developer's request, you probably shouldn't be here. "
-			"It is very easy to confuse drivers about instrument state by sending manual commands without updating driver-side caches."
+			"It is very easy to confuse drivers about instrument state by sending manual commands without "
+			"updating driver-side caches."
 			);
 	}
 

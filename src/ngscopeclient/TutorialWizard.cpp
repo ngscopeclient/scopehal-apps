@@ -60,7 +60,7 @@ TutorialWizard::TutorialWizard(Session* session, MainWindow* parent)
 	m_markdownText.push_back(ReadDataFile("md/tutorial_99_final.md"));
 
 	//DEBUG: automatically jump ahead a bit
-	m_step = TUTORIAL_05_YAXIS;
+	m_step = TUTORIAL_06_FILTER_GRAPH;
 	m_continueEnabled = false;
 }
 

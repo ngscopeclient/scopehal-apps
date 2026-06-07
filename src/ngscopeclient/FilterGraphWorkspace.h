@@ -56,6 +56,7 @@ public:
 	{}
 
 protected:
+	virtual void TutorialHook() override;
 	virtual void DoRender(ImGuiID id) override;
 
 	bool m_firstRun;

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -102,6 +102,9 @@ bool Workspace::Render()
 		//If we get here, the window is tabbed out or the content area is otherwise not visible.
 		//Need to keep the dockspace node alive still, though!
 		ImGui::DockSpace(id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_KeepAliveOnly, nullptr);
+
+		//Run the tutorial hook for the "switch to this tab" popup
+		TutorialHook();
 
 		ImGui::End();
 		return true;

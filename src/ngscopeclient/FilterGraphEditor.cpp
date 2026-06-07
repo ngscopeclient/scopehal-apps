@@ -430,6 +430,11 @@ ax::NodeEditor::PinId FilterGraphEditor::GetSinkPinForLink(StreamDescriptor sour
  */
 bool FilterGraphEditor::DoRender()
 {
+	//Detect the filter graph being opened
+	auto tutorial = m_parent->GetTutorialWizard();
+	if(tutorial && (tutorial->GetCurrentStep() == TutorialWizard::TUTORIAL_06_FILTER_GRAPH) )
+		tutorial->EnableNextStep();
+
 	bool windowHovered = ImGui::IsWindowHovered();
 
 	ax::NodeEditor::SetCurrentEditor(m_context);

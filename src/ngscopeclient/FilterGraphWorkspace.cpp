@@ -56,6 +56,23 @@ FilterGraphWorkspace::FilterGraphWorkspace(
 	m_title = "Filter Graph";
 }
 
+void FilterGraphWorkspace::TutorialHook()
+{
+	//Detect the filter graph being opened
+	auto tutorial = m_parent->GetTutorialWizard();
+	if(tutorial && (tutorial->GetCurrentStep() == TutorialWizard::TUTORIAL_06_FILTER_GRAPH) )
+	{
+		auto wpos = ImGui::GetWindowPos();
+
+		//Offset by a bit
+		wpos.y += ImGui::GetFontSize();
+		wpos.x += ImGui::GetFontSize() * 6;
+
+		//Draw the bubble
+		tutorial->DrawSpeechBubble(wpos, ImGuiDir_Up, "Switch to the graph editor tab");
+	}
+}
+
 void FilterGraphWorkspace::DoRender(ImGuiID id)
 {
 	//First run? special case

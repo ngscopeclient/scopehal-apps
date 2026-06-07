@@ -56,6 +56,9 @@ protected:
 	virtual void DoRender([[maybe_unused]] ImGuiID id)
 	{}
 
+	virtual void TutorialHook()
+	{}
+
 	void TitleHoverHelp();
 
 	Session& m_session;
