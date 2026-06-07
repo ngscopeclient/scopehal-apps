@@ -51,9 +51,9 @@ SCPIConsoleDialog::SCPIConsoleDialog(MainWindow* parent, shared_ptr<SCPIInstrume
 		nullptr,
 		parent)
 	, m_inst(inst)
+	, m_command("*IDN?")
 	, m_commandPending(false)
 {
-	m_command = "*IDN?";
 }
 
 SCPIConsoleDialog::~SCPIConsoleDialog()
