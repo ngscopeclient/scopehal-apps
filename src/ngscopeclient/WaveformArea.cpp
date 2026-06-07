@@ -2883,6 +2883,34 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
 			AutofitVertical();
 	}
+
+	//If dragging the axis, immediately push changes if the channel is capable of high-rate offset changes
+	//(filter or scope that has opted into it)
+	if(m_dragState == DRAG_STATE_Y_AXIS)
+	{
+		bool updated = false;
+
+		for(auto c : m_displayedChannels)
+		{
+			auto s = c->GetStream();
+			if(s.IsHighRateOffsetCapable())
+			{
+				//Check if the offset has actually changed by a nontrivial amount
+				auto epsilon = 0.001 * s.GetVoltageRange();
+				if(fabs(s.GetOffset() - m_yAxisOffset) > epsilon)
+				{
+					updated = true;
+					s.SetOffset(m_yAxisOffset);
+				}
+			}
+		}
+
+		if(updated)
+		{
+			ClearPersistence();
+			m_parent->SetNeedRender();
+		}
+	}
 }
 
 /**
