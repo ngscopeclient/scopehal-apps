@@ -53,6 +53,7 @@ SCPIConsoleDialog::SCPIConsoleDialog(MainWindow* parent, shared_ptr<SCPIInstrume
 	, m_inst(inst)
 	, m_commandPending(false)
 {
+	m_command = "*IDN?";
 }
 
 SCPIConsoleDialog::~SCPIConsoleDialog()
@@ -64,8 +65,6 @@ SCPIConsoleDialog::~SCPIConsoleDialog()
 
 bool SCPIConsoleDialog::DoRender()
 {
-	auto csize = ImGui::GetContentRegionAvail();
-
 	//Check for results of pending commands
 	if(m_commandPending)
 	{
@@ -80,8 +79,21 @@ bool SCPIConsoleDialog::DoRender()
 		}
 	}
 
-	//Scroll area for console output is full window minus command box
+	ImGui::Text("Enter raw SCPI commands to send them to the instrument.\n\n");
+	if(ImGui::CollapsingHeader("CAUTION", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::TextWrapped(
+			"This is a low-level debug interface!\n\n"
+			"If you are not a driver developer or testing something at a developer's request, you probably shouldn't be here. "
+			"It is very easy to confuse drivers about instrument state by sending manual commands without updating driver-side caches."
+			);
+	}
+
+	auto csize = ImGui::GetContentRegionAvail();
+
+	//Scroll area for console output is remaining window minus command box
 	ImVec2 scrollarea(csize.x, csize.y - 1.5*ImGui::GetTextLineHeightWithSpacing());
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetColorU32(ImGuiCol_FrameBg, 0.25));
 	ImGui::BeginChild("scrollview", scrollarea, false, ImGuiWindowFlags_HorizontalScrollbar);
 		auto font = m_parent->GetFontPref("Appearance.General.console_font");
 		ImGui::PushFont(font.first, font.second);
@@ -92,6 +104,7 @@ bool SCPIConsoleDialog::DoRender()
 		if(ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
 			ImGui::SetScrollHereY(1.0f);
 	ImGui::EndChild();
+	ImGui::PopStyleColor();
 
 	//Command input box
 	ImGui::SetNextItemWidth(csize.x);
