@@ -459,7 +459,7 @@ protected:
 
 	WaveformArea's auto resize, and will collectively fill the entire client area of their parent window.
  */
-class WaveformArea : public SerializableObject
+class WaveformArea : public SinkNode
 {
 public:
 	WaveformArea(StreamDescriptor stream, std::shared_ptr<WaveformGroup> group, MainWindow* parent);
@@ -515,6 +515,7 @@ public:
 	TimePoint GetWaveformTimestamp();
 
 	void SerializeConfiguration(YAML::Node& node);
+	virtual YAML::Node SerializeConfiguration(IDTable& table) override;
 	void LoadConfiguration(YAML::Node& node);
 
 protected:

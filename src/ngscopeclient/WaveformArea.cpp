@@ -420,6 +420,17 @@ void WaveformArea::SerializeConfiguration(YAML::Node& node)
 	node["ycursors"] = ycursors;
 }
 
+/**
+	@brief SerializeConfiguration method called by filter graph, not yet used for anything
+
+	Long term we'll switch waveform area serialization to this method and retire the one that takes a reference
+ */
+YAML::Node WaveformArea::SerializeConfiguration([[maybe_unused]] IDTable& table)
+{
+	YAML::Node ret;
+	return ret;
+}
+
 void WaveformArea::LoadConfiguration(YAML::Node& node)
 {
 	auto cursornode = node["ycursors"];
