@@ -481,6 +481,7 @@ void WaveformArea::AddStream(StreamDescriptor desc, bool persistence, const stri
 	auto chan = CreateInput(desc, m_parent->GetSession());
 	chan->SetPersistenceEnabled(persistence);
 	chan->m_colorRamp = ramp;
+	OnStreamAdded(desc);
 }
 
 /**
@@ -500,6 +501,54 @@ void WaveformArea::AddStream(StreamDescriptor desc, size_t position, bool persis
 	desc.AddSink(this);
 
 	RefreshInputNames();
+	OnStreamAdded(desc);
+}
+
+/**
+	@brief When a stream is added, autoscale it
+ */
+void WaveformArea::OnStreamAdded(StreamDescriptor desc)
+{
+	LogTrace("Stream %s added to waveform area\n", desc.GetName().c_str());
+	LogIndenter li;
+
+	//If it's a physical instrument channel no need to autoscale
+	if(desc.m_channel->GetInstrument() != nullptr)
+	{
+		LogTrace("Instrument channel, no autoscaling needed\n");
+		return;
+	}
+
+	//If we get here it's a filter or otherwise not part of an instrument
+	//Check which waveform areas it drives
+	bool drivesWaveformAreasOtherThanUs = false;
+	auto& sinks = desc.GetSinks();
+	LogTrace("Sinks\n");
+	for(auto sink : sinks)
+	{
+		LogIndenter li2;
+
+		auto w = dynamic_cast<WaveformArea*>(sink);
+		if(w == this)
+			LogTrace("This waveform area\n");
+		else if(w)
+		{
+			LogTrace("Another waveform area\n");
+			drivesWaveformAreasOtherThanUs = true;
+		}
+		else
+			LogTrace("Not a waveform area\n");
+	}
+
+	//We are the first waveform area this stream is being added to, and it's a filter
+	//Rescale it to match
+	auto an = GetFirstAnalogStream();
+	if(!drivesWaveformAreasOtherThanUs && an && (an != desc) )
+	{
+		LogTrace("We are the first load and we have an analog stream, updating to match\n");
+		desc.SetVoltageRange(an.GetVoltageRange());
+		desc.SetOffset(an.GetOffset());
+	}
 }
 
 /**

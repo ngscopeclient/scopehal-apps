@@ -489,7 +489,6 @@ public:
 	bool IsStreamBeingDisplayed(StreamDescriptor target);
 
 	void AddStream(StreamDescriptor desc, bool persistence = false, const std::string& ramp = "eye-gradient-viridis");
-
 	void AddStream(StreamDescriptor desc, size_t position, bool persistence = false, const std::string& ramp = "eye-gradient-viridis");
 
 	size_t GetStreamPosition(StreamDescriptor desc);
@@ -523,6 +522,8 @@ public:
 	void LoadConfiguration(YAML::Node& node);
 
 protected:
+	void OnStreamAdded(StreamDescriptor desc);
+
 	virtual void CreateInput(const std::string& name) override;
 	virtual std::shared_ptr<DisplayedChannel> CreateInput(StreamDescriptor stream, Session& session);
 
