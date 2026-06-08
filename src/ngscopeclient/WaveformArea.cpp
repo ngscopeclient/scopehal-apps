@@ -402,8 +402,12 @@ void WaveformArea::CreateInput([[maybe_unused]] const string& name)
 
 shared_ptr<DisplayedChannel> WaveformArea::CreateInput(StreamDescriptor stream, Session& session)
 {
+	//Create the stream
 	auto p = make_shared<DisplayedChannel>(stream, session);
 	m_inputs.push_back(p);
+	stream.AddSink(this);
+
+	//Make sure the port numbers are consistent
 	RefreshInputNames();
 	return p;
 }
@@ -491,6 +495,10 @@ void WaveformArea::AddStream(StreamDescriptor desc, size_t position, bool persis
 		m_inputs.push_back(chan);
 	else
 		m_inputs.insert(m_inputs.begin() + position, chan);
+
+	//Mark us a sink of the source (normally FlowGraphNode::SetInput would do this)
+	desc.AddSink(this);
+
 	RefreshInputNames();
 }
 
@@ -562,6 +570,9 @@ void WaveformArea::RemoveStream(size_t i)
 
 	m_channelsToRemove.push_back(m_inputs[i]);
 	m_inputs.erase(m_inputs.begin() + i);
+
+	//Remove us from the sink list
+	stream.RemoveSink(this);
 
 	//Make names consistent again
 	RefreshInputNames();
@@ -1222,7 +1233,11 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 	if(!channelsToRemove.empty())
 	{
 		for(ssize_t i=channelsToRemove.size()-1; i>=0; i--)
-			m_inputs.erase(m_inputs.begin() + channelsToRemove[i]);
+		{
+			auto idx = channelsToRemove[i];
+			m_inputs[idx]->m_sourceStream.RemoveSink(this);
+			m_inputs.erase(m_inputs.begin() + idx);
+		}
 		RefreshInputNames();
 	}
 }
