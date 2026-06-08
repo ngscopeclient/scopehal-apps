@@ -584,7 +584,7 @@ void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 
 void MainWindow::RenderWaveformTextures(
 	vk::raii::CommandBuffer& cmdbuf,
-	vector<shared_ptr<DisplayedChannel> >& channels)
+	vector<shared_ptr<InputDescriptor> >& channels)
 {
 	bool clear = m_clearPersistence.exchange(false);
 	vector<shared_ptr<WaveformGroup>> groups;

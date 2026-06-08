@@ -209,7 +209,7 @@ void WaveformGroup::ReferenceWaveformTextures()
 
 void WaveformGroup::RenderWaveformTextures(
 	vk::raii::CommandBuffer& cmdbuf,
-	vector<shared_ptr<DisplayedChannel> >& channels,
+	vector<shared_ptr<InputDescriptor> >& channels,
 	bool clearPersistence)
 {
 	bool clearThisGroupOnly = m_clearPersistence.exchange(false);

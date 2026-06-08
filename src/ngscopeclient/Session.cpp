@@ -3624,7 +3624,7 @@ int64_t Session::GetToneMapTime()
 	return m_mainWindow->GetToneMapTime();
 }
 
-void Session::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf, vector<shared_ptr<DisplayedChannel> >& channels)
+void Session::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf, vector<shared_ptr<InputDescriptor> >& channels)
 {
 	m_mainWindow->RenderWaveformTextures(cmdbuf, channels);
 }

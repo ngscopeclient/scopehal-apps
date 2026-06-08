@@ -197,20 +197,19 @@ struct PeakLabel
 /**
 	@brief Context data for a single channel being displayed within a WaveformArea
  */
-class DisplayedChannel
+class DisplayedChannel : public InputDescriptor
 {
 public:
 	DisplayedChannel(StreamDescriptor stream, Session& session);
-
 	~DisplayedChannel();
 
 	YAML::Node Serialize(IDTable& table) const;
 
 	std::string GetName()
-	{ return m_stream.GetName(); }
+	{ return m_sourceStream.GetName(); }
 
 	StreamDescriptor GetStream()
-	{ return m_stream; }
+	{ return m_sourceStream; }
 
 	std::shared_ptr<Texture> GetTexture()
 	{ return m_texture; }
@@ -349,13 +348,13 @@ public:
 
 	bool ZeroHoldFlagSet()
 	{
-		return m_stream.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE;
+		return m_sourceStream.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE;
 		// TODO: Allow this to be overridden by a configuration option in the WaveformArea
 	}
 
 	bool IsDensePacked()
 	{
-		auto data = m_stream.GetData();
+		auto data = m_sourceStream.GetData();
 		if(dynamic_cast<UniformWaveformBase*>(data) != nullptr)
 			return true;
 		else
@@ -363,7 +362,7 @@ public:
 	}
 
 	bool ShouldFillUnder()
-	{ return m_stream.GetFlags() & Stream::STREAM_FILL_UNDER; }
+	{ return m_sourceStream.GetFlags() & Stream::STREAM_FILL_UNDER; }
 
 	bool ZeroHoldCursorBehaviour()
 	{
@@ -397,7 +396,6 @@ public:
 	std::string m_colorRamp;
 
 protected:
-	StreamDescriptor m_stream;
 
 	///@brief Parent session object
 	Session& m_session;
@@ -468,19 +466,25 @@ public:
 	bool Render(int iArea, int numAreas, ImVec2 clientArea);
 	void RenderWaveformTextures(
 		vk::raii::CommandBuffer& cmdbuf,
-		std::vector<std::shared_ptr<DisplayedChannel> >& channels,
+		std::vector<std::shared_ptr<InputDescriptor> >& channels,
 		bool clearPersistence);
 	void ReferenceWaveformTextures();
 	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
 
 	size_t GetStreamCount()
-	{ return m_displayedChannels.size(); }
+	{ return m_inputs.size(); }
 
 	StreamDescriptor GetStream(size_t i)
-	{ return m_displayedChannels[i]->GetStream(); }
+	{
+		auto s = GetDisplayedChannel(i);
+		if(s)
+			return s->GetStream();
+		else
+			return nullptr;	//should never happen
+	}
 
 	std::shared_ptr<DisplayedChannel> GetDisplayedChannel(size_t i)
-	{ return m_displayedChannels[i]; }
+	{ return std::dynamic_pointer_cast<DisplayedChannel>(m_inputs[i]); }
 
 	bool IsStreamBeingDisplayed(StreamDescriptor target);
 
@@ -519,6 +523,9 @@ public:
 	void LoadConfiguration(YAML::Node& node);
 
 protected:
+	virtual void CreateInput(const std::string& name) override;
+	virtual std::shared_ptr<DisplayedChannel> CreateInput(StreamDescriptor stream, Session& session);
+
 	void ChannelButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
 	void RenderBackgroundGradient(ImVec2 start, ImVec2 size);
 	void RenderGrid(ImVec2 start, ImVec2 size, std::map<float, float>& gridmap, float& vbot, float& vtop);
@@ -638,13 +645,6 @@ protected:
 	void OnMouseUp();
 	void OnDragUpdate();
 
-	/**
-		@brief The channels currently living within this WaveformArea
-
-		TODO: make this a FlowGraphNode and just hook up inputs??
-	 */
-	std::vector<std::shared_ptr<DisplayedChannel>> m_displayedChannels;
-
 	///@brief Waveform group containing us
 	std::shared_ptr<WaveformGroup> m_group;
 
@@ -673,7 +673,7 @@ protected:
 	BERTInputChannel* m_bertChannelDuringDrag;
 
 	///@brief Channels we're in the process of removing
-	std::vector<std::shared_ptr<DisplayedChannel> > m_channelsToRemove;
+	std::vector<std::shared_ptr<InputDescriptor> > m_channelsToRemove;
 
 	///@brief X axis position of the mouse at the most recent right click
 	int64_t m_lastRightClickOffset;

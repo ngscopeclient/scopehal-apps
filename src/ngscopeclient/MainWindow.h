@@ -229,7 +229,7 @@ public:
 
 	void RenderWaveformTextures(
 		vk::raii::CommandBuffer& cmdbuf,
-		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
+		std::vector<std::shared_ptr<InputDescriptor> >& channels);
 
 	void SetNeedRender()
 	{ m_needRender = true; }

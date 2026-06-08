@@ -53,8 +53,8 @@ using namespace std;
 // DisplayedChannel
 
 DisplayedChannel::DisplayedChannel(StreamDescriptor stream, Session& session)
-		: m_colorRamp("eye-gradient-viridis")
-		, m_stream(stream)
+		: InputDescriptor("", stream)
+		, m_colorRamp("eye-gradient-viridis")
 		, m_session(session)
 		, m_rasterizedWaveform("DisplayedChannel.m_rasterizedWaveform")
 		, m_indexBuffer("DisplayedChannel.m_indexBuffer")
@@ -84,7 +84,7 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream, Session& session)
 	m_rasterizedWaveform.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 
 	//Create tone map pipeline depending on waveform type
-	switch(m_stream.GetType())
+	switch(m_sourceStream.GetType())
 	{
 		case Stream::STREAM_TYPE_EYE:
 			m_toneMapPipe = make_shared<ComputePipeline>(
@@ -131,7 +131,7 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream, Session& session)
 
 DisplayedChannel::~DisplayedChannel()
 {
-	auto schan = dynamic_cast<OscilloscopeChannel*>(m_stream.m_channel);
+	auto schan = dynamic_cast<OscilloscopeChannel*>(m_sourceStream.m_channel);
 	if(schan)
 	{
 		//Remove pausable filters from trigger group when they're deleted
@@ -173,12 +173,12 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 
 	//Special processing needed for eyes coming from BERTs or sampling scopes
 	//These can change size on their own even if the window isn't resized
-	auto eye = dynamic_cast<EyePattern*>(m_stream.m_channel);
-	auto constellation = dynamic_cast<ConstellationFilter*>(m_stream.m_channel);
-	auto waterfall = dynamic_cast<Waterfall*>(m_stream.m_channel);
-	auto data = m_stream.GetData();
+	auto eye = dynamic_cast<EyePattern*>(m_sourceStream.m_channel);
+	auto constellation = dynamic_cast<ConstellationFilter*>(m_sourceStream.m_channel);
+	auto waterfall = dynamic_cast<Waterfall*>(m_sourceStream.m_channel);
+	auto data = m_sourceStream.GetData();
 	auto eyedata = dynamic_cast<EyeWaveform*>(data);
-	if( (m_stream.GetType() == Stream::STREAM_TYPE_EYE) && eyedata && !eye)
+	if( (m_sourceStream.GetType() == Stream::STREAM_TYPE_EYE) && eyedata && !eye)
 	{
 		x = eyedata->GetWidth();
 		y = eyedata->GetHeight();
@@ -214,7 +214,7 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 
 		//Eyes coming from BERTs, sampling scopes, etc cannot be reallocated
 		//TODO: what about if someone else makes their own filter that outputs eyes?
-		else if(m_stream.GetType() == Stream::STREAM_TYPE_EYE)
+		else if(m_sourceStream.GetType() == Stream::STREAM_TYPE_EYE)
 		{
 			if(eyedata)
 			{
@@ -347,8 +347,8 @@ YAML::Node DisplayedChannel::Serialize(IDTable& table) const
 	YAML::Node node;
 
 	node["persistence"] = m_persistenceEnabled;
-	node["channel"] = table[m_stream.m_channel];
-	node["stream"] = m_stream.m_stream;
+	node["channel"] = table[m_sourceStream.m_channel];
+	node["stream"] = m_sourceStream.m_stream;
 	node["colorRamp"] = m_colorRamp;
 
 	return node;
@@ -383,12 +383,29 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	m_yAxisCursorPositions[0] = 0;
 	m_yAxisCursorPositions[1] = 0;
 
-	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream, m_parent->GetSession()));
+	CreateInput(stream, m_parent->GetSession());
 }
 
 WaveformArea::~WaveformArea()
 {
-	m_displayedChannels.clear();
+	m_inputs.clear();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Graph interfacing
+
+void WaveformArea::CreateInput([[maybe_unused]] const string& name)
+{
+	LogFatal("CreateInput base version called, should never happen\n");
+	//m_inputs.push_back(make_shared<InputDescriptor>(name, StreamDescriptor(nullptr, 0)));
+}
+
+shared_ptr<DisplayedChannel> WaveformArea::CreateInput(StreamDescriptor stream, Session& session)
+{
+	auto p = make_shared<DisplayedChannel>(stream, session);
+	m_inputs.push_back(p);
+	RefreshInputNames();
+	return p;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -457,10 +474,9 @@ void WaveformArea::LoadConfiguration(YAML::Node& node)
  */
 void WaveformArea::AddStream(StreamDescriptor desc, bool persistence, const string& ramp)
 {
-	auto chan = make_shared<DisplayedChannel>(desc, m_parent->GetSession());
+	auto chan = CreateInput(desc, m_parent->GetSession());
 	chan->SetPersistenceEnabled(persistence);
 	chan->m_colorRamp = ramp;
-	m_displayedChannels.push_back(chan);
 }
 
 /**
@@ -471,14 +487,11 @@ void WaveformArea::AddStream(StreamDescriptor desc, size_t position, bool persis
 	auto chan = make_shared<DisplayedChannel>(desc, m_parent->GetSession());
 	chan->SetPersistenceEnabled(persistence);
 	chan->m_colorRamp = ramp;
-	if(position >= m_displayedChannels.size())
-	{
-		m_displayedChannels.push_back(chan);
-	}
+	if(position >= m_inputs.size())
+		m_inputs.push_back(chan);
 	else
-	{
-		m_displayedChannels.insert(m_displayedChannels.begin() + position, chan);
-	}
+		m_inputs.insert(m_inputs.begin() + position, chan);
+	RefreshInputNames();
 }
 
 /**
@@ -488,10 +501,11 @@ void WaveformArea::AddStream(StreamDescriptor desc, size_t position, bool persis
  */
 size_t WaveformArea::GetStreamPosition(StreamDescriptor desc)
 {
-	size_t position = m_displayedChannels.size();
-	for (size_t i = 0; i < m_displayedChannels.size(); ++i)
+	size_t position = m_inputs.size();
+	for (size_t i = 0; i < m_inputs.size(); ++i)
 	{
-		if (m_displayedChannels[i] && m_displayedChannels[i].get()->GetStream() == desc)
+		auto c = GetDisplayedChannel(i);
+		if(c && c->GetStream() == desc)
 		{
 			position = i;
 			break;
@@ -509,26 +523,27 @@ void WaveformArea::MoveStream(StreamDescriptor desc, size_t newPosition)
 {
 	// Find original position
 	size_t oldIndex = GetStreamPosition(desc);
-	if (oldIndex == m_displayedChannels.size())
-		// Not found
+	if (oldIndex == m_inputs.size())	// Not found
 		return;
 
-	if (oldIndex == newPosition)
-		// Nothing to do
+	if (oldIndex == newPosition)		// Nothing to do
 		return;
 
 	// Backup value
-	std::shared_ptr<DisplayedChannel> temp = m_displayedChannels[oldIndex];
+	auto temp = dynamic_pointer_cast<DisplayedChannel>(m_inputs[oldIndex]);
 
 	// Remove from list
-	m_displayedChannels.erase(m_displayedChannels.begin() + oldIndex);
+	m_inputs.erase(m_inputs.begin() + oldIndex);
 
 	// If we move after, index has to be shifted
 	if (oldIndex < newPosition)
 		newPosition--;
 
 	// Insert at new position
-	m_displayedChannels.insert(m_displayedChannels.begin() + newPosition, temp);
+	m_inputs.insert(m_inputs.begin() + newPosition, temp);
+
+	//Make names consistent again
+	RefreshInputNames();
 }
 
 /**
@@ -541,12 +556,15 @@ void WaveformArea::RemoveStream(size_t i)
 	//This normally happens in Render() but if we're in an off-screen tab, it might be indefinitely delayed
 	//until we re-activate that tab and we want the drag/drop overlays to disappear immediately
 	//(https://github.com/ngscopeclient/scopehal-apps/issues/651)
-	auto stream = m_displayedChannels[i]->GetStream();
+	auto stream = m_inputs[i]->m_sourceStream;
 	if( (m_dragState == DRAG_STATE_CHANNEL) && (stream == m_dragStream) )
 		m_dragState = DRAG_STATE_NONE;
 
-	m_channelsToRemove.push_back(m_displayedChannels[i]);
-	m_displayedChannels.erase(m_displayedChannels.begin() + i);
+	m_channelsToRemove.push_back(m_inputs[i]);
+	m_inputs.erase(m_inputs.begin() + i);
+
+	//Make names consistent again
+	RefreshInputNames();
 }
 
 /**
@@ -556,9 +574,9 @@ void WaveformArea::RemoveStream(size_t i)
  */
 StreamDescriptor WaveformArea::GetFirstAnalogStream()
 {
-	for(auto chan : m_displayedChannels)
+	for(auto chan : m_inputs)
 	{
-		auto stream = chan->GetStream();
+		auto stream = chan->m_sourceStream;
 		if(stream.GetType() == Stream::STREAM_TYPE_ANALOG)
 			return stream;
 	}
@@ -575,9 +593,9 @@ StreamDescriptor WaveformArea::GetFirstAnalogStream()
  */
 StreamDescriptor WaveformArea::GetFirstAnalogOrDensityStream()
 {
-	for(auto chan : m_displayedChannels)
+	for(auto chan : m_inputs)
 	{
-		auto stream = chan->GetStream();
+		auto stream = chan->m_sourceStream;
 		if(stream.GetType() == Stream::STREAM_TYPE_ANALOG)
 			return stream;
 		if(stream.GetType() == Stream::STREAM_TYPE_SPECTROGRAM)
@@ -598,9 +616,9 @@ StreamDescriptor WaveformArea::GetFirstAnalogOrDensityStream()
  */
 StreamDescriptor WaveformArea::GetFirstEyeStream()
 {
-	for(auto chan : m_displayedChannels)
+	for(auto chan : m_inputs)
 	{
-		auto stream = chan->GetStream();
+		auto stream = chan->m_sourceStream;
 		if(stream.GetType() == Stream::STREAM_TYPE_EYE)
 			return stream;
 	}
@@ -615,9 +633,9 @@ StreamDescriptor WaveformArea::GetFirstEyeStream()
  */
 StreamDescriptor WaveformArea::GetFirstConstellationStream()
 {
-	for(auto chan : m_displayedChannels)
+	for(auto chan : m_inputs)
 	{
-		auto stream = chan->GetStream();
+		auto stream = chan->m_sourceStream;
 		if(stream.GetType() == Stream::STREAM_TYPE_CONSTELLATION)
 			return stream;
 	}
@@ -632,9 +650,9 @@ StreamDescriptor WaveformArea::GetFirstConstellationStream()
  */
 StreamDescriptor WaveformArea::GetFirstDensityFunctionStream()
 {
-	for(auto chan : m_displayedChannels)
+	for(auto chan : m_inputs)
 	{
-		auto stream = chan->GetStream();
+		auto stream = chan->m_sourceStream;
 		if(stream.GetType() == Stream::STREAM_TYPE_EYE)
 			return stream;
 		if(stream.GetType() == Stream::STREAM_TYPE_CONSTELLATION)
@@ -653,8 +671,11 @@ StreamDescriptor WaveformArea::GetFirstDensityFunctionStream()
  */
 void WaveformArea::ReferenceWaveformTextures()
 {
-	for(auto chan : m_displayedChannels)
+	for(size_t i=0; i<m_inputs.size(); i++)
+	{
+		auto chan = GetDisplayedChannel(i);
 		m_parent->AddTextureUsedThisFrame(chan->GetTexture());
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -843,8 +864,8 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		ImGui::SetCursorScreenPos(startCursor);
 		ImGui::BeginGroup();
 
-			for(size_t i=0; i<m_displayedChannels.size(); i++)
-				ChannelButton(m_displayedChannels[i], i);
+			for(size_t i=0; i<m_inputs.size(); i++)
+				ChannelButton(GetDisplayedChannel(i), i);
 
 		ImGui::EndGroup();
 
@@ -882,7 +903,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	if(first)
 		m_pixelsPerYAxisUnit = unspacedHeightPerArea / first.GetVoltageRange();
 
-	if(m_displayedChannels.empty())
+	if(m_inputs.empty())
 		return false;
 	return true;
 }
@@ -1142,17 +1163,17 @@ void WaveformArea::PlotContextMenu()
  */
 void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 {
-	vector<size_t> displayedChannelsToRemove;
+	vector<size_t> channelsToRemove;
 
-	for(size_t i=0; i<m_displayedChannels.size(); i++)
+	for(size_t i=0; i<m_inputs.size(); i++)
 	{
-		auto& chan = m_displayedChannels[i];
+		auto chan = GetDisplayedChannel(i);
 
 		//Make sure the stream exists. If it was removed (filter config changed, etc) it may no longer be there
 		if(chan->GetStream().IsOutOfRange())
 		{
-			m_channelsToRemove.push_back(m_displayedChannels[i]);
-			displayedChannelsToRemove.push_back(i);
+			m_channelsToRemove.push_back(chan);
+			channelsToRemove.push_back(i);
 			continue;
 		}
 
@@ -1198,10 +1219,11 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 		}
 	}
 
-	if(!displayedChannelsToRemove.empty())
+	if(!channelsToRemove.empty())
 	{
-		for(ssize_t i=displayedChannelsToRemove.size()-1; i>=0; i--)
-			m_displayedChannels.erase(m_displayedChannels.begin() + displayedChannelsToRemove[i]);
+		for(ssize_t i=channelsToRemove.size()-1; i>=0; i--)
+			m_inputs.erase(m_inputs.begin() + channelsToRemove[i]);
+		RefreshInputNames();
 	}
 }
 
@@ -2049,8 +2071,9 @@ void WaveformArea::MakePathSignalBody(ImDrawList* list, float xstart, float xend
  */
 void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
-	for(auto& chan : m_displayedChannels)
+	for(size_t i=0; i<m_inputs.size(); i++)
 	{
+		auto chan = GetDisplayedChannel(i);
 		auto stream = chan->GetStream();
 		if(chan->GetStream().IsOutOfRange())
 			continue;
@@ -2105,16 +2128,17 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
  */
 void WaveformArea::RenderWaveformTextures(
 	vk::raii::CommandBuffer& cmdbuf,
-	vector<shared_ptr<DisplayedChannel> >& chans,
+	vector<shared_ptr<InputDescriptor> >& chans,
 	bool clearPersistence)
 {
-	chans = m_displayedChannels;
+	chans = m_inputs;
 
 	bool clearThisAreaOnly = m_clearPersistence.exchange(false);
 	bool clearing = clearThisAreaOnly || clearPersistence;
 
-	for(auto& chan : chans)
+	for(size_t i=0; i<chans.size(); i++)
 	{
+		auto chan = GetDisplayedChannel(i);
 		auto stream = chan->GetStream();
 		if(chan->GetStream().IsOutOfRange())
 			continue;
@@ -2901,9 +2925,9 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	{
 		bool updated = false;
 
-		for(auto c : m_displayedChannels)
+		for(auto c : m_inputs)
 		{
-			auto s = c->GetStream();
+			auto s = c->m_sourceStream;
 			if(s.IsHighRateOffsetCapable())
 			{
 				//Check if the offset has actually changed by a nontrivial amount
@@ -2966,8 +2990,9 @@ void WaveformArea::RenderBERSamplingPoint(ImVec2 /*start*/, ImVec2 /*size*/)
 	auto mouse = ImGui::GetMousePos();
 
 	m_mouseOverBERTarget = false;
-	for(auto c : m_displayedChannels)
+	for(size_t i=0; i<m_inputs.size(); i++)
 	{
+		auto c = GetDisplayedChannel(i);
 		auto stream = c->GetStream();
 		if(stream.GetType() != Stream::STREAM_TYPE_EYE)
 			continue;
@@ -3116,9 +3141,9 @@ void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 	float firstRange = firstStream.GetVoltageRange();
 	bool mismatchFound = true;
 	StreamDescriptor mismatchStream;
-	for(auto c : m_displayedChannels)
+	for(auto c : m_inputs)
 	{
-		auto stream = c->GetStream();
+		auto stream = c->m_sourceStream;
 		if(stream.GetVoltageRange() > 1.2 * firstRange)
 		{
 			mismatchFound = true;
@@ -3202,9 +3227,9 @@ void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
 	//(ignore any filter based channels)
 	set<Oscilloscope*> scopes;
 	set<StreamDescriptor> channels;
-	for(auto c : m_displayedChannels)
+	for(auto c : m_inputs)
 	{
-		auto stream = c->GetStream();
+		auto stream = c->m_sourceStream;
 		auto ochan = dynamic_cast<OscilloscopeChannel*>(stream.m_channel);
 		if(!ochan)
 			continue;
@@ -3314,9 +3339,9 @@ void WaveformArea::RenderBERLevelArrows(ImVec2 start, ImVec2 /*size*/)
 
 	//Make a list of BERT eye patterns we're displaying
 	set<BERTInputChannel*> channels;
-	for(auto c : m_displayedChannels)
+	for(auto c : m_inputs)
 	{
-		auto stream = c->GetStream();
+		auto stream = c->m_sourceStream;
 		if(stream.GetType() != Stream::STREAM_TYPE_EYE)
 			continue;
 		auto ichan = dynamic_cast<BERTInputChannel*>(stream.m_channel);
@@ -3642,7 +3667,7 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 	ImVec2 mousePos = ImGui::GetMousePos();
 	float channelLabeHeight = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y;
 	size_t insertionIndex = (mousePos.y+(channelLabeHeight/2)-start.y) / channelLabeHeight;
-	insertionIndex = min(insertionIndex,m_displayedChannels.size());
+	insertionIndex = min(insertionIndex, m_inputs.size());
 	float insertionYPosition = insertionIndex * channelLabeHeight;
 
 	//Add drop target
@@ -4318,9 +4343,9 @@ void WaveformArea::ClearPersistence()
  */
 void WaveformArea::ClearPersistenceOfChannel(OscilloscopeChannel* chan)
 {
-	for(auto c : m_displayedChannels)
+	for(auto c : m_inputs)
 	{
-		auto stream = c->GetStream();
+		auto stream = c->m_sourceStream;
 		if(stream.m_channel == chan)
 		{
 			m_clearPersistence = true;
@@ -4338,8 +4363,8 @@ void WaveformArea::OnMouseUp()
 	{
 		case DRAG_STATE_Y_AXIS:
 			LogTrace("End dragging Y axis\n");
-			for(auto c : m_displayedChannels)
-				c->GetStream().SetOffset(m_yAxisOffset);
+			for(auto c : m_inputs)
+				c->m_sourceStream.SetOffset(m_yAxisOffset);
 			ClearPersistence();
 			m_parent->SetNeedRender();
 			break;
@@ -4456,10 +4481,10 @@ void WaveformArea::OnDragUpdate()
 				float dy = ImGui::GetIO().MouseDelta.y;
 				m_yAxisOffset -= PixelsToYAxisUnits(dy);
 
-				for(auto chan : m_displayedChannels)
+				for(auto chan : m_inputs)
 				{
 					//Update filters and such instantly
-					auto stream = chan->GetStream();
+					auto stream = chan->m_sourceStream;
 					auto f = dynamic_cast<Filter*>(stream.m_channel);
 					if(f != nullptr)
 						stream.SetOffset(m_yAxisOffset);
@@ -4567,16 +4592,16 @@ void WaveformArea::OnMouseWheelYAxis(float delta)
 		auto range = stream.GetVoltageRange();
 		range *= pow(0.9, delta);
 
-		for(size_t i=0; i<m_displayedChannels.size(); i++)
-			m_displayedChannels[i]->GetStream().SetVoltageRange(range);
+		for(size_t i=0; i<m_inputs.size(); i++)
+			m_inputs[i]->m_sourceStream.SetVoltageRange(range);
 	}
 	else
 	{
 		auto range = stream.GetVoltageRange();
 		range /= pow(0.9, -delta);
 
-		for(size_t i=0; i<m_displayedChannels.size(); i++)
-			m_displayedChannels[i]->GetStream().SetVoltageRange(range);
+		for(size_t i=0; i<m_inputs.size(); i++)
+			m_inputs[i]->m_sourceStream.SetVoltageRange(range);
 	}
 
 	ClearPersistence();
@@ -4588,9 +4613,9 @@ void WaveformArea::OnMouseWheelYAxis(float delta)
  */
 TimePoint WaveformArea::GetWaveformTimestamp()
 {
-	for(auto d : m_displayedChannels)
+	for(auto d : m_inputs)
 	{
-		auto data = d->GetStream().GetData();
+		auto data = d->m_sourceStream.GetData();
 		if(data != nullptr)
 			return TimePoint(data->m_startTimestamp, data->m_startFemtoseconds);
 	}
@@ -4658,9 +4683,9 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
  */
 bool WaveformArea::IsShowing(StreamDescriptor desc)
 {
-	for(auto channel : m_displayedChannels)
+	for(auto channel : m_inputs)
 	{
-		if(channel->GetStream() == desc)
+		if(channel->m_sourceStream == desc)
 			return true;
 	}
 	return false;
@@ -4671,9 +4696,9 @@ bool WaveformArea::IsShowing(StreamDescriptor desc)
  */
 bool WaveformArea::IsStreamBeingDisplayed(StreamDescriptor target)
 {
-	for(auto& c : m_displayedChannels)
+	for(auto& c : m_inputs)
 	{
-		if(c->GetStream() == target)
+		if(c->m_sourceStream == target)
 			return true;
 	}
 	return false;
@@ -4687,9 +4712,9 @@ void WaveformArea::AutofitVertical()
 	float vmax = FLT_MIN;
 	float vmin = FLT_MAX;
 	bool found = false;
-	for(auto& c : m_displayedChannels)
+	for(auto& c : m_inputs)
 	{
-		auto data = c->GetStream().GetData();
+		auto data = c->m_sourceStream.GetData();
 		if(!data)
 			continue;
 		data->PrepareForCpuAccess();
@@ -4707,10 +4732,10 @@ void WaveformArea::AutofitVertical()
 	{
 		auto off = (vmax + vmin) / 2;
 		auto range = (vmax - vmin) * 1.05;
-		for(auto& c : m_displayedChannels)
+		for(auto& c : m_inputs)
 		{
-			c->GetStream().SetOffset(-off);
-			c->GetStream().SetVoltageRange(range);
+			c->m_sourceStream.SetOffset(-off);
+			c->m_sourceStream.SetVoltageRange(range);
 		}
 	}
 

@@ -169,7 +169,7 @@ void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, share
 
 	//Keep references to all displayed channels open until the rendering finishes
 	//This prevents problems if we close a WaveformArea or remove a channel from it before the shader completes
-	vector< shared_ptr<DisplayedChannel> > channels;
+	vector< shared_ptr<InputDescriptor> > channels;
 	cmdbuf.begin({});
 	session->RenderWaveformTextures(cmdbuf, channels);
 	cmdbuf.end();
