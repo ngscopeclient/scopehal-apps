@@ -162,10 +162,6 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Info bubble color")
 				.Description("Color for information bubbles displayed above graph nodes"));
 			graph.AddPreference(
-				Preference::Color("error_outline_color", ColorFromString("#ff0000"))
-				.Label("Error outline color")
-				.Description("Color for outlining graph nodes with errors"));
-			graph.AddPreference(
 				Preference::Font("icon_caption_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13))
 				.Label("Icon font")
 				.Description("Font for icon captions"));
@@ -173,6 +169,27 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("icon_caption_color", ColorFromString("#ffffff"))
 				.Label("Icon color")
 				.Description("Color for icon captions"));
+
+			graph.AddPreference(
+				Preference::Color("error_outline_color", ColorFromString("#ff0000"))
+				.Label("Error outline color")
+				.Description("Color for outlining graph nodes with errors"));
+			graph.AddPreference(
+				Preference::Color("warning_outline_color", ColorFromString("#ffff00"))
+				.Label("Warning outline color")
+				.Description("Color for outlining graph nodes with warnings"));
+			graph.AddPreference(
+				Preference::Color("notice_outline_color", ColorFromString("#00ff00"))
+				.Label("Notice outline color")
+				.Description("Color for outlining graph nodes with notice messages"));
+			graph.AddPreference(
+					Preference::Color("verbose_outline_color", ColorFromString("#a0a0ff"))
+					.Label("Verbose outline color")
+					.Description("Color for outlining graph nodes with verbose messages"));
+			graph.AddPreference(
+					Preference::Color("debug_outline_color", ColorFromString("#a0a0a0"))
+					.Label("Debug outline color")
+					.Description("Color for outlining graph nodes with debug messages"));
 
 		auto& ahelp = appearance.AddCategory("Help");
 			ahelp.AddPreference(

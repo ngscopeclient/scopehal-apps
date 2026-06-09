@@ -2141,7 +2141,16 @@ void FilterGraphEditor::DoNodeForChannel(
 		displaycolor = "#808080";
 
 	auto& prefs = m_session->GetPreferences();
-	auto errorColor = prefs.GetColor("Appearance.Filter Graph.error_outline_color");
+	ImU32 messageColors[] = {
+		0,
+		0,
+		prefs.GetColor("Appearance.Filter Graph.error_outline_color"),
+		prefs.GetColor("Appearance.Filter Graph.warning_outline_color"),
+		prefs.GetColor("Appearance.Filter Graph.notice_outline_color"),
+		prefs.GetColor("Appearance.Filter Graph.verbose_outline_color"),
+		prefs.GetColor("Appearance.Filter Graph.debug_outline_color"),
+		0
+	};
 
 	//Get some configuration / style settings
 	auto color = ColorFromString(displaycolor);
@@ -2414,7 +2423,8 @@ void FilterGraphEditor::DoNodeForChannel(
 
 		//Draw outline rectangle around the entire filter
 		auto errorOutlineThickness = 0.4 * ImGui::GetFontSize();
-		bgList->AddRect(pos, pos+size, errorColor, rounding, ImDrawFlags_RoundCornersAll, errorOutlineThickness);
+		auto outlineColor = messageColors[static_cast<int>(msg->GetSeverity())];
+		bgList->AddRect(pos, pos+size, outlineColor, rounding, ImDrawFlags_RoundCornersAll, errorOutlineThickness);
 	}
 
 	ImGui::PopFont(); // headerfont
