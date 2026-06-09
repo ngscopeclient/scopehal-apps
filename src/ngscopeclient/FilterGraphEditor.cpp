@@ -2371,9 +2371,11 @@ void FilterGraphEditor::DoNodeForChannel(
 	}
 
 	//Display errors
-	if(channel->HasErrors())
+	if(channel->HasMessages())
 	{
-		auto errorText = channel->GetErrorTitle();
+		// We only display the most severe message for now
+		auto msg = channel->GetMostSevereMessage();
+		auto errorText = msg->GetTitle();
 		auto errorSize = ImGui::CalcTextSize(errorText.c_str());
 
 		auto textColor = ImGui::GetColorU32(ImGui::GetStyleColorVec4(ImGuiCol_Text));
@@ -2398,7 +2400,7 @@ void FilterGraphEditor::DoNodeForChannel(
 		if( (mousepos.x > rectStart.x) && (mousepos.y > rectStart.y) &&
 			(mousepos.x < rectEnd.x) && (mousepos.y < rectEnd.y) )
 		{
-			auto log = Trim(channel->GetErrorLog());
+			auto log = Trim(msg->GetMessage());
 
 			ax::NodeEditor::Suspend();
 				MainWindow::SetTooltipPosition();

@@ -47,7 +47,7 @@ public:
 	virtual bool DoRender();
 
 protected:
-	std::set<InstrumentChannel*> m_nodesWithErrors;
+	std::set<InstrumentChannel*> m_nodesWithMessages;
 	bool m_firstRun;
 };
 
