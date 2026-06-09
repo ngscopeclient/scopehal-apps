@@ -566,6 +566,8 @@ protected:
 		bool clearPersistence);
 	void PlotContextMenu();
 
+	void ClearEmptyInputs();
+
 	void DrawDropRangeMismatchMessage(
 		ImDrawList* list,
 		ImVec2 center,

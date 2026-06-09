@@ -807,6 +807,22 @@ StreamDescriptor WaveformArea::GetChannelBeingDragged()
 }
 
 /**
+	@brief Removes any empty spaces from m_inputs
+ */
+void WaveformArea::ClearEmptyInputs()
+{
+	//do NOT cache input count here, it can change during the loop
+	for(size_t i=0; i<GetInputCount(); i++)
+	{
+		if(m_inputs[i]->m_sourceStream == nullptr)
+		{
+			LogTrace("Input %zu was null, removing\n", i);
+			RemoveStream(i);
+		}
+	}
+}
+
+/**
 	@brief Renders a waveform area
 
 	Returns false if the area should be closed (no more waveforms visible in it)
@@ -815,6 +831,9 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 {
 	if(m_dragState != DRAG_STATE_NONE)
 		OnDragUpdate();
+
+	//Coalesce m_inputs to remove any empty spaces
+	ClearEmptyInputs();
 
 	//Clear channels from last frame
 	if(!m_channelsToRemove.empty())
