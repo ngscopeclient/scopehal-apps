@@ -126,4 +126,4 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 
 ## Known issues
 
-* Deletion of a filter by pressing "delete" with the node selected in the filter graph editor is not always possible, since not all possible consumers (e.g. properties dialogs) are tracked in the filter graph yet. If you try to delete a block and it doesn't go away, stdout and the log viewer dialog should show a message about X unresolved dangling references; you will need to find and close these windows manually. Export-to-file filters have a known reference leak and are currently impossible to delete once added to a session.
+* Deletion of a filter by pressing "delete" with the node selected in the filter graph editor is not always possible, since not all possible consumers are tracked in the filter graph yet. If you try to delete a block and it doesn't go away, stdout and the log viewer dialog should show a message about X unresolved dangling references; you will need to find and close these windows manually. Export-to-file filters have a known reference leak and are currently impossible to delete once added to a session.

@@ -61,26 +61,24 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(InstrumentChannel* chan, MainWi
 	if(!ochan)
 		LogFatal("ChannelPropertiesDialog expects an OscilloscopeChannel\n");
 
-	ochan->AddRef();
-
-	m_committedDisplayName = m_channel->GetDisplayName();
+	m_committedDisplayName = chan->GetDisplayName();
 	m_displayName = m_committedDisplayName;
 
 	//Color
-	auto color = ColorFromString(m_channel->m_displaycolor);
+	auto color = ColorFromString(chan->m_displaycolor);
 	m_color[0] = ((color >> IM_COL32_R_SHIFT) & 0xff) / 255.0f;
 	m_color[1] = ((color >> IM_COL32_G_SHIFT) & 0xff) / 255.0f;
 	m_color[2] = ((color >> IM_COL32_B_SHIFT) & 0xff) / 255.0f;
 
 	//Vertical settings are per stream
-	size_t nstreams = m_channel->GetStreamCount();
+	size_t nstreams = chan->GetStreamCount();
 	m_committedOffset.resize(nstreams);
 	m_offset.resize(nstreams);
 	m_committedRange.resize(nstreams);
 	m_range.resize(nstreams);
 	for(size_t i = 0; i<nstreams; i++)
 	{
-		auto unit = m_channel->GetYAxisUnits(i);
+		auto unit = chan->GetYAxisUnits(i);
 
 		m_committedOffset[i] = ochan->GetOffset(i);
 		m_offset[i] = unit.PrettyPrint(m_committedOffset[i]);
@@ -93,8 +91,8 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(InstrumentChannel* chan, MainWi
 	auto scope = ochan->GetScope();
 	if(scope)
 	{
-		m_committedHysteresis = scope->GetDigitalHysteresis(m_channel->GetIndex());
-		m_committedThreshold = scope->GetDigitalThreshold(m_channel->GetIndex());
+		m_committedHysteresis = scope->GetDigitalHysteresis(chan->GetIndex());
+		m_committedThreshold = scope->GetDigitalThreshold(chan->GetIndex());
 	}
 	else
 	{
@@ -103,14 +101,14 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(InstrumentChannel* chan, MainWi
 	}
 	if(nstreams > 0)
 	{
-		auto yunit = m_channel->GetYAxisUnits(0);
+		auto yunit = chan->GetYAxisUnits(0);
 		m_hysteresis = yunit.PrettyPrint(m_committedHysteresis);
 		m_threshold = yunit.PrettyPrint(m_committedThreshold);
 	}
 
 	//Hardware acquisition settings if this is a scope channel
 	if(scope)
-		RefreshInputSettings(scope, m_channel->GetIndex());
+		RefreshInputSettings(scope, chan->GetIndex());
 	else
 	{
 		m_committedAttenuation = 1;
@@ -127,7 +125,11 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(InstrumentChannel* chan, MainWi
  */
 void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t nchan)
 {
-	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel);
+	auto chan = GetChannel();
+	if(!chan)
+		return;
+
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(chan);
 
 	m_couplings.clear();
 	m_couplingNames.clear();
@@ -225,8 +227,6 @@ void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t n
 
 ChannelPropertiesDialog::~ChannelPropertiesDialog()
 {
-	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel);
-	ochan->Release();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -244,7 +244,8 @@ bool ChannelPropertiesDialog::DoRender()
 	if(!BaseChannelPropertiesDialog::DoRender())
 		return false;
 
-	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel);
+	auto chan = GetChannel();
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(chan);
 
 	//Flags for a header that should be open by default EXCEPT in the graph editor
 	ImGuiTreeNodeFlags defaultOpenFlags = m_graphEditorMode ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
@@ -254,7 +255,7 @@ bool ChannelPropertiesDialog::DoRender()
 	float width = 10 * ImGui::GetFontSize();
 
 	auto scope = ochan->GetScope();
-	auto f = dynamic_cast<Filter*>(m_channel);
+	auto f = dynamic_cast<Filter*>(chan);
 
 	//All channels have display settings
 	if(ImGui::CollapsingHeader("Display", defaultOpenFlags))
@@ -285,13 +286,13 @@ bool ChannelPropertiesDialog::DoRender()
 				else
 				{
 					f->UseDefaultName(false);
-					m_channel->SetDisplayName(m_committedDisplayName);
+					chan->SetDisplayName(m_committedDisplayName);
 				}
 			}
 
 			//No, just set the name
 			else
-				m_channel->SetDisplayName(m_committedDisplayName);
+				chan->SetDisplayName(m_committedDisplayName);
 		}
 
 		if(f)
@@ -309,7 +310,7 @@ bool ChannelPropertiesDialog::DoRender()
 				static_cast<int>(round(m_color[0] * 255)),
 				static_cast<int>(round(m_color[1] * 255)),
 				static_cast<int>(round(m_color[2] * 255)));
-			m_channel->m_displaycolor = tmp;
+			chan->m_displaycolor = tmp;
 
 			//If color is changed, request a re-render
 			m_parent->SetNeedRender();
@@ -317,8 +318,8 @@ bool ChannelPropertiesDialog::DoRender()
 	}
 
 	//Input settings only make sense if we have an attached scope
-	auto nstreams = m_channel->GetStreamCount();
-	auto index = m_channel->GetIndex();
+	auto nstreams = chan->GetStreamCount();
+	auto index = chan->GetIndex();
 	if(scope)
 	{
 		if(ImGui::CollapsingHeader("Input", defaultOpenFlags))
@@ -334,12 +335,12 @@ bool ChannelPropertiesDialog::DoRender()
 			HelpMarker("Type of probe connected to the instrument input");
 
 			//See if the channel is digital (first stream digital)
-			bool isDigital = (m_channel->GetType(0) == Stream::STREAM_TYPE_DIGITAL);
+			bool isDigital = (chan->GetType(0) == Stream::STREAM_TYPE_DIGITAL);
 
 			//Digital
 			if(isDigital)
 			{
-				auto yunit = m_channel->GetYAxisUnits(0);
+				auto yunit = chan->GetYAxisUnits(0);
 
 				if(scope->IsDigitalThresholdConfigurable())
 				{
@@ -384,7 +385,7 @@ bool ChannelPropertiesDialog::DoRender()
 					ImGui::Text("Changing input buffer settings will also affect the following channels:");
 					for(auto c : bank)
 					{
-						if(c == m_channel)
+						if(c == chan)
 							continue;
 						ImGui::BulletText("%s", c->GetDisplayName().c_str());
 					}
@@ -407,7 +408,7 @@ bool ChannelPropertiesDialog::DoRender()
 					//Update offset and range when attenuation is changed
 					for(size_t i = 0; i<nstreams; i++)
 					{
-						auto unit = m_channel->GetYAxisUnits(i);
+						auto unit = chan->GetYAxisUnits(i);
 
 						m_committedOffset[i] = ochan->GetOffset(i);
 						m_offset[i] = unit.PrettyPrint(m_committedOffset[i]);
@@ -557,7 +558,7 @@ bool ChannelPropertiesDialog::DoRender()
 		m_range.resize(nstreams);
 		for(size_t i = noldstreams; i<nstreams; i++)
 		{
-			auto unit = m_channel->GetYAxisUnits(i);
+			auto unit = chan->GetYAxisUnits(i);
 
 			m_committedOffset[i] = ochan->GetOffset(i);
 			m_offset[i] = unit.PrettyPrint(m_committedOffset[i]);
@@ -572,16 +573,16 @@ bool ChannelPropertiesDialog::DoRender()
 	{
 		string streamname = "Vertical";
 		if(nstreams > 1)
-			streamname = m_channel->GetStreamName(i);
+			streamname = chan->GetStreamName(i);
 
 		//Only show if analog channel
-		if(m_channel->GetType(i) == Stream::STREAM_TYPE_ANALOG)
+		if(chan->GetType(i) == Stream::STREAM_TYPE_ANALOG)
 		{
 			if(ImGui::CollapsingHeader(streamname.c_str()))
 			{
 				ImGui::PushID(i);
 
-				auto unit = m_channel->GetYAxisUnits(i);
+				auto unit = chan->GetYAxisUnits(i);
 
 				//If no change to offset in dialog, update our input value when we change offset outside the dialog
 				auto off = ochan->GetOffset(i);

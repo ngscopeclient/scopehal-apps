@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -52,8 +52,9 @@ BaseChannelPropertiesDialog::BaseChannelPropertiesDialog(
 		ImVec2(300, 400),
 		parent,
 		graphEditorMode)
-	, m_channel(chan)
 {
+	CreateInput("chan");
+	SetInput(0, StreamDescriptor(chan, 0));
 }
 
 BaseChannelPropertiesDialog::~BaseChannelPropertiesDialog()
@@ -62,10 +63,15 @@ BaseChannelPropertiesDialog::~BaseChannelPropertiesDialog()
 
 bool BaseChannelPropertiesDialog::DoRender()
 {
-	auto f = dynamic_cast<Filter*>(m_channel);
+	//If our channel has been disconnected (e.g. by the node being deleted) stop
+	auto chan = GetChannel();
+	if(!chan)
+		return false;
+
+	auto f = dynamic_cast<Filter*>(chan);
 
 	//TODO
-	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel);
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(chan);
 	Oscilloscope* scope = nullptr;
 	if(ochan)
 		scope = ochan->GetScope();
@@ -79,8 +85,8 @@ bool BaseChannelPropertiesDialog::DoRender()
 		if(scope)
 		{
 			auto nickname = scope->m_nickname;
-			auto hwname = m_channel->GetHwname();
-			auto index = to_string(m_channel->GetIndex() + 1);	//use one based index for display
+			auto hwname = chan->GetHwname();
+			auto index = to_string(chan->GetIndex() + 1);	//use one based index for display
 
 			ImGui::BeginDisabled();
 				ImGui::SetNextItemWidth(width);

@@ -74,7 +74,8 @@ bool FilterPropertiesDialog::Render()
 void FilterPropertiesDialog::SpawnFileDialogForImportFilter()
 {
 	//If the filter is an import filter, show the import dialog
-	auto f = dynamic_cast<ImportFilter*>(m_channel);
+	auto chan = GetChannel();
+	auto f = dynamic_cast<ImportFilter*>(chan);
 	if(f)
 	{
 		auto name = f->GetFileNameParameter();
@@ -92,7 +93,7 @@ void FilterPropertiesDialog::SpawnFileDialogForImportFilter()
 
 	//Special case: TouchstoneImportFilter should be treated as an import filter but is not derived
 	//from ImportFilter because it's a SParameterSourceFilter
-	auto t = dynamic_cast<TouchstoneImportFilter*>(m_channel);
+	auto t = dynamic_cast<TouchstoneImportFilter*>(chan);
 	if(t)
 	{
 		auto name = t->GetFileNameParameter();
@@ -118,7 +119,7 @@ void FilterPropertiesDialog::RunFileDialog()
 
 		if(m_fileDialog->IsClosedOK())
 		{
-			auto f = dynamic_cast<Filter*>(m_channel);
+			auto f = dynamic_cast<Filter*>(GetChannel());
 			auto oldStreamCount = f->GetStreamCount();
 			f->GetParameter(m_fileParamName).SetFileName(m_fileDialog->GetFileName());
 			m_paramTempValues.erase(m_fileParamName);
@@ -135,20 +136,24 @@ void FilterPropertiesDialog::RunFileDialog()
 
 bool FilterPropertiesDialog::DoRender()
 {
+	auto chan = GetChannel();
+	if(!chan)
+		return false;
+
 	//Flags for a header that should be open by default EXCEPT in the graph editor
 	ImGuiTreeNodeFlags defaultOpenFlags = m_graphEditorMode ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
 
 	//Update name as we go
-	m_title = m_channel->GetHwname();
+	m_title = chan->GetHwname();
 
 	if(!ChannelPropertiesDialog::DoRender())
 		return false;
 
-	auto f = dynamic_cast<Filter*>(m_channel);
+	auto f = dynamic_cast<Filter*>(chan);
 
 	bool reconfigured = false;
 
-	auto oldStreamCount = m_channel->GetStreamCount();
+	auto oldStreamCount = chan->GetStreamCount();
 
 	//Show inputs (if we have any)
 	if( (f->GetInputCount() != 0) && !m_graphEditorMode)
@@ -522,11 +527,12 @@ void FilterPropertiesDialog::OnReconfigured(Filter* f, size_t oldStreamCount)
 
 	//If we have more streams than before, add views for them
 	//(this is typically the case if we added a filename to a new import filter)
-	auto newStreamCount = m_channel->GetStreamCount();
+	auto chan = GetChannel();
+	auto newStreamCount = chan->GetStreamCount();
 	if(oldStreamCount < newStreamCount)
 	{
 		for(size_t i=oldStreamCount; i < newStreamCount; i++)
-			m_parent->FindAreaForStream(nullptr, StreamDescriptor(m_channel, i));
+			m_parent->FindAreaForStream(nullptr, StreamDescriptor(chan, i));
 	}
 
 	//Regenerate our temporary values since parameters might have been changed
