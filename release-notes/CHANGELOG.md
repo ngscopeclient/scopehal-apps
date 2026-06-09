@@ -68,6 +68,7 @@ This is a running list of significant bug fixes and new features since the last 
 * GUI: "add instrument" dialog now includes automatic enumeration of attached HID and UART devices (https://github.com/ngscopeclient/scopehal-apps/pull/968)
 * GUI: lots of improvements to drag-and-drop of channels between plots (https://github.com/ngscopeclient/scopehal-apps/pull/972)
 * GUI: Added new NGSCOPECLIENT_UI_SCALE and NGSCOPECLIENT_FONT_SCALE environment variables to override automatic detection of DPI scaling (https://github.com/ngscopeclient/scopehal-apps/issues/953)
+* GUI: Filter graph editor now allows deletion of filter blocks by selecting a block and hitting "delete"
 * Serialization: trace alpha and persistence decay settings are now saved in session files (https://github.com/ngscopeclient/scopehal-apps/issues/936)
 
 ## Breaking changes since v0.1.1
@@ -122,3 +123,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 * GUI: General UI overhaul of stream browser to make things more intuitive and reduce the number of clicks needed to perform common tasks
 * GUI: Adjusted tooltip layout code to prevent mouse cursor from blocking the first character of a tooltip
 * Filters: FFT and waterfall now use uHz rather than Hz as internal frequency unit for improved resolution at the cost of not being able to represent frequencies in excess of 9.22 THz
+
+## Known issues
+
+* Deletion of a filter by pressing "delete" with the node selected in the filter graph editor is not always possible, since not all possible consumers (e.g. properties dialogs) are tracked in the filter graph yet. If you try to delete a block and it doesn't go away, stdout and the log viewer dialog should show a message about X unresolved dangling references; you will need to find and close these windows manually. Export-to-file filters have a known reference leak and are currently impossible to delete once added to a session.

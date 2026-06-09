@@ -49,13 +49,6 @@ MeasurementsDialog::MeasurementsDialog(Session& session)
 
 MeasurementsDialog::~MeasurementsDialog()
 {
-	for(auto& s : m_streams)
-	{
-		auto ochan = dynamic_cast<OscilloscopeChannel*>(s.m_channel);
-		if(ochan)
-			ochan->Release();
-	}
-	m_streams.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -69,6 +62,9 @@ MeasurementsDialog::~MeasurementsDialog()
  */
 bool MeasurementsDialog::DoRender()
 {
+	//Remove any unused input slots
+	ClearEmptyInputs();
+
 	static ImGuiTableFlags flags =
 		ImGuiTableFlags_Resizable |
 		ImGuiTableFlags_BordersOuter |
@@ -95,9 +91,9 @@ bool MeasurementsDialog::DoRender()
 		StreamDescriptor moveStream;
 		size_t moveDest = 0;
 
-		for(size_t i=0; i<m_streams.size(); i++)
+		for(size_t i=0; i<m_inputs.size(); i++)
 		{
-			auto s = m_streams[i];
+			auto s = m_inputs[i]->m_sourceStream;
 			auto name = s.GetName();
 			ImGui::TableNextRow(ImGuiTableRowFlags_None);
 			ImGui::PushID(name.c_str());
@@ -145,27 +141,12 @@ bool MeasurementsDialog::DoRender()
 		//Handle moves
 		if(moving)
 		{
-			LogTrace("Moving a stream (to index %zu of %zu)\n", moveDest, m_streams.size());
-
-			//Remove the old stream
-			for(size_t i=0; i<m_streams.size(); i++)
-			{
-				if(m_streams[i] == moveStream)
-				{
-					LogTrace("Removing old stream (at %zu)\n", i);
-					m_streams.erase(m_streams.begin() + i);
-					break;
-				}
-			}
-
-			//Insert the stream at the target position
-			LogTrace("Inserting new stream (at %zu)\n", moveDest);
-			m_streamset.emplace(moveStream);
-			m_streams.insert(m_streams.begin() + moveDest, moveStream);
+			LogTrace("Moving a stream (to index %zu of %zu)\n", moveDest, m_inputs.size());
+			MoveStream(moveStream, moveDest);
 		}
 
 		//If we have no measurements, display a blank row usable as a drag/drop target
-		if(m_streams.empty())
+		if(m_inputs.empty())
 		{
 			ImGui::TableNextRow(ImGuiTableRowFlags_None);
 			ImGui::TableSetColumnIndex(0);
@@ -189,15 +170,6 @@ bool MeasurementsDialog::DoRender()
 	return true;
 }
 
-void MeasurementsDialog::RemoveStream(size_t i)
-{
-	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_streams[i].m_channel);
-	m_streamset.erase(ochan);
-	if(ochan)
-		ochan->Release();
-	m_streams.erase(m_streams.begin() + i);
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI event handlers
 
@@ -207,10 +179,19 @@ void MeasurementsDialog::AddStream(StreamDescriptor stream)
 	if(HasStream(stream))
 		return;
 
-	m_streams.push_back(stream);
-	m_streamset.emplace(stream);
+	//Add it
+	CreateInput("tmp");
+	SetInput(m_inputs.size()-1, stream);
+	RefreshInputNames();
+}
 
-	auto ochan = dynamic_cast<OscilloscopeChannel*>(stream.m_channel);
-	if(ochan)
-		ochan->AddRef();
+bool MeasurementsDialog::HasStream(StreamDescriptor stream)
+{
+	auto nin = GetInputCount();
+	for(size_t i=0; i<nin; i++)
+	{
+		if(m_inputs[i]->m_sourceStream == stream)
+			return true;
+	}
+	return false;
 }

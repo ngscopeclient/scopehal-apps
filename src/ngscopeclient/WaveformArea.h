@@ -491,15 +491,11 @@ public:
 	void AddStream(StreamDescriptor desc, bool persistence = false, const std::string& ramp = "eye-gradient-viridis");
 	void AddStream(StreamDescriptor desc, size_t position, bool persistence = false, const std::string& ramp = "eye-gradient-viridis");
 
-	size_t GetStreamPosition(StreamDescriptor desc);
-
-	void MoveStream(StreamDescriptor desc, size_t newPosition);
-
 	bool IsCompatible(StreamDescriptor desc);
 
 	bool IsShowing(StreamDescriptor desc);
 
-	void RemoveStream(size_t i);
+	virtual void RemoveStream(size_t i) override;
 
 	void ClearPersistence();
 	void ClearPersistenceOfChannel(OscilloscopeChannel* chan);
@@ -565,8 +561,6 @@ protected:
 		vk::raii::CommandBuffer& cmdbuf,
 		bool clearPersistence);
 	void PlotContextMenu();
-
-	void ClearEmptyInputs();
 
 	void DrawDropRangeMismatchMessage(
 		ImDrawList* list,

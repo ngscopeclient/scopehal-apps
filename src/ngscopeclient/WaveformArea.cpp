@@ -552,58 +552,6 @@ void WaveformArea::OnStreamAdded(StreamDescriptor desc)
 }
 
 /**
- * Get the position of the provided Stream in this WaveformArea
- * @param desc the stream to get the position for
- * @return the position of the stream if found or the number of displayed channels in this WaveformArea otherwise
- */
-size_t WaveformArea::GetStreamPosition(StreamDescriptor desc)
-{
-	size_t position = m_inputs.size();
-	for (size_t i = 0; i < m_inputs.size(); ++i)
-	{
-		auto c = GetDisplayedChannel(i);
-		if(c && c->GetStream() == desc)
-		{
-			position = i;
-			break;
-		}
-	}
-	return position;
-}
-
-/**
-	@brief Move a stream to another position in this plot
-	@param desc the stream to move
-	@param newPosition the position to move the stream to
- */
-void WaveformArea::MoveStream(StreamDescriptor desc, size_t newPosition)
-{
-	// Find original position
-	size_t oldIndex = GetStreamPosition(desc);
-	if (oldIndex == m_inputs.size())	// Not found
-		return;
-
-	if (oldIndex == newPosition)		// Nothing to do
-		return;
-
-	// Backup value
-	auto temp = dynamic_pointer_cast<DisplayedChannel>(m_inputs[oldIndex]);
-
-	// Remove from list
-	m_inputs.erase(m_inputs.begin() + oldIndex);
-
-	// If we move after, index has to be shifted
-	if (oldIndex < newPosition)
-		newPosition--;
-
-	// Insert at new position
-	m_inputs.insert(m_inputs.begin() + newPosition, temp);
-
-	//Make names consistent again
-	RefreshInputNames();
-}
-
-/**
 	@brief Removes the stream at a specified index
  */
 void WaveformArea::RemoveStream(size_t i)
@@ -804,22 +752,6 @@ StreamDescriptor WaveformArea::GetChannelBeingDragged()
 		return m_dragStream;
 	else
 		return StreamDescriptor(nullptr, 0);
-}
-
-/**
-	@brief Removes any empty spaces from m_inputs
- */
-void WaveformArea::ClearEmptyInputs()
-{
-	//do NOT cache input count here, it can change during the loop
-	for(size_t i=0; i<GetInputCount(); i++)
-	{
-		if(m_inputs[i]->m_sourceStream == nullptr)
-		{
-			LogTrace("Input %zu was null, removing\n", i);
-			RemoveStream(i);
-		}
-	}
 }
 
 /**

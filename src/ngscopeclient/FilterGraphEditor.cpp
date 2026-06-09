@@ -2003,13 +2003,6 @@ bool FilterGraphEditor::OnFilterDeleted(Filter* node)
 		//Note that we may have >1 connection to a given sink node
 		for(auto dest : sinks)
 		{
-			//Debug logging
-			auto f = dynamic_cast<Filter*>(dest);
-			if(dynamic_cast<WaveformArea*>(dest))
-				LogTrace("Sink %p is a WaveformArea\n", (void*)dest);
-			else
-				LogTrace("Sink %s is a filter\n", f->GetDisplayName().c_str());
-
 			//Walk over its inputs and remove us
 			//Do not stop if we find a hit:
 			size_t nin = dest->GetInputCount();
@@ -2017,7 +2010,7 @@ bool FilterGraphEditor::OnFilterDeleted(Filter* node)
 			{
 				if(dest->GetInput(j).m_channel == node)
 				{
-					LogTrace("We are input %zu, breaking link\n", j);
+					LogTrace("We are input %zu of %p, breaking link\n", j, (void*)dest);
 					dest->SetInput(j, StreamDescriptor(nullptr, 0), true);
 
 					LogTrace("Link broken, rc=%zu\n", node->GetRefCount());
