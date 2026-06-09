@@ -165,7 +165,10 @@ bool MeasurementsDialog::DoRender()
 	}
 
 	if(deleteRow)
-		RemoveStream(rowToDelete);
+	{
+		SetInput(rowToDelete, StreamDescriptor(nullptr, 0));
+		ClearEmptyInputs();
+	}
 
 	return true;
 }
