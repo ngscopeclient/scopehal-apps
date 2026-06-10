@@ -976,6 +976,28 @@ void MainWindow::TriggerSingleDropdown(float buttonsize)
 	}
 }
 
+void MainWindow::TriggerAutoDropdown(float buttonsize)
+{
+	if(DropdownButton("trigger-auto-dropdown", buttonsize))
+		ImGui::OpenPopup("TriggerAutoMenu");
+	if(ImGui::BeginPopup("TriggerAutoMenu"))
+	{
+		bool all = false;
+		shared_ptr<TriggerGroup> group;
+		DoTriggerDropdown("Auto", group, all);
+
+		//Start trigger for only a specific group
+		if(group)
+			group->Arm(TriggerGroup::TRIGGER_TYPE_AUTO);
+
+		//Start trigger for all groups
+		if(all)
+			m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_AUTO, true);
+
+		ImGui::EndPopup();
+	}
+}
+
 void MainWindow::TriggerForceDropdown(float buttonsize)
 {
 	if(DropdownButton("trigger-force-dropdown", buttonsize))
@@ -1072,6 +1094,16 @@ void MainWindow::ToolbarButtons()
 	{
 		ImGui::SameLine(0.0, 0.0);
 		TriggerForceDropdown(buttonsize.y);
+	}
+
+	ImGui::SameLine(0.0, 0.0);
+	if(ImGui::ImageButton("trigger-auto", GetTexture("trigger-auto"), buttonsize))
+		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_AUTO);
+	Dialog::Tooltip("Arm the trigger, then force an acquisition if no trigger event occurs");
+	if(multigroup)
+	{
+		ImGui::SameLine(0.0, 0.0);
+		TriggerAutoDropdown(buttonsize.y);
 	}
 
 	ImGui::SameLine(0.0, 0.0);

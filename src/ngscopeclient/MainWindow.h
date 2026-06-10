@@ -331,6 +331,7 @@ protected:
 				void TriggerStartDropdown(float buttonsize);
 				void TriggerSingleDropdown(float buttonsize);
 				void TriggerForceDropdown(float buttonsize);
+				void TriggerAutoDropdown(float buttonsize);
 				void TriggerStopDropdown(float buttonsize);
 				void DoTriggerDropdown(const char* action, std::shared_ptr<TriggerGroup>& group, bool& all);
 		void DockingArea();

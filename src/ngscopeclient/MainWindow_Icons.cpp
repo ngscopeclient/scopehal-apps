@@ -823,7 +823,8 @@ void MainWindow::LoadToolbarIcons()
 	m_texmgr.LoadTexture("history", FindDataFile(prefix + "history.png"));
 	m_texmgr.LoadTexture("refresh-settings", FindDataFile(prefix + "refresh-settings.png"));
 	m_texmgr.LoadTexture("trigger-single", FindDataFile(prefix + "trigger-single.png"));
-	m_texmgr.LoadTexture("trigger-force", FindDataFile(prefix + "trigger-single.png"));	//no dedicated icon yet
+	m_texmgr.LoadTexture("trigger-force", FindDataFile(prefix + "trigger-force.png"));
+	m_texmgr.LoadTexture("trigger-auto", FindDataFile(prefix + "trigger-auto.png"));
 	m_texmgr.LoadTexture("trigger-start", FindDataFile(prefix + "trigger-start.png"));
 	m_texmgr.LoadTexture("trigger-stop", FindDataFile(prefix + "trigger-stop.png"));
 }
