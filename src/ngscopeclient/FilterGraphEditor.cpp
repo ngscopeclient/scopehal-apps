@@ -2142,14 +2142,14 @@ void FilterGraphEditor::DoNodeForChannel(
 
 	auto& prefs = m_session->GetPreferences();
 	ImU32 messageColors[] = {
-		0,
-		0,
+		prefs.GetColor("Appearance.Filter Graph.error_outline_color"), // 0 zero in enum is not set, therefore placeholder
+		prefs.GetColor("Appearance.Filter Graph.error_outline_color"), // Also no fatal error should be ever sent, but better than crash
 		prefs.GetColor("Appearance.Filter Graph.error_outline_color"),
 		prefs.GetColor("Appearance.Filter Graph.warning_outline_color"),
 		prefs.GetColor("Appearance.Filter Graph.notice_outline_color"),
 		prefs.GetColor("Appearance.Filter Graph.verbose_outline_color"),
 		prefs.GetColor("Appearance.Filter Graph.debug_outline_color"),
-		0
+		prefs.GetColor("Appearance.Filter Graph.debug_outline_color"), // We don't need crash, so placeholder
 	};
 
 	//Get some configuration / style settings
