@@ -59,15 +59,15 @@ bool FilterGraphErrorWindow::Render()
 {
 	//Refresh list of errors
 	auto& nodes = Filter::GetAllInstances();
-	m_nodesWithErrors.clear();
+	m_nodesWithMessages.clear();
 	for(auto node : nodes)
 	{
-		if(node->HasErrors())
-			m_nodesWithErrors.emplace(node);
+		if(node->HasMessages())
+			m_nodesWithMessages.emplace(node);
 	}
 
 	//Show error window on first run, or if we have errors
-	if(!m_nodesWithErrors.empty())
+	if(!m_nodesWithMessages.empty())
 		m_open = true;
 	else if(m_firstRun)
 	{
@@ -97,27 +97,30 @@ bool FilterGraphErrorWindow::DoRender()
 		ImGuiTableFlags_SizingFixedFit;
 
 	auto width = ImGui::GetFontSize();
-	if(ImGui::BeginTable("table", 2, flags))
+	if(ImGui::BeginTable("table", 3, flags))
 	{
 		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
 
+		ImGui::TableSetupColumn("Severity", ImGuiTableColumnFlags_WidthFixed, 6*width);
 		ImGui::TableSetupColumn("Channel", ImGuiTableColumnFlags_WidthFixed, 12*width);
 		ImGui::TableSetupColumn("Error", ImGuiTableColumnFlags_WidthStretch, 0);
 		ImGui::TableHeadersRow();
 
-		for(auto f : m_nodesWithErrors)
+		for(auto f : m_nodesWithMessages)
 		{
-			auto messages = explode(f->GetErrorLog(), '\n');
-			for(auto& m : messages)
+			for(auto& m : f->GetMessages())
 			{
-				//remove bullet and space
-				string s = m.substr(m.find(' ') + 1);
-
+				// TODO: Combine this with logging library and merge the enum-Str mapping
+				const char* severity_str[] = {
+					"NOTHING", "FATAL", "ERROR", "WARNING", "NOTICE", "VERBOSE", "DEBUG", "TRACE"
+				};
 				ImGui::TableNextRow(ImGuiTableRowFlags_None);
 				ImGui::TableSetColumnIndex(0);
-				ImGui::TextUnformatted(f->GetDisplayName().c_str());
+				ImGui::TextUnformatted(severity_str[static_cast<int>(m.GetSeverity())]);
 				ImGui::TableSetColumnIndex(1);
-				ImGui::TextUnformatted(s.c_str());
+				ImGui::TextUnformatted(f->GetDisplayName().c_str());
+				ImGui::TableSetColumnIndex(2);
+				ImGui::TextUnformatted(m.GetMessage().c_str());
 			}
 		}
 
