@@ -41,6 +41,7 @@ TriggerGroup::TriggerGroup(shared_ptr<Oscilloscope> primary, Session* session)
 	, m_default(true)
 	, m_session(session)
 	, m_multiScopeFreeRun(false)
+	, m_autoTriggerArmed(false)
 {
 }
 
@@ -215,6 +216,9 @@ void TriggerGroup::Arm(TriggerType type)
 	//But if we have secondaries, do a single trigger so it doesn't re-arm before we've set up the secondaries
 	if(m_primary)
 	{
+		//Default to not in auto trigger mode
+		m_autoTriggerArmed = false;
+
 		switch(type)
 		{
 			case TriggerGroup::TRIGGER_TYPE_NORMAL:
@@ -227,8 +231,18 @@ void TriggerGroup::Arm(TriggerType type)
 					m_primary->Start();
 				break;
 
+			//Same as normal trigger, but also set auto flag
 			case TriggerGroup::TRIGGER_TYPE_AUTO:
-				LogError("ArmTrigger(TRIGGER_TYPE_AUTO) not implemented\n");
+				m_autoTriggerArmed = true;
+
+				if(!m_secondaries.empty())
+				{
+					LogTrace("Starting trigger for primary\n");
+					m_primary->StartSingleTrigger();
+				}
+				else
+					m_primary->Start();
+
 				break;
 
 			case TriggerGroup::TRIGGER_TYPE_SINGLE:

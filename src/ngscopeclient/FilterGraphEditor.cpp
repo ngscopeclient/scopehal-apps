@@ -2004,7 +2004,7 @@ bool FilterGraphEditor::OnFilterDeleted(Filter* node)
 		for(auto dest : sinks)
 		{
 			//Walk over its inputs and remove us
-			//Do not stop if we find a hit:
+			//Do not stop if we find a hit
 			size_t nin = dest->GetInputCount();
 			for(size_t j=0; j<nin; j++)
 			{

@@ -104,6 +104,9 @@ protected:
 
 	///@brief True if we have multiple scopes and are in normal trigger mode
 	bool m_multiScopeFreeRun;
+
+	///@brief True if the group is in auto-trigger mode
+	bool m_autoTriggerArmed;
 };
 
 #endif
