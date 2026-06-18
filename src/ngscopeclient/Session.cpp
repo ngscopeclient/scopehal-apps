@@ -427,6 +427,8 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 bool Session::LoadWaveformData(int version, const string& dataDir)
 {
 	LogTrace("Loading waveform data\n");
+	LogIndenter li;
+	double start = GetTime();
 
 	//Load filter waveforms *before* scope data
 	//(we don't want any filters to be updated from nonexistent inputs and change state prior to getting output loaded)
@@ -443,6 +445,10 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 				return false;
 		}
 	}
+
+	double dt = GetTime() - start;
+	start = GetTime();
+	LogTrace("Filter waveform loading took %.3f ms\n", dt * 1000);
 
 	//Load data for each scope
 	for(auto it : m_oscilloscopes)
@@ -465,8 +471,11 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 		}
 	}
 
+	dt = GetTime() - start;
+	start = GetTime();
+	LogTrace("Scope waveform loading took %.3f ms\n", dt * 1000);
+
 	//Third pass: history and refresh filters
-	double hstart = GetTime();
 	double cdt = 0;
 	bool converted = false;
 	for(auto point : m_history.m_history)
@@ -481,7 +490,7 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 		RefreshAllFilters();
 	}
 
-	double hdt = GetTime() - hstart;
+	double hdt = GetTime() - start;
 	LogTrace("History replay took %.3f ms\n", hdt * 1000);
 	if(converted)
 		LogTrace("Legacy waveform conversion took %.3f ms\n", cdt * 1000);
