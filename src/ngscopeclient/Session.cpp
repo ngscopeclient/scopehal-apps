@@ -940,8 +940,8 @@ void Session::DoLoadWaveformDataForStream(WaveformBase* cap, const string& forma
 				//cppcheck-suppress invalidPointerCast
 				sacap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
 
-				sacap->m_offsets[j] = stime[0];
-				sacap->m_durations[j] = stime[1];
+				memcpy(&sacap->m_offsets[j], &stime[0], sizeof(int64_t));
+				memcpy(&sacap->m_durations[j], &stime[1], sizeof(int64_t));
 			}
 
 			else if(sdcap)
