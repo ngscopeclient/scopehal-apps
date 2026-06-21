@@ -262,14 +262,14 @@ bool StreamBrowserDialog::renderCombo(
 		selected = 0;
 	}
 
-	const char* selectedLabel = "";
+	string selectedLabel;
 	if(selected < (int)values.size())
-		selectedLabel = values[selected].c_str();
+		selectedLabel = values[selected];
 
 	if(alignRight)
 	{
 		int padding = ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2 + paddingRight;
-		float xsz = ImGui::CalcTextSize(selectedLabel).x + padding;
+		float xsz = ImGui::CalcTextSize(selectedLabel.c_str()).x + padding;
 		string resizedLabel;
 		if ((m_badgeXCur - xsz) < m_badgeXMin)
 		{
@@ -288,7 +288,7 @@ bool StreamBrowserDialog::renderCombo(
 				return false; // Still no room
 			// We found an acceptable size
 			resizedLabel = resizedLabel + ELLIPSIS_CHAR;
-			selectedLabel = resizedLabel.c_str();
+			selectedLabel = resizedLabel;
 		}
 		m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 		ImGui::SameLine(m_badgeXCur);
@@ -314,7 +314,7 @@ bool StreamBrowserDialog::renderCombo(
 		flags |= ImGuiComboFlags_WidthFitPreview;
 
 	bool changed = false;
-	if(ImGui::BeginCombo(label, selectedLabel, flags))
+	if(ImGui::BeginCombo(label, selectedLabel.c_str(), flags))
 	{
 		for(int i = 0 ; i < (int)values.size() ; i++)
 		{
@@ -828,6 +828,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	// Get current shape and  shape index
 	FunctionGenerator::WaveShape shape = awgState->m_channelShape[channelIndex];
 	int shapeIndex = awgState->m_channelShapeIndexes[channelIndex][shape];
+
 	if(renderCombo(
 		"##waveform",
 		true,
