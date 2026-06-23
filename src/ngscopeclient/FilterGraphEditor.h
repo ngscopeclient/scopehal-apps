@@ -178,6 +178,7 @@ protected:
 
 	ax::NodeEditor::PinId CanonicalizePin(ax::NodeEditor::PinId port);
 
+	void InputPortTooltip(FlowGraphNode* node, size_t idx);
 	void OutputPortTooltip(StreamDescriptor stream);
 	void DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group);
 	void DoInternalLinksForGroup(std::shared_ptr<FilterGraphGroup> group);
