@@ -1492,6 +1492,9 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 					auto inputPort = m_inputIDMap[endId];
 					auto stream = m_streamIDMap[startId];
 
+					auto sinkNode = inputPort.first;
+					auto sinkIndex = inputPort.second;
+
 					//Check for and reject back edges (creates cycles)
 					if(IsBackEdge(stream.m_channel, inputPort.first))
 					{
@@ -1503,7 +1506,7 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 					}
 
 					//See if the path is valid
-					else if(inputPort.first->ValidateChannel(inputPort.second, stream))
+					else if(sinkNode->ValidateChannel(sinkIndex, stream))
 					{
 						//Yep, looks good
 						ImGui::BeginTooltip();
@@ -1532,6 +1535,12 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 
 						ImGui::BeginTooltip();
 							ImGui::TextColored(invalidcolor, "x Incompatible stream type for input");
+
+							//Get the constraints
+							auto constraints = sinkNode->GetInputConstraints(sinkIndex);
+							if(constraints)
+								ImGui::Text("Input requirements:\n%s", constraints->ToString().c_str());
+
 						ImGui::EndTooltip();
 					}
 				}
