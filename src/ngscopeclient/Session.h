@@ -89,6 +89,34 @@ public:
 };
 
 /**
+	@brief Case insensitive map helper
+ */
+class StringLessCaseInsensitive
+{
+public:
+
+	bool operator()(const std::string& a, const std::string& b) const
+	{
+		size_t len = std::min(a.size(), b.size());
+
+		for(size_t i=0; i<len; i++)
+		{
+			auto ca = tolower(a[i]);
+			auto cb = tolower(b[i]);
+
+			if(ca > cb)
+				return false;
+			if(ca < cb)
+				return true;
+		}
+
+		if(a.size() < b.size())
+			return true;
+		return false;
+	}
+};
+
+/**
 	@brief A Session stores all of the instrument configuration and other state the user has open.
 
 	Generally only accessed from the GUI thread.
@@ -614,7 +642,7 @@ public:
 	Filter* GetReferenceFilter(const std::string& name)
 	{ return m_referenceFilters[name]; }
 
-	const std::map<std::string, Filter*>& GetReferenceFilters()
+	const std::map<std::string, Filter*, StringLessCaseInsensitive>& GetReferenceFilters()
 	{ return m_referenceFilters; }
 
 	///@brief Get all of the drivers of a given type
@@ -630,7 +658,7 @@ protected:
 	void CreateReferenceFilters();
 	void DestroyReferenceFilters();
 
-	std::map<std::string, Filter*> m_referenceFilters;
+	std::map<std::string, Filter*, StringLessCaseInsensitive> m_referenceFilters;
 
 	///@brief Map of "type" to drivername[]
 	std::map<std::string, std::vector<std::string> > m_driverNamesByType;
