@@ -83,8 +83,9 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 * Many filters no longer take the input signal and recovered clock as separate inputs. Instead, they take the new sampled output from the CDR PLL (or I/Q Demux) block. This eliminates redundant sampling and is significantly faster but was not possible to do in a fully backwards compatible fashion. The list of affected filters is:
   * 100baseTX
   * 128b/130b
-  * 8B/10B (IBM)
-  * 8B/10B (TMDS)
+  * 64b/66b
+  * 8b/10b (IBM)
+  * 8b/10b (TMDS)
   * Constellation
   * DDJ
   * Ethernet - 100baseT1
