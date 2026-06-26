@@ -112,6 +112,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 * Filters: FFT waveforms were shifted one bin to the right of the correct position and also sometimes had incorrect bin size calculation due to rounding
 * Filters: Frequency and period measurement had a rounding error during integer-to-floating-point conversion causing half a cycle of the waveform to be dropped under some circumstances leading to an incorrect result, with worse error at low frequencies and short memory depths. This only affected the "summary" output not the trend plot.
 * Filters: Upsample filter incorrectly calculated sample indexes on waveforms with more than 2^21 points
+* GUI: Opening a session for offline analysis would add the instruments in it to your recent list (https://github.com/ngscopeclient/scopehal-apps/issues/1005)
 * GUI: Crash when closing a session (https://github.com/ngscopeclient/scopehal-apps/issues/934)
 * GUI: Pressing middle mouse on the Y axis to autoscale would fail, setting the full scale range to zero volts, if the waveform was resident in GPU memory and the CPU-side copy of the buffer was stale
 * GUI: History dialog allowed zero or negative values for history depth (https://github.com/ngscopeclient/scopehal-apps/issues/940)

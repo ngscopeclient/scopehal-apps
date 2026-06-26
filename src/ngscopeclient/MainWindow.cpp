@@ -1683,11 +1683,19 @@ void MainWindow::AddToRecentInstrumentList(shared_ptr<SCPIInstrument> inst)
 	if(inst == nullptr)
 		return;
 
+	//If the transport is null, don't add to the list
+	if(dynamic_cast<SCPINullTransport*>(inst->GetTransport()) != nullptr)
+	{
+		LogTrace("Not addding instrument \"%s\" to recent instrument list because it's offline\n",
+			inst->m_nickname.c_str());
+		return;
+	}
+
 	LogTrace("Adding instrument \"%s\" to recent instrument list (had %zu)\n",
 		inst->m_nickname.c_str(), m_recentInstruments.size());
 	LogIndenter li;
 
-	auto now = time(NULL);
+	auto now = time(nullptr);
 
 	auto connectionString =
 		inst->m_nickname + ":" +
