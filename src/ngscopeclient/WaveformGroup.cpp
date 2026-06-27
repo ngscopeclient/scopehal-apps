@@ -431,6 +431,7 @@ void WaveformGroup::DoCursorReadouts()
 						case Stream::STREAM_TYPE_TRIGGER:
 						case Stream::STREAM_TYPE_UNDEFINED:
 						case Stream::STREAM_TYPE_ANALOG_SCALAR:
+						case Stream::STREAM_TYPE_DIGITAL_SCALAR:
 						case Stream::STREAM_TYPE_CONSTELLATION:
 							sv1 = "";
 							sv2 = "";

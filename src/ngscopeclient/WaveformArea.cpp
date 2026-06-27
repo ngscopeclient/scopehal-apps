@@ -396,7 +396,7 @@ WaveformArea::~WaveformArea()
 
 void WaveformArea::CreateInput([[maybe_unused]] const string& name)
 {
-	LogFatal("CreateInput base version called, should never happen\n");
+	LogFatal("WaveformArea::CreateInput base version called, should never happen\n");
 	//m_inputs.push_back(make_shared<InputDescriptor>(name, StreamDescriptor(nullptr, 0)));
 }
 
@@ -1222,6 +1222,7 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 
 			//nothing to draw, it's not a waveform (shouldn't even be here)
 			case Stream::STREAM_TYPE_ANALOG_SCALAR:
+			case Stream::STREAM_TYPE_DIGITAL_SCALAR:
 				break;
 
 			default:

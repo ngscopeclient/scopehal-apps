@@ -1122,13 +1122,22 @@ void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
 				}
 				break;
 
+			case Stream::STREAM_TYPE_DIGITAL_SCALAR:
+				{
+					ImGui::TextUnformatted("Digital value:");
+					string value;
+					//string value = stream.GetYAxisUnits().PrettyPrint(stream.GetScalarValue());
+					ImGui::TextUnformatted(value.c_str());
+				}
+				break;
+
 			default:
 				ImGui::TextUnformatted("Unknown channel type");
 				break;
 		}
 
 		//Get the data type and print (unless it's a scalar)
-		if(stype != Stream::STREAM_TYPE_ANALOG_SCALAR)
+		if( (stype != Stream::STREAM_TYPE_ANALOG_SCALAR) && (stype != Stream::STREAM_TYPE_DIGITAL_SCALAR) )
 		{
 			auto data = stream.GetData();
 			if(!data)
@@ -2626,6 +2635,9 @@ bool FilterGraphEditor::HandleNodeProperties()
 			auto doc = dynamic_cast<DigitalOutputChannel*>(node);
 			auto dic = dynamic_cast<DigitalInputChannel*>(node);
 			auto dio = dynamic_cast<DigitalIOChannel*>(node);
+
+			//Close the floating dialog, if one exists
+			m_parent->HideChannelProperties(dynamic_cast<InstrumentChannel*>(node));
 
 			//Make the properties window
 			if(m_propertiesDialogs.find(id) == m_propertiesDialogs.end())

@@ -72,6 +72,7 @@
 #include "../scopeprotocols/DDJMeasurement.h"
 #include "../scopeprotocols/DeEmbedFilter.h"
 #include "../scopeprotocols/DeskewFilter.h"
+#include "../scopeprotocols/DigitalConstantFilter.h"
 #include "../scopeprotocols/DigitalToNRZFilter.h"
 #include "../scopeprotocols/DigitalToPAM4Filter.h"
 #include "../scopeprotocols/DivideFilter.h"
@@ -485,6 +486,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(DDJMeasurement))] 						= "filter-ddj";
 	m_filterIconMap[type_index(typeid(DeEmbedFilter))] 							= "filter-de-embed";
 	m_filterIconMap[type_index(typeid(DeskewFilter))] 							= "filter-deskew";
+	m_filterIconMap[type_index(typeid(DigitalConstantFilter))] 					= "filter-constant";
 	m_filterIconMap[type_index(typeid(DigitalToNRZFilter))] 					= "filter-digital-to-nrz";
 	m_filterIconMap[type_index(typeid(DigitalToPAM4Filter))] 					= "filter-digital-to-pam4";
 	m_filterIconMap[type_index(typeid(DivideFilter))] 							= "filter-divide";

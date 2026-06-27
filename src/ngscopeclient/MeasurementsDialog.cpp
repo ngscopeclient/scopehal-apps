@@ -51,6 +51,20 @@ MeasurementsDialog::~MeasurementsDialog()
 {
 }
 
+void MeasurementsDialog::CreateInput(const string& name)
+{
+	m_inputs.push_back(make_shared<MeasurementDescriptor>(name));
+	RefreshInputNames();
+}
+
+void MeasurementsDialog::CreateInput(StreamDescriptor stream)
+{
+	auto p = make_shared<MeasurementDescriptor>(stream);
+	m_inputs.push_back(p);
+	stream.AddSink(this);
+	RefreshInputNames();
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
@@ -93,7 +107,9 @@ bool MeasurementsDialog::DoRender()
 
 		for(size_t i=0; i<m_inputs.size(); i++)
 		{
-			auto s = m_inputs[i]->m_sourceStream;
+			auto desc = dynamic_pointer_cast<MeasurementDescriptor>(m_inputs[i]);
+
+			auto s = desc->m_sourceStream;
 			auto name = s.GetName();
 			ImGui::TableNextRow(ImGuiTableRowFlags_None);
 			ImGui::PushID(name.c_str());
@@ -122,6 +138,22 @@ bool MeasurementsDialog::DoRender()
 
 			if(ImGui::BeginPopupContextItem())
 			{
+				if(s.GetType() == Stream::STREAM_TYPE_DIGITAL_SCALAR)
+				{
+					if(ImGui::BeginMenu("Format"))
+					{
+						if(ImGui::MenuItem("Hex", nullptr, (desc->m_format == MeasurementDescriptor::FORMAT_HEX)))
+							desc->m_format = MeasurementDescriptor::FORMAT_HEX;
+						if(ImGui::MenuItem("Binary", nullptr, (desc->m_format == MeasurementDescriptor::FORMAT_BINARY)))
+							desc->m_format = MeasurementDescriptor::FORMAT_BINARY;
+						if(ImGui::MenuItem("Decimal", nullptr, (desc->m_format == MeasurementDescriptor::FORMAT_DEC)))
+							desc->m_format = MeasurementDescriptor::FORMAT_DEC;
+
+						ImGui::EndMenu();
+					}
+					ImGui::Separator();
+				}
+
 				if(ImGui::MenuItem("Delete"))
 				{
 					deleteRow = true;
@@ -132,8 +164,30 @@ bool MeasurementsDialog::DoRender()
 			}
 
 			ImGui::TableSetColumnIndex(1);
-			auto value = s.GetYAxisUnits().PrettyPrint(s.GetScalarValue());
-			ImGui::TextUnformatted(value.c_str());
+
+			if(s.GetType() == Stream::STREAM_TYPE_DIGITAL_SCALAR)
+			{
+				switch(desc->m_format)
+				{
+					case MeasurementDescriptor::FORMAT_BINARY:
+						ImGui::TextUnformatted(s.PrettyPrintDigitalScalarBinary().c_str());
+						break;
+
+					case MeasurementDescriptor::FORMAT_DEC:
+						ImGui::TextUnformatted(s.PrettyPrintDigitalScalarDecimal().c_str());
+						break;
+
+					case MeasurementDescriptor::FORMAT_HEX:
+					default:
+						ImGui::TextUnformatted(s.PrettyPrintDigitalScalarHex().c_str());
+						break;
+				}
+			}
+			else
+			{
+				auto value = s.GetYAxisUnits().PrettyPrint(s.GetScalarValue());
+				ImGui::TextUnformatted(value.c_str());
+			}
 
 			ImGui::PopID();
 		}

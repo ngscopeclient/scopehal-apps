@@ -721,10 +721,17 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 	StreamDescriptor s(dmmchan, streamIndex);
 	if(ImGui::BeginDragDropSource())
 	{
-		if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
-			ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
-		else
-			ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
+		switch(s.GetType())
+		{
+			case Stream::STREAM_TYPE_ANALOG_SCALAR:
+			case Stream::STREAM_TYPE_DIGITAL_SCALAR:
+				ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
+				break;
+
+			default:
+				ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
+				break;
+		}
 
 		ImGui::TextUnformatted(s.GetName().c_str());
 		ImGui::EndDragDropSource();
@@ -1581,10 +1588,17 @@ void StreamBrowserDialog::renderChannelNode(
 		StreamDescriptor s(channel, 0);
 		if(ImGui::BeginDragDropSource())
 		{
-			if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
-				ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
-			else
-				ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
+			switch(s.GetType())
+			{
+				case Stream::STREAM_TYPE_ANALOG_SCALAR:
+				case Stream::STREAM_TYPE_DIGITAL_SCALAR:
+					ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
+					break;
+
+				default:
+					ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
+					break;
+			}
 
 			ImGui::TextUnformatted(s.GetName().c_str());
 			ImGui::EndDragDropSource();

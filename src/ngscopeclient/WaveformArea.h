@@ -201,7 +201,7 @@ class DisplayedChannel : public InputDescriptor
 {
 public:
 	DisplayedChannel(StreamDescriptor stream, Session& session);
-	~DisplayedChannel();
+	virtual ~DisplayedChannel();
 
 	YAML::Node Serialize(IDTable& table) const;
 
