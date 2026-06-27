@@ -1125,8 +1125,7 @@ void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
 			case Stream::STREAM_TYPE_DIGITAL_SCALAR:
 				{
 					ImGui::TextUnformatted("Digital value:");
-					string value;
-					//string value = stream.GetYAxisUnits().PrettyPrint(stream.GetScalarValue());
+					string value = stream.PrettyPrintDigitalScalarHex();
 					ImGui::TextUnformatted(value.c_str());
 				}
 				break;
