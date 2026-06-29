@@ -72,6 +72,7 @@ This is a running list of significant bug fixes and new features since the last 
 * GUI: lots of improvements to drag-and-drop of channels between plots (https://github.com/ngscopeclient/scopehal-apps/pull/972)
 * GUI: Added new NGSCOPECLIENT_UI_SCALE and NGSCOPECLIENT_FONT_SCALE environment variables to override automatic detection of DPI scaling (https://github.com/ngscopeclient/scopehal-apps/issues/953)
 * GUI: Filter graph editor now allows deletion of filter blocks by selecting a block and hitting "delete"
+* GUI: added performance counter for per-scope waveform rate to better profile multi-scope sessions
 * Serialization: trace alpha and persistence decay settings are now saved in session files (https://github.com/ngscopeclient/scopehal-apps/issues/936)
 
 ## Breaking changes since v0.1.1

@@ -188,6 +188,17 @@ bool MetricsDialog::DoRender()
 			if(ImGui::TreeNode(s->m_nickname.c_str()))
 			{
 				ImGui::BeginDisabled();
+					str = hz.PrettyPrint(s->GetWaveformDownloadRate());
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Waveform rate", &str);
+				ImGui::EndDisabled();
+
+				HelpMarker(
+					"Rate at which waveforms are being retrieved from the instrument queue and processed.\n\n"
+					"This should be the same as the top level waveform rate if you have only one trigger group in the session."
+					);
+
+				ImGui::BeginDisabled();
 					str = counts.PrettyPrint(s->GetPendingWaveformCount());
 					ImGui::SetNextItemWidth(width);
 					ImGui::InputText("Pending waveforms", &str);
