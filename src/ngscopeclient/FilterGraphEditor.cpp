@@ -2230,13 +2230,19 @@ void FilterGraphEditor::DoNodeForChannel(
 			(dynamic_cast<FunctionGeneratorChannel*>(channel)) ||
 			(dynamic_cast<RFSignalGeneratorChannel*>(channel)) ||
 			(dynamic_cast<DigitalOutputChannel*>(channel)) ||
-			(dynamic_cast<BERTOutputChannel*>(channel))
+			(dynamic_cast<BERTOutputChannel*>(channel)) ||
+			(dynamic_cast<VIOOutputChannel*>(channel))
 			)
 		{
 			blocktype = "Hardware output";
 		}
-		else if(dynamic_cast<DigitalIOChannel*>(channel))
+		else if(
+			dynamic_cast<DigitalIOChannel*>(channel) ||
+			dynamic_cast<VectorGPIOChannel*>(channel)
+			)
+		{
 			blocktype = "Hardware I/O";
+		}
 		else
 			blocktype = "Hardware input";
 	}
