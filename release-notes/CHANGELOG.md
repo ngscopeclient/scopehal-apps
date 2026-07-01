@@ -56,6 +56,7 @@ This is a running list of significant bug fixes and new features since the last 
   * Vector Frequency (1040x speedup)
   * Vector Magnitude (73x speedup)
   * Vector Phase (243x speedup)
+* Filters: Added digital-to-analog filter to convert a digital scalar value (e.g. from a VIO) to an analog value
 * Filters: Added Ethernet clause 73 (base-KX copper backplane) autonegotiation decoder (https://github.com/ngscopeclient/scopehal/pull/1074)
 * Filters: Invert now works on digital signals as well as analog (https://github.com/ngscopeclient/scopehal/issues/1088)
 * Filters: 100baseT1 now has configurable decision thresholds for better decoding of weak signals
@@ -104,6 +105,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 * Core: missing mutex lock causing threading issues on GPUs with less Vulkan queues than active threads (common on AMD cards)
 * Core: Boolean properties of filter graph blocks were serialized to scopesessions with a trailing space, which caused them to load incorrectly
 * Core: Fixed some numerical precision errors in conversion of 64-bit integer values to strings and back (https://github.com/ngscopeclient/scopehal/issues/1073)
+* Core: Fixed hexadecimal values in Y axis sometimes being truncated
 * Drivers: LeCroy allowed some APIs intended for analog inputs to be called on the trigger channel as well, confusing the scope
 * Drivers: LeCroy "force trigger" button did not work if the trigger wasn't already armed (https://github.com/ngscopeclient/scopehal-apps/issues/1053)
 * Filters: broken CSV import with \r\n line endings (https://github.com/ngscopeclient/scopehal-apps/issues/939)
