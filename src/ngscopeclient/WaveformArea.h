@@ -591,6 +591,9 @@ public:
 	StreamDescriptor GetFirstDensityFunctionStream();
 	StreamDescriptor GetFirstAnalogOrDensityStream();
 
+	Unit GetYAxisUnit()
+	{ return m_yAxisUnit; }
+
 	/**
 		@brief Returns true if the mouse is over a button, rather than the plot area
 

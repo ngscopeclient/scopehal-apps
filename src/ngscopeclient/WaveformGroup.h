@@ -123,7 +123,16 @@ public:
 	void ClearPersistence();
 
 	float GetYAxisWidth()
-	{ return 6 * ImGui::GetFontSize(); }
+	{
+		//Hex numbers need more space to draw
+		//Check if we have any UNIT_HEXNUM areas in the group and scale it up
+		for(auto a : m_areas)
+		{
+			if(a->GetYAxisUnit() == Unit::UNIT_HEXNUM)
+				return 10 * ImGui::GetFontSize();
+		}
+		return 6 * ImGui::GetFontSize();
+	}
 
 	float GetSpacing()
 	{ return ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight(); }
