@@ -850,7 +850,6 @@ bool Session::LoadWaveformDataForScope(
 			waveformsToLoad.push_back(info);
 		}
 
-		//TODO: merge history in multi scope sessions?
 		vector<shared_ptr<Oscilloscope>> temp;
 		temp.push_back(scope);
 		m_history.AddHistory(temp, false, pinned, label);

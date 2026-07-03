@@ -287,11 +287,43 @@ void HistoryManager::AddHistory(
 	if(!foundTimestamp)
 		tp = refTimeIfNoWaveforms;
 
-	//If we already have a history point for the same exact timestamp, do nothing
-	//Either a bug or we're in append mode
-	//TODO: when loading multiscope scopesessions, do we want to add stuff here??
+	//If we already have a history point for the same exact timestamp, merge it
 	if(HasHistory(tp))
+	{
+		LogTrace("Found duplicate history, merging\n");
+		LogIndenter li;
+
+		for(auto pt : m_history)
+		{
+			if(pt->m_time == tp)
+			{
+				for(auto scope : scopes)
+				{
+					//See if we already have history for this scope
+					if(pt->m_history.find(scope) != pt->m_history.end())
+					{
+						LogTrace("Already have history for scope %s, not sure what to do\n", scope->m_nickname.c_str());
+						continue;
+					}
+
+					LogTrace("Adding history for scope %s\n", scope->m_nickname.c_str());
+
+					WaveformHistory hist;
+					for(size_t i=0; i<scope->GetChannelCount(); i++)
+					{
+						auto chan = scope->GetOscilloscopeChannel(i);
+						if(!chan)
+							continue;
+						for(size_t j=0; j<chan->GetStreamCount(); j++)
+							hist[StreamDescriptor(chan, j)] = chan->GetData(j);
+					}
+					pt->m_history[scope] = hist;
+				}
+			}
+		}
+
 		return;
+	}
 
 	LogTrace("Adding history for %s\n", tp.PrettyPrint().c_str());
 
