@@ -160,6 +160,7 @@ public:
 	YAML::Node SerializeMarkers();
 	bool SerializeWaveforms(const std::string& dataDir);
 	bool SerializeSparseWaveform(SparseWaveformBase* wfm, const std::string& path);
+	bool SerializeSparseWaveformV2(SparseWaveformBase* wfm, const std::string& path);
 	bool SerializeUniformWaveform(UniformWaveformBase* wfm, const std::string& path);
 
 	std::shared_ptr<PacketManager> AddPacketFilter(PacketDecoder* filter);
