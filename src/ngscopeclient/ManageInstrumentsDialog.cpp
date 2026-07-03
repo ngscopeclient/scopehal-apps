@@ -303,10 +303,15 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 				if(ImGui::TableSetColumnIndex(3))
 					ImGui::TextUnformatted(scope->GetSerial().c_str());
 				if(ImGui::TableSetColumnIndex(4))
-					ImGui::TextUnformatted(fs.PrettyPrint(m_session->GetDeskew(scope)).c_str());
+				{
+					auto sessionSkew = m_session->GetDeskew(scope);
+
+					if(UnitInputWithImplicitApply("###Skew", m_instrumentCurrentSkews[scope], sessionSkew, fs))
+						m_session->SetDeskew(scope, sessionSkew);
+				}
 				if(ImGui::TableSetColumnIndex(5))
 				{
-					if(ImGui::Button("Deskew"))
+					if(ImGui::Button("Auto Deskew"))
 						m_parent->ShowSyncWizard(group, scope);
 				}
 				ImGui::PopID();
@@ -408,11 +413,13 @@ void ManageInstrumentsDialog::AllInstrumentsTable()
 	size_t instNumber = insts.size();
 	size_t instIndex = 0;
 	if(instNumber != m_instrumentCurrentNames.size())
-	{	// Instrument list has changed, clear cache
+	{
+		// Instrument list has changed, clear cache
 		m_instrumentCurrentNames.clear();
 		m_instrumentCommittedNames.clear();
 		m_instrumentCurrentPaths.clear();
 		m_instrumentCommittedPaths.clear();
+
 		m_instrumentCurrentNames.resize(instNumber);
 		m_instrumentCommittedNames.resize(instNumber);
 		m_instrumentCurrentPaths.resize(instNumber);

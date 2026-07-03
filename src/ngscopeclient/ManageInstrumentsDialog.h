@@ -57,6 +57,8 @@ protected:
 	std::vector<std::string> m_instrumentCommittedPaths;
 	std::vector<std::string> m_instrumentCurrentPaths;
 
+	std::map<std::shared_ptr<SCPIOscilloscope>, std::string> m_instrumentCurrentSkews;
+
 	//std::shared_ptr<SCPIInstrument> m_selection;
 };
 

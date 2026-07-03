@@ -4179,6 +4179,9 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 					samples.PrettyPrint(data->capacity()) +
 					")\n";
 
+				tooltip +=
+					string("Fine skew: ") + stream.GetXAxisUnits().PrettyPrint(data->m_triggerPhase) + "\n";
+
 				if(udata)
 				{
 					Unit rate(Unit::UNIT_SAMPLERATE);
