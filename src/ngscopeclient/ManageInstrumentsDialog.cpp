@@ -305,9 +305,22 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 				if(ImGui::TableSetColumnIndex(4))
 				{
 					auto sessionSkew = m_session->GetDeskew(scope);
+					auto committedSkew = m_instrumentCommittedSkews[scope];
+					if(committedSkew != sessionSkew)
+					{
+						auto newSkew = fs.PrettyPrint(sessionSkew);
+						auto oldSkew = fs.PrettyPrint(committedSkew);
+						LogTrace("Detected skew change (was %s now %s, text box %s)\n",
+							oldSkew.c_str(), newSkew.c_str(), m_instrumentCurrentSkews[scope].c_str());
+						m_instrumentCurrentSkews[scope] = newSkew;
+						m_instrumentCommittedSkews[scope] = sessionSkew;
+					}
 
 					if(UnitInputWithImplicitApply("###Skew", m_instrumentCurrentSkews[scope], sessionSkew, fs))
+					{
 						m_session->SetDeskew(scope, sessionSkew);
+						m_instrumentCommittedSkews[scope] = sessionSkew;
+					}
 				}
 				if(ImGui::TableSetColumnIndex(5))
 				{
