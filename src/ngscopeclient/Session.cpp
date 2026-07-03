@@ -2646,11 +2646,13 @@ bool Session::SerializeSparseWaveformV2(SparseWaveformBase* wfm, const string& p
 	if(len != fwrite(&wfm->m_offsets[0], sizeof(int64_t), len, fp))
 	{
 		LogError("write offsets failed\n");
+		fclose(fp);
 		return false;
 	}
 	if(len != fwrite(&wfm->m_durations[0], sizeof(int64_t), len, fp))
 	{
 		LogError("write durations failed\n");
+		fclose(fp);
 		return false;
 	}
 
@@ -2660,6 +2662,7 @@ bool Session::SerializeSparseWaveformV2(SparseWaveformBase* wfm, const string& p
 		if(len != fwrite(&ichan->m_samples[0], sizeof(IBM8b10bSymbol), len, fp))
 		{
 			LogError("write samples failed\n");
+			fclose(fp);
 			return false;
 		}
 	}
