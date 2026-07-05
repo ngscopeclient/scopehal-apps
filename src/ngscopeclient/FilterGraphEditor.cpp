@@ -1091,7 +1091,7 @@ void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
 				break;
 
 			case Stream::STREAM_TYPE_DIGITAL_BUS:
-				ImGui::TextUnformatted("Digital bus");
+				ImGui::Text("Digital bus, %zu bits wide", stream.GetDigitalWidth());
 				break;
 
 			case Stream::STREAM_TYPE_EYE:

@@ -1220,6 +1220,10 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 				RenderProtocolWaveform(chan, start, size);
 				break;
 
+			case Stream::STREAM_TYPE_DIGITAL_BUS:
+				RenderDigitalBusWaveform(chan, start, size);
+				break;
+
 			//nothing to draw, it's not a waveform (shouldn't even be here)
 			case Stream::STREAM_TYPE_ANALOG_SCALAR:
 			case Stream::STREAM_TYPE_DIGITAL_SCALAR:
@@ -1908,6 +1912,118 @@ void WaveformArea::RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> chan
 	}
 }
 
+/**
+	@brief Renders a single digital vector waveform
+ */
+void WaveformArea::RenderDigitalBusWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size)
+{
+	auto stream = channel->GetStream();
+	auto data = stream.GetData();
+	if(data == nullptr)
+		return;
+	auto u32 = dynamic_cast<UniformDigitalBusWaveform32*>(data);
+	auto u64 = dynamic_cast<UniformDigitalBusWaveform64*>(data);
+
+	if(u32)
+		RenderUniformDigitalBusWaveform(channel, u32, start, size);
+	else if(u64)
+		RenderUniformDigitalBusWaveform(channel, u64, start, size);
+	else
+		LogError("Unrecognized digital bus waveform type\n");
+}
+
+template<class T>
+void WaveformArea::RenderUniformDigitalBusWaveform(
+	shared_ptr<DisplayedChannel> channel,
+	T* data,
+	ImVec2 start,
+	ImVec2 size)
+{
+	auto list = ImGui::GetWindowDrawList();
+
+	//Calculate a bunch of constants
+	int64_t offset = m_group->GetXAxisOffset();
+	int64_t offset_samples = (offset - data->m_triggerPhase) / data->m_timescale;
+
+	//Find the index of the first sample visible on screen
+	data->PrepareForCpuAccess();
+
+	//We're uniform so index of first sample just is the time in timebase units
+	auto ifirst = offset_samples;
+	ifirst = max(ifirst, (int64_t)0);
+
+	//Go left by one sample
+	//The last sample BEFORE the left side of our view might extend into the visible space
+	if(ifirst > 0)
+		ifirst --;
+
+	float ybot = channel->GetYButtonPos() + start.y;
+	float ytop = ybot - m_channelButtonHeight;
+	float ymid = ybot - m_channelButtonHeight/2;
+
+	auto color = ColorFromString(channel->GetStream().m_channel->m_displaycolor);
+
+	uint32_t widthBits = channel->GetStream().GetDigitalWidth();
+	uint32_t widthNibbles = widthBits / 4;
+	if(widthBits & 3)
+		widthNibbles ++;
+
+	//Draw the actual stuff
+	size_t len = data->size();
+	size_t xend = start.x + size.x;
+	string field;
+	for(size_t i=ifirst; i<len; i++)
+	{
+		int64_t tstart = (i * data->m_timescale) + data->m_triggerPhase;
+		double xs = m_group->XAxisUnitsToXPosition(tstart);
+
+		//Merge consecutive samples with the same value
+		auto value = data->m_samples[i];
+		size_t imerge = i;
+		for(; (imerge + 1) < len; imerge ++)
+		{
+			if(value != data->m_samples[imerge + 1])
+				break;
+		}
+		i = imerge;
+
+		//End of merged sample
+		int64_t end = ( (imerge + 1) * data->m_timescale) + data->m_triggerPhase;
+		double xe = m_group->XAxisUnitsToXPosition(end);
+
+		if(xe < start.x)
+			continue;
+		if(xs > xend)
+			break;
+
+		double cellwidth = xe - xs;
+
+		//This sample is really skinny. There's no text to render so don't waste time with that.
+		if(cellwidth < 2)
+		{
+			RenderComplexSignal(
+				list,
+				start.x, xend,
+				xs, xe, 5,
+				ybot, ymid, ytop,
+				"",
+				color);
+		}
+
+		else
+		{
+			field = to_string_hex(value, true, widthNibbles);
+			RenderComplexSignal(
+				list,
+				start.x, xend,
+				xs, xe, 5,
+				ybot, ymid, ytop,
+				field,
+				color);
+		}
+	}
+}
+
 void WaveformArea::RenderComplexSignal(
 		ImDrawList* list,
 		int visleft, int visright,
@@ -2119,6 +2235,7 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 
 			//no tone mapping required
 			case Stream::STREAM_TYPE_PROTOCOL:
+			case Stream::STREAM_TYPE_DIGITAL_BUS:
 				break;
 
 			//nothing to draw, it's not a waveform (shouldn't even be here)
@@ -2175,6 +2292,7 @@ void WaveformArea::RenderWaveformTextures(
 
 			//no background rendering required, we draw everything live
 			case Stream::STREAM_TYPE_PROTOCOL:
+			case Stream::STREAM_TYPE_DIGITAL_BUS:
 				break;
 
 			//nothing to draw, it's not a waveform (shouldn't even be here)
@@ -4682,6 +4800,7 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 
 		//Digital and protocol channels can be overlaid on anything other than a density plot
 		case Stream::STREAM_TYPE_DIGITAL:
+		case Stream::STREAM_TYPE_DIGITAL_BUS:
 		case Stream::STREAM_TYPE_PROTOCOL:
 			return true;
 

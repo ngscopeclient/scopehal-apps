@@ -504,7 +504,7 @@ void MainWindow::OnScopeAdded(shared_ptr<Oscilloscope> scope, bool createViews)
 				continue;
 
 			//If this is a digital stream, add to existing digital waveform areas if one can be found
-			if(stype == Stream::STREAM_TYPE_DIGITAL)
+			if( (stype == Stream::STREAM_TYPE_DIGITAL) || (stype == Stream::STREAM_TYPE_DIGITAL_BUS) )
 			{
 				FindAreaForStream(nullptr, s);
 				continue;

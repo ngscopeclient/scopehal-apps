@@ -543,6 +543,11 @@ protected:
 	void RenderSpectrumPeaks(ImDrawList* list, std::shared_ptr<DisplayedChannel> channel);
 	void RenderDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
+	void RenderDigitalBusWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
+
+	template<class T>
+	void RenderUniformDigitalBusWaveform(std::shared_ptr<DisplayedChannel> channel, T* data, ImVec2 start, ImVec2 size);
+
 	void RenderComplexSignal(
 		ImDrawList* list,
 		int visleft, int visright,

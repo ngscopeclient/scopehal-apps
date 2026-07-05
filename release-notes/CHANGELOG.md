@@ -21,6 +21,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Drivers: Demo scope now uses xorshift32 instead of glibc LCG for better statistical properties on the simulated noise
 * Drivers: Added Antikernel Labs GPIO driver (FPGA debug IP)
 * Drivers: Added Antikernel Labs 8b10b SERDES ILA driver (FPGA debug IP)
+* Drivers: Added Antikernel Labs ILA driver (FPGA debug IP)
 * Drivers: Added Antikernel Labs VIO driver (FPGA debug IP)
 * Filters: Added GPU acceleration and/or optimized many more filters (https://github.com/ngscopeclient/scopehal/issues/977) including but not limited to the list below. Typical performance improvements (RTX 2080 Ti vs Xeon 6144):
   * 8B/10B (IBM) (12.1x speedup)
