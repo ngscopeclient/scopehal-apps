@@ -4314,6 +4314,8 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 				}
 			}
 		}
+		else
+			tooltip += "No waveform\n";
 		tooltip = Trim(tooltip);
 
 		MainWindow::SetTooltipPosition();

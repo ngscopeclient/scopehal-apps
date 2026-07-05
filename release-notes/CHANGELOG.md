@@ -59,6 +59,7 @@ This is a running list of significant bug fixes and new features since the last 
   * Vector Frequency (1040x speedup)
   * Vector Magnitude (73x speedup)
   * Vector Phase (243x speedup)
+* Filters: Added AMBA APB protocol decoder
 * Filters: Added digital-to-analog filter to convert a digital scalar value (e.g. from a VIO) to an analog value
 * Filters: Added Ethernet clause 73 (base-KX copper backplane) autonegotiation decoder (https://github.com/ngscopeclient/scopehal/pull/1074)
 * Filters: Invert now works on digital signals as well as analog (https://github.com/ngscopeclient/scopehal/issues/1088)
