@@ -71,6 +71,7 @@
 #include "SCPIConsoleDialog.h"
 #include "ScopeDeskewWizard.h"
 #include "TriggerPropertiesDialog.h"
+#include "../scopeprotocols/TouchstoneImportFilter.h"
 
 #include <imgui_markdown.h>
 #include <filesystem>

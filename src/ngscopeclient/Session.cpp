@@ -2895,6 +2895,7 @@ bool Session::SerializeUniformWaveform(UniformWaveformBase* wfm, const string& p
 		if(len != fwrite(achan->m_samples.GetCpuPointer(), sizeof(float), len, fp))
 		{
 			LogError("file write error\n");
+			fclose(fp);
 			return false;
 		}
 	}
@@ -2903,6 +2904,7 @@ bool Session::SerializeUniformWaveform(UniformWaveformBase* wfm, const string& p
 		if(len != fwrite(dchan->m_samples.GetCpuPointer(), sizeof(bool), len, fp))
 		{
 			LogError("file write error\n");
+			fclose(fp);
 			return false;
 		}
 	}
@@ -2911,6 +2913,7 @@ bool Session::SerializeUniformWaveform(UniformWaveformBase* wfm, const string& p
 		if(len != fwrite(b32->m_samples.GetCpuPointer(), sizeof(uint32_t), len, fp))
 		{
 			LogError("file write error\n");
+			fclose(fp);
 			return false;
 		}
 	}
@@ -2919,6 +2922,7 @@ bool Session::SerializeUniformWaveform(UniformWaveformBase* wfm, const string& p
 		if(len != fwrite(b64->m_samples.GetCpuPointer(), sizeof(uint64_t), len, fp))
 		{
 			LogError("file write error\n");
+			fclose(fp);
 			return false;
 		}
 	}
@@ -2926,6 +2930,7 @@ bool Session::SerializeUniformWaveform(UniformWaveformBase* wfm, const string& p
 	{
 		//TODO: support other waveform types (buses, eyes, etc)
 		LogError("unrecognized sample type\n");
+		fclose(fp);
 		return false;
 	}
 
