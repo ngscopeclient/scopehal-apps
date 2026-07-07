@@ -2183,8 +2183,9 @@ Filter* MainWindow::CreateFilter(
 		}
 	}
 
-	//Create and show filter properties dialog
-	if( (f->NeedsConfig() && showProperties) || (f->GetCategory() == Filter::CAT_GENERATION))
+	//Create and show filter properties dialog iff it's an import filter
+	//(TouchstoneImportFilter is not derived from ImportFilter for complicated reasons so is special cased)
+	if( (dynamic_cast<ImportFilter*>(f) != nullptr) || (dynamic_cast<TouchstoneImportFilter*>(f) != nullptr) )
 	{
 		auto dlg = make_shared<FilterPropertiesDialog>(f, this);
 		m_channelPropertiesDialogs[f] = dlg;
