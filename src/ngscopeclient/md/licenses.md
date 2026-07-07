@@ -19,7 +19,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 ## Third party components
 ngscopeclient and libscopehal include or depend on the following open source components, summarized below. See the individual project websites for full license text.
 
-  * avx_mathfun.h (static, zlib license)
   * canvas_ity (static, ISC license)
   * dbus (shared, LGPLv2.1 license)
   * Dear ImGui (static, MIT license)
