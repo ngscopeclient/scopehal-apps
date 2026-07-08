@@ -1530,7 +1530,7 @@ void StreamBrowserDialog::renderChannelNode(
 	auto awg = std::dynamic_pointer_cast<FunctionGenerator>(instrument);
 	auto dmm = std::dynamic_pointer_cast<Multimeter>(instrument);
 
-	bool singleStream = channel->GetStreamCount() == 1;
+	bool singleStream = channel->GetStreamCount() <= 1;		//allow zero for input-only channels
 	auto scopechan = dynamic_cast<OscilloscopeChannel *>(channel);
 	auto psuchan = dynamic_cast<PowerSupplyChannel *>(channel);
 	auto awgchan = dynamic_cast<FunctionGeneratorChannel *>(channel);
