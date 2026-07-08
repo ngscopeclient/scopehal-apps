@@ -102,7 +102,6 @@ add_executable(ngscopeclient
 	NFDFileBrowser.cpp
 	NotesDialog.cpp
 	PacketManager.cpp
-	PersistenceSettingsDialog.cpp
 	PowerSupplyDialog.cpp
 	Preference.cpp
 	PreferenceDialog.cpp

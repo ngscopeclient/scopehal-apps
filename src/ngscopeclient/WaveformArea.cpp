@@ -62,7 +62,7 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream, Session& session)
 		, m_rasterizedY(0)
 		, m_cachedX(0)
 		, m_cachedY(0)
-		, m_persistenceEnabled(false)
+		, m_persistenceEnabled(true)
 		, m_yButtonPos(0)
 {
 	auto schan = dynamic_cast<OscilloscopeChannel*>(stream.m_channel);

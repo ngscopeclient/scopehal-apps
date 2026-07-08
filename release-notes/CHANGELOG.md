@@ -82,6 +82,7 @@ This is a running list of significant bug fixes and new features since the last 
 * GUI: added performance counter for per-scope waveform rate to better profile multi-scope sessions
 * Serialization: trace alpha and persistence decay settings are now saved in session files (https://github.com/ngscopeclient/scopehal-apps/issues/936)
 * GUI: Properties dialogs don't auto-spawn when filters (other than import filters) are created, to avoid unnecessary clutter
+* GUI: Removed hard-to-find persistence settings dialog and just made persistence a slider on the toolbar
 
 ## Breaking changes since v0.1.1
 

@@ -255,9 +255,6 @@ public:
 	float GetPersistDecay()
 	{ return m_persistenceDecay; }
 
-	void SetPersistDecay(float f)
-	{ m_persistenceDecay = f; }
-
 	Filter* CreateFilter(
 		const std::string& name,
 		WaveformArea* area,
@@ -425,9 +422,6 @@ protected:
 
 	///@brief Manage instruments
 	std::shared_ptr<ManageInstrumentsDialog> m_manageInstrumentsDialog;
-
-	///@brief Persistence settings
-	std::shared_ptr<Dialog> m_persistenceDialog;
 
 	///@brief Lab notes
 	std::shared_ptr<Dialog> m_notesDialog;

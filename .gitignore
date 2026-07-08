@@ -1,9 +1,2 @@
-build
-release-build
-debug-build
-analysis-build
-asan-build
-release-nodebug-build
-debug-noopt-build
-release-asan-build
+*-build
 release-info.cmake

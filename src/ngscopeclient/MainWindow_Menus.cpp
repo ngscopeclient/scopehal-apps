@@ -55,7 +55,6 @@
 #include "MetricsDialog.h"
 #include "MemoryDialog.h"
 #include "NotesDialog.h"
-#include "PersistenceSettingsDialog.h"
 #include "PowerSupplyDialog.h"
 #include "PreferenceDialog.h"
 #include "ProtocolAnalyzerDialog.h"
@@ -220,14 +219,6 @@ void MainWindow::ViewMenu()
 	{
 		if(ImGui::MenuItem("Fullscreen"))
 			SetFullscreen(!m_fullscreen);
-
-		ImGui::Separator();
-
-		if(ImGui::MenuItem("Persistence Setup"))
-		{
-			m_persistenceDialog = make_shared<PersistenceSettingsDialog>(this);
-			AddDialog(m_persistenceDialog);
-		}
 
 		ImGui::EndMenu();
 	}
@@ -614,32 +605,6 @@ void MainWindow::WindowMenu()
 		if(hasMeasurements)
 			ImGui::EndDisabled();
 
-		bool hasMetrics = m_metricsDialog != nullptr;
-		if(hasMetrics)
-			ImGui::BeginDisabled();
-
-		if(ImGui::MenuItem("Performance Metrics"))
-		{
-			m_metricsDialog = make_shared<MetricsDialog>(&m_session);
-			AddDialog(m_metricsDialog);
-		}
-
-		if(hasMetrics)
-			ImGui::EndDisabled();
-
-		bool hasMemory = m_memoryDialog != nullptr;
-		if(hasMemory)
-			ImGui::BeginDisabled();
-
-		if(ImGui::MenuItem("Memory Analysis"))
-		{
-			m_memoryDialog = make_shared<MemoryDialog>(&m_session, this);
-			AddDialog(m_memoryDialog);
-		}
-
-		if(hasMemory)
-			ImGui::EndDisabled();
-
 		bool hasHistory = m_historyDialog != nullptr;
 		if(hasHistory)
 			ImGui::BeginDisabled();
@@ -834,6 +799,32 @@ void MainWindow::DebugMenu()
 
 		if(ImGui::MenuItem("Hardware Flags"))
 			AddDialog(make_shared<HardwareFlagsDialog>());
+
+		bool hasMetrics = m_metricsDialog != nullptr;
+		if(hasMetrics)
+			ImGui::BeginDisabled();
+
+		if(ImGui::MenuItem("Performance Metrics"))
+		{
+			m_metricsDialog = make_shared<MetricsDialog>(&m_session);
+			AddDialog(m_metricsDialog);
+		}
+
+		if(hasMetrics)
+			ImGui::EndDisabled();
+
+		bool hasMemory = m_memoryDialog != nullptr;
+		if(hasMemory)
+			ImGui::BeginDisabled();
+
+		if(ImGui::MenuItem("Memory Analysis"))
+		{
+			m_memoryDialog = make_shared<MemoryDialog>(&m_session, this);
+			AddDialog(m_memoryDialog);
+		}
+
+		if(hasMemory)
+			ImGui::EndDisabled();
 
 		ImGui::EndMenu();
 	}
