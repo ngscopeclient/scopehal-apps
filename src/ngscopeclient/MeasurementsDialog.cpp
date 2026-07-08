@@ -130,6 +130,11 @@ bool MeasurementsDialog::DoRender()
 				if(payload && (payload->DataSize == sizeof(StreamDescriptor)))
 				{
 					moveStream = *reinterpret_cast<const StreamDescriptor*>(payload->Data);
+
+					//If we don't have it, append it before moving
+					if(!HasInput(moveStream))
+						AddStream(moveStream);
+
 					moveDest = i;
 					moving = true;
 				}
@@ -199,20 +204,17 @@ bool MeasurementsDialog::DoRender()
 			MoveStream(moveStream, moveDest);
 		}
 
-		//If we have no measurements, display a blank row usable as a drag/drop target
-		if(m_inputs.empty())
-		{
-			ImGui::TableNextRow(ImGuiTableRowFlags_None);
-			ImGui::TableSetColumnIndex(0);
+		//Display a blank row usable as a drag/drop target
+		ImGui::TableNextRow(ImGuiTableRowFlags_None);
+		ImGui::TableSetColumnIndex(0);
 
-			ImGui::Text("(drag stream here)");
-			if(ImGui::BeginDragDropTarget())
-			{
-				auto payload = ImGui::AcceptDragDropPayload("Scalar");
-				if(payload && (payload->DataSize == sizeof(StreamDescriptor)))
-					AddStream(*reinterpret_cast<const StreamDescriptor*>(payload->Data));
-				ImGui::EndDragDropTarget();
-			}
+		ImGui::Text("(drag stream here)");
+		if(ImGui::BeginDragDropTarget())
+		{
+			auto payload = ImGui::AcceptDragDropPayload("Scalar");
+			if(payload && (payload->DataSize == sizeof(StreamDescriptor)))
+				AddStream(*reinterpret_cast<const StreamDescriptor*>(payload->Data));
+			ImGui::EndDragDropTarget();
 		}
 
 		ImGui::EndTable();
