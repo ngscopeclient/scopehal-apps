@@ -346,8 +346,11 @@ void AddInstrumentDialog::UpdateCombos()
 		for(auto& transport : selectedModel.supportedTransports)
 		{
 			string transportName = to_string(transport.transportType);
+
 			// Prepare transport type for default value
-			if(transportIndex == 0) m_selectedTransportType = transport.transportType;
+			if(transportIndex == 0)
+				m_selectedTransportType = transport.transportType;
+
 			if(m_supportedTransports.find(transportName) != m_supportedTransports.end())
 			{
 				m_transports.push_back(transportName);

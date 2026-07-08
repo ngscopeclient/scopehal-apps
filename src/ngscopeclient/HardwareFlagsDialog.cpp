@@ -67,7 +67,7 @@ bool HardwareFlagsDialog::DoRender()
 	ImGui::TextWrapped(
 		"It is mostly intended for developers to test fallback versions of accelerated functionality by "
 		"disabling a feature that the hardware actually supports. There are no guardrails! "
-		"Enabling a feature your CPU or Vulkan device does not support will probably crash ngscopeclient");
+		"Enabling a feature your CPU or Vulkan device does not support will probably crash ngscopeclient.");
 
 	if(ImGui::CollapsingHeader("CPU"))
 	{
