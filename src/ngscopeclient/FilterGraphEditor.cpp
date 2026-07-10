@@ -45,6 +45,7 @@
 #include "EmbeddedTriggerPropertiesDialog.h"
 #include "MeasurementsDialog.h"
 #include "../scopehal/DensityFunctionWaveform.h"
+#include "../scopeprotocols/DigitalConstantFilter.h"
 
 using namespace std;
 
@@ -2284,6 +2285,24 @@ void FilterGraphEditor::DoNodeForChannel(
 	//Reserve space for the node header
 	auto startpos = ImGui::GetCursorPos();
 	ImGui::Dummy(ImVec2(nodewidth, headerheight));
+
+	//SPECIAL CASE: If we're a constant filter, allow it to be edited directly in the graph editor
+	//TODO: we need to store state somewhere for text inputs
+	auto dc = dynamic_cast<DigitalConstantFilter*>(f);
+	if(dc)
+	{
+		auto& width = dc->GetWidth();
+		auto& value = dc->GetValue();
+		if(width.GetIntVal() == 1)
+		{
+			bool b = value.GetBoolVal();
+			if(ImGui::Checkbox("Value", &b))
+			{
+				value.SetBoolVal(b);
+				m_parent->OnFilterReconfigured(f);
+			}
+		}
+	}
 
 	//Table of inputs at left and outputs at right
 	//TODO: this should move up to base class or something?
