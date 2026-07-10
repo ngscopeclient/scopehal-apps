@@ -416,11 +416,23 @@ void WaveformGroup::DoCursorReadouts()
 							}
 						break;
 
-						//TODO
 						case Stream::STREAM_TYPE_DIGITAL_BUS:
-							sv1 = "(unimplemented)";
-							sv2 = "(unimplemented)";
-							svd = "(unimplemented)";
+							{
+								auto v1 = GetDigitalBusValueAtTime(data, m_xAxisCursorPositions[0]);
+								auto v2 = GetDigitalBusValueAtTime(data, m_xAxisCursorPositions[1]);
+
+								uint32_t widthBits = stream.GetDigitalWidth();
+								uint32_t widthNibbles = widthBits / 4;
+								if(widthBits & 3)
+									widthNibbles ++;
+
+								if(v1)
+									sv1 = to_string_hex(v1.value(), true, widthNibbles);
+								if(v2)
+									sv2 = to_string_hex(v2.value(), true, widthNibbles);
+								if(v1 && v2)
+									svd = to_string_hex(v2.value() - v1.value(), true, widthNibbles);
+							}
 							break;
 
 						//Cursor readout on density plots makes no sense
