@@ -145,7 +145,7 @@ bool MeasurementsDialog::DoRender()
 			{
 				if(s.GetType() == Stream::STREAM_TYPE_DIGITAL_SCALAR)
 				{
-					if(ImGui::BeginMenu("Format"))
+					if(ImGui::BeginMenu("Radix"))
 					{
 						if(ImGui::MenuItem("Hex", nullptr, (desc->m_format == MeasurementDescriptor::FORMAT_HEX)))
 							desc->m_format = MeasurementDescriptor::FORMAT_HEX;

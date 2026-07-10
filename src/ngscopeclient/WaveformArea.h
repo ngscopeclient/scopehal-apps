@@ -197,7 +197,7 @@ struct PeakLabel
 /**
 	@brief Context data for a single channel being displayed within a WaveformArea
  */
-class DisplayedChannel : public InputDescriptor
+class DisplayedChannel : public MeasurementDescriptor
 {
 public:
 	DisplayedChannel(StreamDescriptor stream, Session& session);

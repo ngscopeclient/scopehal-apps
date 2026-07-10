@@ -53,7 +53,7 @@ using namespace std;
 // DisplayedChannel
 
 DisplayedChannel::DisplayedChannel(StreamDescriptor stream, Session& session)
-		: InputDescriptor("", stream)
+		: MeasurementDescriptor("", stream)
 		, m_colorRamp("eye-gradient-viridis")
 		, m_session(session)
 		, m_rasterizedWaveform("DisplayedChannel.m_rasterizedWaveform")
@@ -1963,10 +1963,28 @@ void WaveformArea::RenderUniformDigitalBusWaveform(
 
 	auto color = ColorFromString(channel->GetStream().m_channel->m_displaycolor);
 
+	//Figure out how wide to display it
 	uint32_t widthBits = channel->GetStream().GetDigitalWidth();
-	uint32_t widthNibbles = widthBits / 4;
-	if(widthBits & 3)
-		widthNibbles ++;
+	uint32_t displayWidth = 0;
+	switch(channel->m_format)
+	{
+		case MeasurementDescriptor::FORMAT_DEC:
+			displayWidth = ceil(log10(pow(2, widthBits)));
+			if(displayWidth > 16)
+				displayWidth = 16;
+			break;
+
+		case MeasurementDescriptor::FORMAT_BINARY:
+			displayWidth = widthBits;
+			break;
+
+		case MeasurementDescriptor::FORMAT_HEX:
+		default:
+			displayWidth = widthBits / 4;
+			if(widthBits & 3)
+				displayWidth ++;
+			break;
+	}
 
 	//Draw the actual stuff
 	size_t len = data->size();
@@ -2012,7 +2030,39 @@ void WaveformArea::RenderUniformDigitalBusWaveform(
 
 		else
 		{
-			field = to_string_hex(value, true, widthNibbles);
+			switch(channel->m_format)
+			{
+				case MeasurementDescriptor::FORMAT_DEC:
+					{
+						char format[32];
+						snprintf(format, sizeof(format), "%%0%d%s", displayWidth, PRIu64);
+
+						//Actually format the value
+						char tmp[32];
+						snprintf(tmp, sizeof(tmp), format, value);
+						field = tmp;
+					}
+					break;
+
+				case MeasurementDescriptor::FORMAT_BINARY:
+					{
+						for(int j=displayWidth-1; j >= 0; j--)
+						{
+							uint64_t mask = static_cast<uint64_t>(1) << j;
+							if( (value & mask) == mask)
+								field += "1";
+							else
+								field += "0";
+						}
+					}
+					break;
+
+				case MeasurementDescriptor::FORMAT_HEX:
+				default:
+					field = to_string_hex(value, true, displayWidth);
+					break;
+			}
+
 			RenderComplexSignal(
 				list,
 				start.x, xend,
@@ -4383,6 +4433,24 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 		if(ImGui::MenuItem("Persistence", nullptr, persist))
 			chan->SetPersistenceEnabled(!persist);
 		ImGui::Separator();
+
+		//See if the stream is a digital vector and if so, show the radix menu
+		if(stream.GetType() == Stream::STREAM_TYPE_DIGITAL_BUS)
+		{
+			if(ImGui::BeginMenu("Radix"))
+			{
+				if(ImGui::MenuItem("Hex", nullptr, (chan->m_format == MeasurementDescriptor::FORMAT_HEX)))
+					chan->m_format = MeasurementDescriptor::FORMAT_HEX;
+				if(ImGui::MenuItem("Binary", nullptr, (chan->m_format == MeasurementDescriptor::FORMAT_BINARY)))
+					chan->m_format = MeasurementDescriptor::FORMAT_BINARY;
+				if(ImGui::MenuItem("Decimal", nullptr, (chan->m_format == MeasurementDescriptor::FORMAT_DEC)))
+					chan->m_format = MeasurementDescriptor::FORMAT_DEC;
+
+				ImGui::EndMenu();
+			}
+
+			ImGui::Separator();
+		}
 
 		FilterMenu(chan);
 

@@ -79,6 +79,37 @@ public:
 	std::shared_ptr<FunctionGeneratorState> awgstate;
 };
 
+class MeasurementDescriptor : public InputDescriptor
+{
+public:
+	MeasurementDescriptor(const std::string& name)
+	: InputDescriptor(name, StreamDescriptor(nullptr))
+	, m_format(FORMAT_HEX)
+	{}
+
+	MeasurementDescriptor(const std::string& name, StreamDescriptor stream)
+	: InputDescriptor(name, stream)
+	, m_format(FORMAT_HEX)
+	{}
+
+	MeasurementDescriptor(StreamDescriptor stream)
+	: InputDescriptor("", stream)
+	, m_format(FORMAT_HEX)
+	{}
+
+	virtual ~MeasurementDescriptor()
+	{}
+
+	enum format_t
+	{
+		FORMAT_HEX,
+		FORMAT_BINARY,
+		FORMAT_DEC
+	};
+
+	format_t m_format;
+};
+
 void InstrumentThread(InstrumentThreadArgs args);
 void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
 
