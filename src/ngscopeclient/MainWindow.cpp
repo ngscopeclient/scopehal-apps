@@ -2132,16 +2132,15 @@ void MainWindow::UpdateFonts()
 	@brief Creates a filter optionally and adds all of its streams to the best waveform area
 
 	@param name				Name of the filter
+	@param flags			Bitwise OR of one or more FilterCreate_t flags
 	@param area				Waveform area we launched the context menu from (if any)
 	@param initialStream	Stream we launched the context menu from (if any)
-	@param addtoArea		True to add to a waveform area
  */
 Filter* MainWindow::CreateFilter(
 	const string& name,
+	uint32_t flags,
 	WaveformArea* area,
-	StreamDescriptor initialStream,
-	[[maybe_unused]] bool showProperties,	//TODO deprecate and remove this
-	bool addToArea)
+	StreamDescriptor initialStream)
 {
 	LogTrace("CreateFilter %s\n", name.c_str());
 
@@ -2160,14 +2159,14 @@ Filter* MainWindow::CreateFilter(
 	m_session.MarkChannelDirty(f);
 
 	//Find a home for each of its streams
-	if(addToArea)
+	if(flags & ADD_PLOT)
 	{
 		m_pendingChannelDisplayRequests.emplace(pair<OscilloscopeChannel*, WaveformArea*>(f, area));
 		f->AddRef();
 	}
 
 	//Not adding waveforms to plots, but still check for scalar values and add to measurements view
-	else
+	else if(flags & ADD_MEASURE)
 	{
 		for(size_t i=0; i<f->GetStreamCount(); i++)
 		{

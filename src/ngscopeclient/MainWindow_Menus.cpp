@@ -472,7 +472,7 @@ void MainWindow::AddImportMenu()
 			string shortname = fname.substr(0, fname.size() - strlen(" Import"));
 
 			if(ImGui::MenuItem(shortname.c_str()))
-				CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
+				CreateFilter(fname, ADD_PLOT, nullptr, StreamDescriptor(nullptr, 0));
 		}
 
 		ImGui::EndMenu();
@@ -509,7 +509,7 @@ void MainWindow::AddGenerateMenu()
 				continue;
 
 			if(ImGui::MenuItem(fname.c_str()))
-				CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
+				CreateFilter(fname, ADD_PLOT, nullptr, StreamDescriptor(nullptr, 0));
 		}
 
 		ImGui::EndMenu();

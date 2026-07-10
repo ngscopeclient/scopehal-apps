@@ -4517,10 +4517,10 @@ void WaveformArea::FilterSubmenu(shared_ptr<DisplayedChannel> chan, const string
 				if(ImGui::BeginMenu(fname.c_str(), valid))
 				{
 					if(ImGui::MenuItem("Trend"))
-						m_parent->CreateFilter(fname, this, stream, false);
+						m_parent->CreateFilter(fname, MainWindow::ADD_PLOT, this, stream);
 
 					if(ImGui::MenuItem("Summary"))
-						m_parent->CreateFilter(fname, this, stream, false, false);
+						m_parent->CreateFilter(fname, MainWindow::ADD_MEASURE, this, stream);
 
 					ImGui::EndMenu();
 				}
@@ -4529,7 +4529,7 @@ void WaveformArea::FilterSubmenu(shared_ptr<DisplayedChannel> chan, const string
 			else
 			{
 				if(ImGui::MenuItem(fname.c_str(), nullptr, false, valid))
-					m_parent->CreateFilter(fname, this, stream);
+					m_parent->CreateFilter(fname, MainWindow::ADD_PLOT, this, stream);
 			}
 		}
 

@@ -255,12 +255,18 @@ public:
 	float GetPersistDecay()
 	{ return m_persistenceDecay; }
 
+	enum FilterCreate_t
+	{
+		ADD_PLOT	= 1,	//Add to waveform areas, if applicable (implies ADD_MEASURE too)
+		ADD_MEASURE	= 2		//Add to measurements, if applicable
+	};
+
 	Filter* CreateFilter(
 		const std::string& name,
+		uint32_t flags,
 		WaveformArea* area,
-		StreamDescriptor initialStream,
-		bool showProperties = true,
-		bool addToArea = true);
+		StreamDescriptor initialStream);
+
 	void FindAreaForStream(WaveformArea* area, StreamDescriptor stream);
 
 	void OnFilterReconfigured(Filter* f);

@@ -487,7 +487,11 @@ bool FilterGraphEditor::DoRender()
 				//Make the filter but don't spawn a properties dialog for it
 				//If measurement, don't add trends by default... but always add something
 				StreamDescriptor emptyStream;
-				auto f = m_parent->CreateFilter(fname, nullptr, emptyStream, false, (cat != Filter::CAT_MEASUREMENT) );
+				uint32_t flags = 0;
+				if(cat != Filter::CAT_MEASUREMENT)
+					flags = MainWindow::ADD_PLOT;
+
+				auto f = m_parent->CreateFilter(fname, flags, nullptr, emptyStream);
 
 				//If it's a measurement that has no scalar outputs (only one as of this writing is burst width),
 				//we *do* want to spawn a waveform area for it
@@ -1783,7 +1787,7 @@ void FilterGraphEditor::CreateChannelMenu()
 			if(ImGui::MenuItem(fname.c_str()))
 			{
 				//Make the filter but don't spawn a properties dialog for it or add to a waveform area
-				auto f = m_parent->CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0), false, false);
+				auto f = m_parent->CreateFilter(fname, 0, nullptr, StreamDescriptor(nullptr, 0));
 
 				//Get relative mouse position
 				auto mousePos = ax::NodeEditor::ScreenToCanvas(m_createMousePos);
@@ -1880,10 +1884,10 @@ void FilterGraphEditor::FilterSubmenu(StreamDescriptor stream, const string& nam
 			{
 				//Make the filter but don't spawn a properties dialog for it
 				//If measurement, don't add trends by default
-				bool addToArea = true;
+				uint32_t flags = MainWindow::ADD_PLOT;
 				if(cat == Filter::CAT_MEASUREMENT )
-					addToArea = false;
-				auto f = m_parent->CreateFilter(fname, nullptr, stream, false, addToArea);
+					flags = 0;
+				auto f = m_parent->CreateFilter(fname, flags, nullptr, stream);
 
 				//Get relative mouse position
 				auto mousePos = ax::NodeEditor::ScreenToCanvas(m_createMousePos);
@@ -2782,10 +2786,8 @@ void FilterGraphEditor::DoAddMenu()
 
 			string shortname = fname.substr(0, fname.size() - strlen(" Import"));
 
-			//Unlike normal filter creation, we DO want the properties dialog shown immediately
-			//since we need to specify a file name to do anything
 			if(ImGui::MenuItem(shortname.c_str()))
-				m_parent->CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
+				m_parent->CreateFilter(fname, 0, nullptr, StreamDescriptor(nullptr, 0));
 		}
 
 		ImGui::PopFont();
@@ -2808,7 +2810,7 @@ void FilterGraphEditor::DoAddMenu()
 				continue;
 
 			if(ImGui::MenuItem(fname.c_str()))
-				m_parent->CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
+				m_parent->CreateFilter(fname, MainWindow::ADD_PLOT, nullptr, StreamDescriptor(nullptr, 0));
 		}
 
 		ImGui::PopFont();
