@@ -827,6 +827,9 @@ void MainWindow::Toolbar()
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar(2);
 
+	ImGui::SameLine();
+	ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+
 	//Slider for trace alpha
 	ImGui::SameLine();
 	float y = ImGui::GetCursorPosY();
@@ -834,6 +837,9 @@ void MainWindow::Toolbar()
 	ImGui::SetNextItemWidth(6 * toolbarHeight);
 	if(ImGui::SliderFloat("Intensity", &m_traceAlpha, 0, 0.75, "", ImGuiSliderFlags_Logarithmic))
 		SetNeedRender();
+
+	ImGui::SameLine();
+	ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
 
 	//Slider for persistence decay
 	ImGui::SameLine();
@@ -1120,6 +1126,9 @@ void MainWindow::ToolbarButtons()
 		ImGui::SameLine(0.0, 0.0);
 		TriggerStopDropdown(buttonsize.y);
 	}
+
+	ImGui::SameLine();
+	ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
 
 	//History selector
 	bool hasHist = (m_historyDialog != nullptr);
