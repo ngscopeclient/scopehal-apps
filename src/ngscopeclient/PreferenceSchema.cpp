@@ -460,14 +460,14 @@ void PreferenceManager::InitializeDefaults()
 					.EnumValue("24x24", 24)
 					.EnumValue("48x48", 48)
 				);
+			toolbar.AddPreference(
+				Preference::Enum("icon_theme", ICON_THEME_DARK)
+					.Label("Icon Theme")
+					.Description("Toolbar theme")
+					.EnumValue("Dark", ICON_THEME_DARK)
+					.EnumValue("Light", ICON_THEME_LIGHT)
+				);
 
-		/*auto& waveforms = appearance.AddCategory("Waveforms");
-			waveforms.AddPreference(
-				Preference::Real("persist_decay_rate", 0.9)
-				.Label("Persistence decay rate (0 = none, 1 = infinite)")
-				.Description("Decay rate for persistence waveforms. ")
-				.Unit(Unit::UNIT_COUNTS));
-		*/
 		auto& windows = appearance.AddCategory("Windowing");
 			windows.AddPreference(
 				Preference::Enum("viewport_mode", VIEWPORT_ENABLE)

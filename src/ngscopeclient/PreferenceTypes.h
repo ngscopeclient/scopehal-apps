@@ -82,4 +82,10 @@ enum NumericValueDisplay
 	NUMERIC_DISPLAY_DEFAULT_FONT
 };
 
+enum IconTheme_t
+{
+	ICON_THEME_LIGHT,
+	ICON_THEME_DARK
+};
+
 #endif

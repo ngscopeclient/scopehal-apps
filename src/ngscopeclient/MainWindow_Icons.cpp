@@ -810,13 +810,30 @@ void MainWindow::LoadMiscIcons()
 void MainWindow::LoadToolbarIcons()
 {
 	int iconSize = m_session.GetPreferences().GetEnumRaw("Appearance.Toolbar.icon_size");
+	int iconTheme = m_session.GetPreferences().GetEnumRaw("Appearance.Toolbar.icon_theme");
 
-	if(m_toolbarIconSize == iconSize)
+	if( (m_toolbarIconSize == iconSize) && (m_toolbarIconTheme == iconTheme) )
 		return;
 
 	m_toolbarIconSize = iconSize;
+	m_toolbarIconTheme = static_cast<IconTheme_t>(iconTheme);
 
-	string prefix = string("icons/") + to_string(iconSize) + "x" + to_string(iconSize) + "/";
+	string prefix = string("icons/themes/");
+	switch(iconTheme)
+	{
+		case ICON_THEME_DARK:
+			prefix += "dark/";
+			break;
+
+		case ICON_THEME_LIGHT:
+			prefix += "light/";
+			break;
+
+		default:
+			LogError("invalid icon theme\n");
+			break;
+	}
+	prefix += to_string(iconSize) + "x" + to_string(iconSize) + "/";
 
 	//Load the icons
 	m_texmgr.LoadTexture("clear-sweeps", FindDataFile(prefix + "clear-sweeps.png"));

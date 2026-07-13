@@ -35,7 +35,6 @@
 #include "ngscopeclient.h"
 #include "ngscopeclient-version.h"
 #include "MainWindow.h"
-#include "PreferenceTypes.h"
 #include "FileSystem.h"
 
 #include <iostream>
@@ -121,6 +120,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue, bool maximized, bool resto
 	, m_showDemo(false)
 	, m_nextWaveformGroup(1)
 	, m_toolbarIconSize(0)
+	, m_toolbarIconTheme(ICON_THEME_DARK)
 	, m_traceAlpha(0.75)
 	, m_persistenceDecay(0.0)
 	, m_session(this)
@@ -162,7 +162,6 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue, bool maximized, bool resto
 	UpdateFonts();
 
 	//Load some textures
-	m_toolbarIconSize = 0;
 	LoadToolbarIcons();
 	LoadGradients();
 	LoadMiscIcons();
@@ -1088,6 +1087,16 @@ void MainWindow::ToolbarButtons()
 		m_tutorialDialog->DrawSpeechBubble(anchorPos, ImGuiDir_Up, "Arm the trigger");
 	}
 
+	if(ImGui::ImageButton("trigger-auto", GetTexture("trigger-auto"), buttonsize))
+		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_AUTO);
+	Dialog::Tooltip("Arm the trigger, then force an acquisition if no trigger event occurs");
+	if(multigroup)
+	{
+		ImGui::SameLine(0.0, 0.0);
+		TriggerAutoDropdown(buttonsize.y);
+	}
+
+	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-single", GetTexture("trigger-single"), buttonsize))
 		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_SINGLE);
 	Dialog::Tooltip("Arm the trigger in one-shot mode");
@@ -1105,16 +1114,6 @@ void MainWindow::ToolbarButtons()
 	{
 		ImGui::SameLine(0.0, 0.0);
 		TriggerForceDropdown(buttonsize.y);
-	}
-
-	ImGui::SameLine(0.0, 0.0);
-	if(ImGui::ImageButton("trigger-auto", GetTexture("trigger-auto"), buttonsize))
-		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_AUTO);
-	Dialog::Tooltip("Arm the trigger, then force an acquisition if no trigger event occurs");
-	if(multigroup)
-	{
-		ImGui::SameLine(0.0, 0.0);
-		TriggerAutoDropdown(buttonsize.y);
 	}
 
 	ImGui::SameLine(0.0, 0.0);

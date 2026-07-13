@@ -51,6 +51,8 @@
 #include "Workspace.h"
 #include "imgui_markdown.h"
 
+#include "PreferenceTypes.h"
+
 #include "../scopehal/PacketDecoder.h"
 
 class MeasurementsDialog;
@@ -468,6 +470,9 @@ protected:
 
 	///@brief Cached toolbar icon size
 	int m_toolbarIconSize;
+
+	///@brief cached toolbar icon theme
+	IconTheme_t m_toolbarIconTheme;
 
 	///@brief Trace alpha
 	float m_traceAlpha;
