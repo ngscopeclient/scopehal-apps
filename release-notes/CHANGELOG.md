@@ -19,6 +19,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Drivers: Added Teledyne LeCroy SDA6000A support (https://github.com/ngscopeclient/scopehal/issues/1065)
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
 * Drivers: Demo scope now uses xorshift32 instead of glibc LCG for better statistical properties on the simulated noise
+* Drivers: Demo scope now has some MSO channels in addition to the analog ones
 * Drivers: Added Antikernel Labs GPIO driver (FPGA debug IP)
 * Drivers: Added Antikernel Labs 8b10b SERDES ILA driver (FPGA debug IP)
 * Drivers: Added Antikernel Labs ILA driver (FPGA debug IP)
