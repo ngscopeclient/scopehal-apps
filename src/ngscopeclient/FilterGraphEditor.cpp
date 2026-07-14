@@ -2193,7 +2193,16 @@ void FilterGraphEditor::DoNodeForChannel(
 		displaycolor = "#808080";
 
 	auto& prefs = m_session->GetPreferences();
-	auto errorColor = prefs.GetColor("Appearance.Filter Graph.error_outline_color");
+	ImU32 messageColors[] = {
+		prefs.GetColor("Appearance.Filter Graph.error_outline_color"), // 0 zero in enum is not set, therefore placeholder
+		prefs.GetColor("Appearance.Filter Graph.error_outline_color"), // Also no fatal error should be ever sent, but better than crash
+		prefs.GetColor("Appearance.Filter Graph.error_outline_color"),
+		prefs.GetColor("Appearance.Filter Graph.warning_outline_color"),
+		prefs.GetColor("Appearance.Filter Graph.notice_outline_color"),
+		prefs.GetColor("Appearance.Filter Graph.verbose_outline_color"),
+		prefs.GetColor("Appearance.Filter Graph.debug_outline_color"),
+		prefs.GetColor("Appearance.Filter Graph.debug_outline_color"), // We don't need crash, so placeholder
+	};
 
 	//Get some configuration / style settings
 	auto color = ColorFromString(displaycolor);
@@ -2454,9 +2463,11 @@ void FilterGraphEditor::DoNodeForChannel(
 	}
 
 	//Display errors
-	if(channel->HasErrors())
+	if(channel->HasMessages())
 	{
-		auto errorText = channel->GetErrorTitle();
+		// We only display the most severe message for now
+		auto msg = channel->GetMostSevereMessage();
+		auto errorText = msg->GetTitle();
 		auto errorSize = ImGui::CalcTextSize(errorText.c_str());
 
 		auto textColor = ImGui::GetColorU32(ImGui::GetStyleColorVec4(ImGuiCol_Text));
@@ -2481,7 +2492,7 @@ void FilterGraphEditor::DoNodeForChannel(
 		if( (mousepos.x > rectStart.x) && (mousepos.y > rectStart.y) &&
 			(mousepos.x < rectEnd.x) && (mousepos.y < rectEnd.y) )
 		{
-			auto log = Trim(channel->GetErrorLog());
+			auto log = Trim(msg->GetMessage());
 
 			ax::NodeEditor::Suspend();
 				MainWindow::SetTooltipPosition();
@@ -2495,7 +2506,8 @@ void FilterGraphEditor::DoNodeForChannel(
 
 		//Draw outline rectangle around the entire filter
 		auto errorOutlineThickness = 0.4 * ImGui::GetFontSize();
-		bgList->AddRect(pos, pos+size, errorColor, rounding, ImDrawFlags_RoundCornersAll, errorOutlineThickness);
+		auto outlineColor = messageColors[static_cast<int>(msg->GetSeverity())];
+		bgList->AddRect(pos, pos+size, outlineColor, rounding, ImDrawFlags_RoundCornersAll, errorOutlineThickness);
 	}
 
 	ImGui::PopFont(); // headerfont
