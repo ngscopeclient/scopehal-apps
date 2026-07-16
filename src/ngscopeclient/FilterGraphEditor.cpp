@@ -489,7 +489,9 @@ bool FilterGraphEditor::DoRender()
 				//If measurement, don't add trends by default... but always add something
 				StreamDescriptor emptyStream;
 				uint32_t flags = 0;
-				if(cat != Filter::CAT_MEASUREMENT)
+				if(cat == Filter::CAT_MEASUREMENT)
+					flags = MainWindow::ADD_MEASURE;
+				else
 					flags = MainWindow::ADD_PLOT;
 
 				auto f = m_parent->CreateFilter(fname, flags, nullptr, emptyStream);
