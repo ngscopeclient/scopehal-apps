@@ -1628,9 +1628,52 @@ void StreamBrowserDialog::renderChannelNode(
 	startBadgeLine();
 	if (scopechan)
 	{
+		// bool chanEnabled = scopechan->IsEnabled();
+		
 		//"trigger" badge on trigger inputs to show they're not displayable channels
 		if(scopechan->GetType(0) == Stream::STREAM_TYPE_TRIGGER)
 			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "TRIG ONLY", "TRIG","--", nullptr);
+		/* Currently, enable/disable state is coupled to node reference counting, so we can't let the user manually enable/disable channels
+		// Scope channel
+		else if (!chanEnabled)
+		{
+			if(renderToggle(
+				"###scopeChanEnable",
+				true,
+				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")),
+				chanEnabled,
+				"DISABLED",
+				"ENABLE",
+				3))
+			{
+				if(chanEnabled)
+					scope->EnableChannel(channelIndex);
+			}
+			//renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "DISABLED", "DISA","--", nullptr);
+		} 
+		*/
+
+		//Download in progress
+		else
+		{
+			if(!renderDownloadProgress(instrument, channel, isLast))
+			{	// No download in progress, we can show the ENABLE/DISABLE toggle
+				/* Currently, enable/disable state is coupled to node reference counting, so we can't let the user manually enable/disable channels
+				if(renderToggle(
+					"###scopeChanEnable",
+					true,
+					ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")),
+					chanEnabled,
+					"DISABLE",
+					"ENABLED",
+					3))
+				{
+					if(!chanEnabled)
+						scope->DisableChannel(channelIndex);
+				}
+				*/
+			}
+		}
 	}
 	else if(psu)
 	{
