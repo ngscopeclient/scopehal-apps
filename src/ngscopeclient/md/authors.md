@@ -9,6 +9,7 @@ The following is a list of all contributors to ngscopeclient, libscopehal, and l
   * azonenberg (Andrew Zonenberg)
   * bgianfo (Brian Gianforcaro)
   * biswa96 (Biswapriyo Nath)
+  * Brian Lehrer
   * bvernoux (Benjamin Vernoux)
   * chille (Christian Antila)
   * codysseus (Cody Holliday)
