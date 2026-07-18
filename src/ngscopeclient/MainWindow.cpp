@@ -761,6 +761,8 @@ void MainWindow::RenderUI()
 	{
 		if(it.second->PollForSelectionChanges())
 		{
+			LogTrace("Protocol analyzer selection changed\n");
+
 			auto tstamp = it.second->GetSelectedWaveformTimestamp();
 			auto& hist = m_session.GetHistory();
 			if(m_historyDialog)
@@ -769,6 +771,8 @@ void MainWindow::RenderUI()
 			auto hpt = hist.GetHistory(tstamp);
 			if(hpt)
 			{
+				LogTrace("Loading history\n");
+
 				hpt->LoadHistoryToSession(m_session);
 				m_needRender = true;
 			}
@@ -1504,6 +1508,8 @@ void MainWindow::StatusBar(float height)
  */
 void MainWindow::NavigateToTimestamp(int64_t stamp, int64_t duration, StreamDescriptor target)
 {
+	LogTrace("Navigating to timestamp %" PRIi64 "\n", stamp);
+
 	lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
 	for(auto group : m_waveformGroups)
 		group->NavigateToTimestamp(stamp, duration, target);
