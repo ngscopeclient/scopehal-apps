@@ -348,7 +348,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 					visibleRowSelected = true;
 
 					//See if a new waveform was selected
-					if( (m_lastSelectedWaveform != TimePoint(0, 0)) && (m_lastSelectedWaveform != row.m_stamp) )
+					if(m_lastSelectedWaveform != row.m_stamp)
 						m_waveformChanged = true;
 					m_lastSelectedWaveform = row.m_stamp;
 
@@ -749,9 +749,23 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, FontWithSize dataFont, v
 
 	//Recompute height of THIS cell and apply changes if we've expanded
 	double padding = ImGui::GetStyle().CellPadding.y;
-	double height = padding*2 + ImGui::CalcTextSize(firstLine.c_str()).y;
+	double height = ImGui::CalcTextSize(firstLine.c_str()).y;
 	if(open)
 		height += ImGui::CalcTextSize(data.c_str()).y;
+
+	//If we have a "info" column, account for that height too
+	//HACK: we should have a list of multi row columns or something
+	double infoHeight = 0;
+	auto it = pack->m_headers.find("Info");
+	if(it != pack->m_headers.end())
+	{
+		infoHeight = ImGui::CalcTextSize(it->second.c_str()).y;
+		height = max(height, infoHeight);
+	}
+
+	//Add padding
+	height += padding*2;
+
 	double oldheight = rows[nrow].m_height;
 	double delta = height - oldheight;
 	if(abs(delta) > 0.001)

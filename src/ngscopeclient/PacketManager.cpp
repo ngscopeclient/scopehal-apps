@@ -71,6 +71,7 @@ PacketManager::~PacketManager()
 void PacketManager::RefreshRows()
 {
 	LogTrace("Refreshing rows for %s\n", m_filter->GetDisplayName().c_str());
+	LogIndenter li;
 
 	lock_guard<recursive_mutex> lock(m_mutex);
 
@@ -89,6 +90,15 @@ void PacketManager::RefreshRows()
 	double lineheight = ImGui::CalcTextSize("dummy text").y;
 	double padding = ImGui::GetStyle().CellPadding.y;
 
+	//HACK: If column is named Info assume it can be multiline
+	bool hasInfoColumn = false;
+	auto cols = m_filter->GetHeaders();
+	for(auto col : cols)
+	{
+		if(col == "Info")
+			hasInfoColumn = true;
+	}
+
 	//Process packets from each waveform
 	for(auto wavetime : times)
 	{
@@ -99,7 +109,9 @@ void PacketManager::RefreshRows()
 		size_t imarker = 0;
 		int64_t lastoff = 0;
 
-		LogTrace("Refreshing (markers: %zu at %s)\n", markers.size(), wavetime.PrettyPrint().c_str());
+		LogTrace("Refreshing (markers: %zu at %s), lineheight=%.1f\n",
+			markers.size(), wavetime.PrettyPrint().c_str(), lineheight);
+		LogIndenter li2;
 
 		for(auto pack : wpackets)
 		{
@@ -125,8 +137,12 @@ void PacketManager::RefreshRows()
 			RowData dat(wavetime, pack);
 			lastoff = pack->m_offset;
 
-			//Calculate row height
-			double height = padding*2 + lineheight;
+			//Calculate row height allowing for multiline text in the Info column
+			double height;
+			if(hasInfoColumn)
+				height = padding*2 + ImGui::CalcTextSize(pack->m_headers["Info"].c_str()).y;
+			else
+				height = padding*2 + lineheight;
 
 			//Integrate heights
 			dat.m_height = height;
@@ -144,7 +160,11 @@ void PacketManager::RefreshRows()
 					RowData cdat(wavetime, child);
 
 					//Calculate row height
-					height = padding*2 + lineheight;
+					//TODO: account for hexdump expansion
+					if(hasInfoColumn)
+						height = padding*2 + ImGui::CalcTextSize(child->m_headers["Info"].c_str()).y;
+					else
+						height = padding*2 + lineheight;
 
 					//Integrate heights
 					cdat.m_height = height;
@@ -171,7 +191,7 @@ void PacketManager::RefreshRows()
 		}
 	}
 
-	LogTrace("%zu rows\n", m_rows.size());
+	LogTrace("Refresh complete, %zu rows, totalheight=%.1f\n", m_rows.size(), totalHeight);
 }
 
 void PacketManager::OnMarkerChanged()
@@ -197,6 +217,7 @@ void PacketManager::Update()
 		return;
 
 	LogTrace("Updating packet manager with new data at %s\n", time.PrettyPrint().c_str());
+	LogIndenter li;
 
 	//If we get here, waveform changed. Update cache key
 	m_cachekey = key;
@@ -214,6 +235,7 @@ void PacketManager::Update()
 
 		auto& packets = m_filter->GetPackets();
 		auto npackets = packets.size();
+		LogTrace("Adding %zu raw packets\n", npackets);
 		Packet* parentOfGroup = nullptr;
 		Packet* firstChildPacketOfGroup = nullptr;
 		Packet* lastPacket = nullptr;
@@ -257,6 +279,8 @@ void PacketManager::Update()
 
 			lastPacket = p;
 		}
+
+		LogTrace("Added %zu top-level packets after merge\n", outpackets.size());
 	}
 	m_filter->DetachPackets();
 
