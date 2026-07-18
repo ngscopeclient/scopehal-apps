@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -93,7 +93,7 @@ void PacketManager::RefreshRows()
 	//HACK: If column is named Info assume it can be multiline
 	bool hasInfoColumn = false;
 	auto cols = m_filter->GetHeaders();
-	for(auto col : cols)
+	for(auto& col : cols)
 	{
 		if(col == "Info")
 			hasInfoColumn = true;
