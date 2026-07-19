@@ -809,7 +809,15 @@ void MainWindow::LoadMiscIcons()
  */
 void MainWindow::LoadToolbarIcons()
 {
-	int iconSize = m_session.GetPreferences().GetEnumRaw("Appearance.Toolbar.icon_size");
+	float toolbarHeight = m_session.GetPreferences().GetEnumRaw("Appearance.Toolbar.toolbar_height") *
+		ImGui::GetFontSize();
+
+	//Pick closest standard icon size based on the scaled size of the toolbar
+	//TODO: does this take DPI into account properly?
+	int iconSize = 24;
+	if(toolbarHeight > 28)
+		iconSize = 48;
+
 	int iconTheme = m_session.GetPreferences().GetEnumRaw("Appearance.Toolbar.icon_theme");
 
 	if( (m_toolbarIconSize == iconSize) && (m_toolbarIconTheme == iconTheme) )

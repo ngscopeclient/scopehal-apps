@@ -803,7 +803,8 @@ void MainWindow::Toolbar()
 	//Toolbar should be at the top of the main window.
 	//Update work area size so docking area doesn't include the toolbar rectangle
 	auto viewport = ImGui::GetMainViewport();
-	float toolbarHeight = 2.5 * ImGui::GetFontSize();
+	float toolbarMultiplier = m_session.GetPreferences().GetEnumRaw("Appearance.Toolbar.toolbar_height");
+	float toolbarHeight = (toolbarMultiplier + 0.5) * ImGui::GetFontSize();
 	m_workPos = ImVec2(viewport->WorkPos.x, viewport->WorkPos.y + toolbarHeight);
 	m_workSize = ImVec2(viewport->WorkSize.x, viewport->WorkSize.y - toolbarHeight);
 	ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -833,11 +834,15 @@ void MainWindow::Toolbar()
 	ImGui::SameLine();
 	ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
 
+	//Adjust size of sliders to match toolbar height
+	auto sliderWidth = 12 * ImGui::GetFontSize();
+	ImGui::PushFont(nullptr, (toolbarMultiplier / 2) * ImGui::GetStyle().FontSizeBase);
+
 	//Slider for trace alpha
 	ImGui::SameLine();
 	float y = ImGui::GetCursorPosY();
 	ImGui::SetCursorPosY(y + 5);
-	ImGui::SetNextItemWidth(6 * toolbarHeight);
+	ImGui::SetNextItemWidth(sliderWidth);
 	if(ImGui::SliderFloat("Intensity", &m_traceAlpha, 0, 0.75, "", ImGuiSliderFlags_Logarithmic))
 		SetNeedRender();
 
@@ -847,8 +852,10 @@ void MainWindow::Toolbar()
 	//Slider for persistence decay
 	ImGui::SameLine();
 	ImGui::SetCursorPosY(y + 5);
-	ImGui::SetNextItemWidth(6 * toolbarHeight);
+	ImGui::SetNextItemWidth(sliderWidth);
 	ImGui::SliderFloat("Persistence", &m_persistenceDecay, 0, 1, "", ImGuiSliderFlags_AlwaysClamp);
+
+	ImGui::PopFont();
 
 	ImGui::End();
 }
@@ -1058,7 +1065,7 @@ void MainWindow::TriggerStopDropdown(float buttonsize)
 
 void MainWindow::ToolbarButtons()
 {
-	float sz = 2 * ImGui::GetFontSize();
+	float sz = m_session.GetPreferences().GetEnumRaw("Appearance.Toolbar.toolbar_height") * ImGui::GetFontSize();
 	ImVec2 buttonsize(sz, sz);
 
 	bool multigroup = (m_session.GetTriggerGroups().size() > 1);
