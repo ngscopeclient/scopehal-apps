@@ -3585,9 +3585,10 @@ bool Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		//Release the waveform processing thread
 		g_waveformProcessedEvent.Signal();
 
-		//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
+		//In multi-scope free-run or auto trigger mode
+		//re-arm every instrument's trigger after we've processed all data
 		for(auto group : groups)
-			group->RearmIfMultiScope();
+			group->RearmIfMultiScopeOrAutoTrigger();
 	}
 
 	//If a re-render operation completed, tone map everything again

@@ -12,6 +12,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Core: Allow instruments (currently only demo scope and ThunderScope implemented) to declare that they support high-rate updates to channel DC offset, allowing for more responsive updates while dragging the axis
 * Core: Replaced filter graph input validation flow so that nodes can declare what kinds of input they want in a human-readable format, making it easier to understand why an attempted connection wasn't allowed
 * Core: Added new "sparsev2" serialization format for improved speed loading and saving sparse waveforms. Only used for 8B/10B so far, other waveform types will switch in the future.
+* Core: Initial auto trigger support
 * Drivers: Added support for many more PicoScope models
 * Drivers: Added Agilent 34401A 6.5 digit DMM driver (https://github.com/ngscopeclient/scopehal/pull/1076/)
 * Drivers: Added R&S RTB2000 driver (https://github.com/ngscopeclient/scopehal/pull/1048/)

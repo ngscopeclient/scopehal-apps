@@ -249,10 +249,15 @@ void TriggerGroup::Arm(TriggerType type)
 				m_primary->StartSingleTrigger();
 				break;
 
-			case TriggerGroup::TRIGGER_TYPE_FORCED:
+			//still in auto trigger, timeout elapsed
+			case TriggerGroup::TRIGGER_TYPE_AUTO_FORCE:
+				m_autoTriggerArmed = true;
 				m_primary->ForceTrigger();
 				break;
 
+			case TriggerGroup::TRIGGER_TYPE_FORCED:
+				m_primary->ForceTrigger();
+				break;
 
 			default:
 				break;
@@ -267,6 +272,8 @@ void TriggerGroup::Arm(TriggerType type)
 		else
 			f->Run();
 	}
+
+	m_armTime = GetTime();
 }
 
 string TriggerGroup::GetDescription()
@@ -287,6 +294,7 @@ string TriggerGroup::GetDescription()
 void TriggerGroup::Stop()
 {
 	m_multiScopeFreeRun = false;
+	m_autoTriggerArmed = false;
 
 	if(m_primary)
 	{
@@ -309,6 +317,10 @@ void TriggerGroup::Stop()
  */
 bool TriggerGroup::CheckForPendingWaveforms()
 {
+	//If we are an armed auto-trigger, handle that
+	if(m_autoTriggerArmed)
+		RefreshAutoTrigger();
+
 	if(!m_primary)
 		return false;
 
@@ -443,8 +455,38 @@ void TriggerGroup::DetachAllWaveforms(shared_ptr<Oscilloscope> scope)
 	}
 }
 
-void TriggerGroup::RearmIfMultiScope()
+void TriggerGroup::RearmIfMultiScopeOrAutoTrigger()
 {
+	LogTrace("RearmIfMultiScopeOrAutoTrigger\n");
+
 	if(m_multiScopeFreeRun)
-		Arm(TRIGGER_TYPE_NORMAL);
+	{
+		if(m_autoTriggerArmed)
+			Arm(TRIGGER_TYPE_AUTO);
+		else
+			Arm(TRIGGER_TYPE_NORMAL);
+	}
+
+	else if(m_autoTriggerArmed)
+		Arm(TRIGGER_TYPE_AUTO);
+}
+
+/**
+	@brief Checks on the status of auto trigger
+ */
+void TriggerGroup::RefreshAutoTrigger()
+{
+	double now = GetTime();
+	double dt = now - m_armTime;
+	double autoTriggerTimeout = 0.25;	//TODO: make this configurable, preference, etc?
+
+	//LogTrace("RefreshAutoTrigger %.0f ms\n", dt * 1000);
+
+	if(dt < autoTriggerTimeout)
+		return;
+
+	LogTrace("Auto trigger timeout reached, forcing trigger\n");
+
+	//If we get here, we need to force an acquisition
+	Arm(TRIGGER_TYPE_AUTO_FORCE);
 }

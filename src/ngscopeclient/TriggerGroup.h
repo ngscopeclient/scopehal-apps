@@ -59,7 +59,10 @@ public:
 		TRIGGER_TYPE_SINGLE,
 		TRIGGER_TYPE_FORCED,
 		TRIGGER_TYPE_AUTO,
-		TRIGGER_TYPE_NORMAL
+		TRIGGER_TYPE_NORMAL,
+
+		//Force acquisition on an auto trigger
+		TRIGGER_TYPE_AUTO_FORCE
 	};
 
 	TriggerGroup(std::shared_ptr<Oscilloscope> primary, Session* session);
@@ -76,7 +79,7 @@ public:
 	void Stop();
 	bool CheckForPendingWaveforms();
 	void DownloadWaveforms();
-	void RearmIfMultiScope();
+	void RearmIfMultiScopeOrAutoTrigger();
 
 	bool empty()
 	{ return m_secondaries.empty() && (m_primary == nullptr) && m_filters.empty(); }
@@ -100,6 +103,8 @@ public:
 protected:
 	void DetachAllWaveforms(std::shared_ptr<Oscilloscope> scope);
 
+	void RefreshAutoTrigger();
+
 	Session* m_session;
 
 	///@brief True if we have multiple scopes and are in normal trigger mode
@@ -107,6 +112,9 @@ protected:
 
 	///@brief True if the group is in auto-trigger mode
 	bool m_autoTriggerArmed;
+
+	///@brief Time that the trigger group was armed
+	double m_armTime;
 };
 
 #endif
