@@ -2163,7 +2163,8 @@ Filter* MainWindow::CreateFilter(
 	WaveformArea* area,
 	StreamDescriptor initialStream)
 {
-	LogTrace("CreateFilter %s\n", name.c_str());
+	LogTrace("CreateFilter %s flags=%x\n", name.c_str(), flags);
+	LogIndenter li;
 
 	//Make sure we have a WaveformThread to handle background processing
 	m_session.StartWaveformThreadIfNeeded();
