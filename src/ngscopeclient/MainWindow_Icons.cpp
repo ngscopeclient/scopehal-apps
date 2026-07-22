@@ -75,6 +75,7 @@
 #include "../scopeprotocols/DigitalConstantFilter.h"
 #include "../scopeprotocols/DigitalToNRZFilter.h"
 #include "../scopeprotocols/DigitalToPAM4Filter.h"
+#include "../scopeprotocols/DisplayPortMainLinkDecoder.h"
 #include "../scopeprotocols/DivideFilter.h"
 #include "../scopeprotocols/DownconvertFilter.h"
 #include "../scopeprotocols/DownsampleFilter.h"
@@ -322,6 +323,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-digital-to-nrz", FindDataFile("icons/filters/filter-digital-to-nrz.png"));
 	m_texmgr.LoadTexture("filter-digital-to-pam4", FindDataFile("icons/filters/filter-digital-to-pam4.png"));
 	m_texmgr.LoadTexture("filter-displayport-aux", FindDataFile("icons/filters/filter-displayport-aux.png"));
+	m_texmgr.LoadTexture("filter-displayport-main", FindDataFile("icons/filters/filter-displayport-aux.png"));
 	m_texmgr.LoadTexture("filter-downconvert", FindDataFile("icons/filters/filter-downconvert.png"));
 	m_texmgr.LoadTexture("filter-downsample", FindDataFile("icons/filters/filter-downsample.png"));
 	m_texmgr.LoadTexture("filter-dram-clocks", FindDataFile("icons/filters/filter-dram-clocks.png"));
@@ -493,6 +495,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(DownconvertFilter))] 						= "filter-downconvert";
 	m_filterIconMap[type_index(typeid(DownsampleFilter))] 						= "filter-downsample";
 	m_filterIconMap[type_index(typeid(DPAuxChannelDecoder))] 					= "filter-displayport-aux";
+	m_filterIconMap[type_index(typeid(DisplayPortMainLinkDecoder))] 			= "filter-displayport-main";
 	m_filterIconMap[type_index(typeid(DPhyHSClockRecoveryFilter))]				= "filter-clock-recovery-dphy-hs-mode";
 	m_filterIconMap[type_index(typeid(DPhyDataDecoder))] 						= "filter-mipi-d-phy-data";
 	m_filterIconMap[type_index(typeid(DPhyEscapeModeDecoder))] 					= "filter-mipi-d-phy-escape-mode";
