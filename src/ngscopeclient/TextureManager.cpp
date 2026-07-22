@@ -493,6 +493,7 @@ void TextureManager::LoadTexture(
 	VkDeviceSize size = width * height * bytesPerPixel;
 
 	//Allocate temporary staging buffer
+	//TODO: reuse buffers as much as possible to avoid constant reallocations
 	vk::BufferCreateInfo bufinfo({}, size, vk::BufferUsageFlagBits::eTransferSrc);
 	vk::raii::Buffer stagingBuf(*g_vkComputeDevice, bufinfo);
 

@@ -471,22 +471,22 @@ bool ProtocolAnalyzerDialog::DoRender()
  */
 void ProtocolAnalyzerDialog::DoImageColumn(Packet* pack, vector<RowData>& rows, size_t nrow)
 {
-	//TODO: get the actual texture
 	auto pos = ImGui::GetCursorScreenPos();
 	auto list = ImGui::GetWindowDrawList();
 	auto size = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeight());
 
-	//auto tex = m_parent->GetTextureManager()->GetTexture("visible-spectrum-380nm-750nm");
-
 	if(!rows[nrow].m_texture)
 	{
 		size_t width = pack->m_data.size() / 3;
+		if(width == 0)
+			return;
 
 		LogTrace("filling texture with 1x%zu pixels of scanline data\n", width);
 		LogIndenter li;
 
 		//TODO: this and TextureManager::LoadTexture have a lot in common
 		//we should refactor into common code
+		//TODO: reuse buffers as much as possible to avoid constant reallocations
 		VkDeviceSize devsize = width * 4;
 
 		//Allocate temporary staging buffer
