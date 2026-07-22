@@ -1889,7 +1889,7 @@ void FilterGraphEditor::FilterSubmenu(StreamDescriptor stream, const string& nam
 				//If measurement, don't add trends by default
 				uint32_t flags = MainWindow::ADD_PLOT;
 				if(cat == Filter::CAT_MEASUREMENT )
-					flags = 0;
+					flags = MainWindow::ADD_MEASURE;
 				auto f = m_parent->CreateFilter(fname, flags, nullptr, stream);
 
 				//Get relative mouse position
