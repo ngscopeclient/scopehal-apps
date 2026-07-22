@@ -1,0 +1,41 @@
+protocol:
+    name:       XFI
+    reference:  SFF-8431 table 14
+displaylimits:
+    ymin:       -450
+    ymax:        450
+units:
+    xscale:     ui
+    yscale:     mv
+mask:
+    - points:
+        -   x:   -0.15
+            y:    0
+        -   x:    0
+            y: -150
+        -   x:    0.15
+            y:    0
+        -   x:    0
+            y:  150
+
+    - points:
+        -   x:   -2
+            y: -425
+        -   x:    2
+            y: -425
+        -   x:    2
+            y: -500
+        -   x:   -2
+            y: -500
+
+    - points:
+        -   x:   -2
+            y:  425
+        -   x:    2
+            y:  425
+        -   x:    2
+            y:  500
+        -   x:   -2
+            y:  500
+conditions:
+    hitrate: 1e-12
