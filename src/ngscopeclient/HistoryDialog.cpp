@@ -252,13 +252,18 @@ bool HistoryDialog::DoRender()
 				{
 					//Figure out how many channels actually have non-null waveform data
 					size_t numNonNull = 0;
+					size_t memory = 0;
 					for(auto& kt : jt.second)
 					{
 						if(kt.second)
+						{
 							numNonNull ++;
+							memory += kt.second->GetMemoryBytes();
+						}
 					}
 
-					strDetails += "  * " + jt.first->m_nickname + " (" + to_string(numNonNull) + " channels with data)\n";
+					strDetails += "  * " + jt.first->m_nickname + " (" + to_string(numNonNull) +
+						" channels with data, " + Unit(Unit::UNIT_BYTES).PrettyPrint(memory) + ")\n";
 				}
 
 				ImGui::BeginTooltip();
