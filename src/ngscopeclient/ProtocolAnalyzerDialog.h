@@ -45,7 +45,9 @@ class MainWindow;
 /**
 	@brief UI for the history system
  */
-class ProtocolAnalyzerDialog : public Dialog
+class ProtocolAnalyzerDialog
+	: public Dialog
+	, public SinkNode
 {
 public:
 	ProtocolAnalyzerDialog(
@@ -55,7 +57,8 @@ public:
 		MainWindow* wnd);
 	virtual ~ProtocolAnalyzerDialog();
 
-	virtual bool DoRender();
+	virtual bool DoRender() override;
+	virtual bool Render() override;
 
 	/**
 		@brief Returns true if a new waveform was selected this frame.
@@ -73,7 +76,7 @@ public:
 	{ return m_lastSelectedWaveform; }
 
 	PacketDecoder* GetFilter()
-	{ return m_filter; }
+	{ return dynamic_cast<PacketDecoder*>(GetInput(0).m_channel); }
 
 	/**
 		@brief Called when a new waveform arrives
@@ -89,7 +92,6 @@ public:
 	void SetFilterExpression(const std::string& f);
 
 protected:
-	PacketDecoder* m_filter;
 	std::shared_ptr<PacketManager> m_mgr;
 
 	///@brief True if a new waveform in the dialog was selected this frame
@@ -113,7 +115,7 @@ protected:
 	bool m_needToScrollToSelectedPacket;
 
 	void DoDataColumn(Packet* pack, FontWithSize dataFont, std::vector<RowData>& rows, size_t nrow);
-	void DoImageColumn(Packet* pack, std::vector<RowData>& rows, size_t nrow);
+	void DoImageColumn(PacketDecoder* f, Packet* pack, std::vector<RowData>& rows, size_t nrow);
 
 	///@brief True the first time DoDataColumn() is called in a given frame
 	bool m_firstDataBlockOfFrame;

@@ -54,7 +54,6 @@ ProtocolAnalyzerDialog::ProtocolAnalyzerDialog(
 		ImVec2(425, 350),
 		session,
 		wnd)
-	, m_filter(filter)
 	, m_mgr(mgr)
 	, m_waveformChanged(false)
 	, m_lastSelectedWaveform(0, 0)
@@ -64,13 +63,17 @@ ProtocolAnalyzerDialog::ProtocolAnalyzerDialog(
 	, m_firstDataBlockOfFrame(true)
 	, m_bytesPerLine(1)
 {
-	//Hold a reference open to the filter so it doesn't disappear on us
-	m_filter->AddRef();
+	CreateInput("filter");
+	SetInput(0, StreamDescriptor(filter, 0));
 }
 
 ProtocolAnalyzerDialog::~ProtocolAnalyzerDialog()
 {
-	m_filter->Release();
+	auto f = GetFilter();
+	if(f)
+		LogTrace("Destroying dialog for %s\n", f->GetDisplayName().c_str());
+	else
+		LogTrace("Destroying dialog (no filter)\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -81,11 +84,25 @@ void ProtocolAnalyzerDialog::SetFilterExpression(const string& f)
 	m_filterExpression = f;
 	m_committedFilterExpression = f;
 
-	auto cols = m_filter->GetHeaders();
+	auto cols = GetFilter()->GetHeaders();
 	size_t ifilter = 0;
 	auto pfilter = make_shared<ProtocolDisplayFilter>(f, ifilter);
 	if(pfilter->Validate(cols))
 		m_mgr->SetDisplayFilter(pfilter);
+}
+
+bool ProtocolAnalyzerDialog::Render()
+{
+	//If our channel has been disconnected (e.g. by the node being deleted) stop
+	//Do this check first so we can run even if not displayed
+	auto f = GetFilter();
+	if(!f)
+	{
+		LogTrace("%p: bailing out because we have no input\n", (void*)this);
+		return false;
+	}
+
+	return Dialog::Render();
 }
 
 /**
@@ -97,7 +114,8 @@ void ProtocolAnalyzerDialog::SetFilterExpression(const string& f)
 bool ProtocolAnalyzerDialog::DoRender()
 {
 	//Keep title in sync
-	m_title = string("Protocol: ") + m_filter->GetDisplayName();
+	auto f = GetFilter();
+	m_title = string("Protocol: ") + f->GetDisplayName();
 
 	static ImGuiTableFlags flags =
 		ImGuiTableFlags_Resizable |
@@ -109,16 +127,16 @@ bool ProtocolAnalyzerDialog::DoRender()
 
 	float width = ImGui::GetFontSize();
 
-	auto cols = m_filter->GetHeaders();
+	auto cols = f->GetHeaders();
 
 	//Figure out channel setup
 	//Default is timestamp plus all headers, add optional other channels as needed
 	int ncols = 1 + cols.size();
 	int datacol = 0;
 	int imgcol = 0;
-	if(m_filter->GetShowDataColumn())
+	if(f->GetShowDataColumn())
 		datacol = (ncols ++);
-	if(m_filter->GetShowImageColumn())
+	if(f->GetShowImageColumn())
 		imgcol = (ncols ++);
 	//TODO: integrate length natively vs having to make the filter calculate it??
 
@@ -177,7 +195,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 	//Output format for data column
 	//If this is changed force a refresh
 	bool forceRefresh = false;
-	if(m_filter->GetShowDataColumn())
+	if(f->GetShowDataColumn())
 	{
 		ImGui::SetNextItemWidth(10 * width);
 		if(ImGui::Combo("Data Format", (int*)&m_dataFormat, "Hex\0ASCII\0Hexdump\0"))
@@ -199,19 +217,19 @@ bool ProtocolAnalyzerDialog::DoRender()
 		for(size_t i=0; i<cols.size(); i++)
 		{
 			//Stretch the last text column if we have no data column
-			if( (i == (cols.size() - 1)) && !m_filter->GetShowDataColumn() )
+			if( (i == (cols.size() - 1)) && !f->GetShowDataColumn() )
 				ImGui::TableSetupColumn(cols[i].c_str(), ImGuiTableColumnFlags_WidthStretch, 0.0f);
 			else
 				ImGui::TableSetupColumn(cols[i].c_str(), ImGuiTableColumnFlags_WidthFixed, 0.0f);
 
 			lastTextColumn ++;
 		}
-		if(m_filter->GetShowDataColumn())
+		if(f->GetShowDataColumn())
 		{
 			ImGui::TableSetupColumn("Data", ImGuiTableColumnFlags_WidthStretch, 0.0f);
 			lastTextColumn ++;
 		}
-		if(m_filter->GetShowImageColumn())
+		if(f->GetShowImageColumn())
 			ImGui::TableSetupColumn("Image", ImGuiTableColumnFlags_WidthFixed, 0.0f);
 		ImGui::TableHeadersRow();
 
@@ -238,7 +256,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 				rows.begin(),
 				rows.end(),
 				minY,
-				[](const RowData& data, double f) { return f > data.m_totalHeight; });
+				[](const RowData& data, double n) { return n > data.m_totalHeight; });
 			size_t istart = sit - rows.begin();
 
 			for (size_t i = istart; i < rows.size() && (!i || maxY > rows[i - 1].m_totalHeight); i++)
@@ -352,7 +370,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 						m_waveformChanged = true;
 					m_lastSelectedWaveform = row.m_stamp;
 
-					m_parent->NavigateToTimestamp(offset, len, StreamDescriptor(m_filter, 0));
+					m_parent->NavigateToTimestamp(offset, len, StreamDescriptor(f, 0));
 				}
 
 				if(ImGui::IsItemHovered())
@@ -376,7 +394,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 					}
 
 					//Data column
-					if(m_filter->GetShowDataColumn())
+					if(f->GetShowDataColumn())
 					{
 						if(ImGui::TableSetColumnIndex(datacol))
 						{
@@ -387,14 +405,14 @@ bool ProtocolAnalyzerDialog::DoRender()
 						}
 					}
 
-					if(m_filter->GetShowImageColumn())
+					if(f->GetShowImageColumn())
 					{
 						if(ImGui::TableSetColumnIndex(imgcol))
 						{
 							if(firstRow)
 								ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
 
-							DoImageColumn(pack, rows, i);
+							DoImageColumn(f, pack, rows, i);
 						}
 					}
 
@@ -430,8 +448,8 @@ bool ProtocolAnalyzerDialog::DoRender()
 				rows.begin(),
 				rows.end(),
 				m_selectedPacket->m_offset,
-				[](const RowData& data, double f)
-					{ return f > (data.m_packet? data.m_packet->m_offset : data.m_marker.m_offset); });
+				[](const RowData& data, double n)
+					{ return n > (data.m_packet? data.m_packet->m_offset : data.m_marker.m_offset); });
 			auto& row = *sit;
 			ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + row.m_totalHeight);
 
@@ -469,7 +487,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 /**
 	@brief Handles the "image" column for packets
  */
-void ProtocolAnalyzerDialog::DoImageColumn(Packet* pack, vector<RowData>& rows, size_t nrow)
+void ProtocolAnalyzerDialog::DoImageColumn(PacketDecoder* f, Packet* pack, vector<RowData>& rows, size_t nrow)
 {
 	auto pos = ImGui::GetCursorScreenPos();
 	auto list = ImGui::GetWindowDrawList();
@@ -521,7 +539,7 @@ void ProtocolAnalyzerDialog::DoImageColumn(Packet* pack, vector<RowData>& rows, 
 
 		//Special case: RGB LED decodes can have scaling if not running at full brightness
 		float scale = 1;
-		auto rgbf = dynamic_cast<RGBLEDDecoder*>(m_filter);
+		auto rgbf = dynamic_cast<RGBLEDDecoder*>(f);
 		if(rgbf)
 			scale = rgbf->GetScale();
 
@@ -787,10 +805,14 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, FontWithSize dataFont, v
  */
 void ProtocolAnalyzerDialog::OnCursorMoved(int64_t offset)
 {
+	auto f = GetFilter();
+	if(!f)
+		return;
+
 	//If nothing is selected, use our current waveform timestamp as a reference
 	if(m_lastSelectedWaveform == TimePoint(0, 0))
 	{
-		auto data = m_filter->GetData(0);
+		auto data = f->GetData(0);
 		if(!data)
 			return;
 		m_lastSelectedWaveform = TimePoint(data->m_startTimestamp, data->m_startFemtoseconds);

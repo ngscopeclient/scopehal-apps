@@ -3795,8 +3795,22 @@ void Session::UpdatePacketManagers(const set<FlowGraphNode*>& nodes, bool nodesL
 	//Delete managers for nonexistent filters
 	for(auto f : deletedFilters)
 	{
-		LogTrace("Deleting packet manager for filter %p\n", (void*)f);
+		LogTrace("Deleting packet manager for filter %p (UpdatePacketManagers)\n", (void*)f);
 		m_packetmgrs.erase(f);
+	}
+}
+
+/**
+	@brief Removes the packet manager for a filter (typically called when deleting it from the graph editor)
+ */
+void Session::RemovePacketFilter(PacketDecoder* filter)
+{
+	auto it = m_packetmgrs.find(filter);
+
+	if(it != m_packetmgrs.end())
+	{
+		LogTrace("Deleting packet manager for filter %p (RemovePacketFilter)\n", (void*)filter);
+		m_packetmgrs.erase(it);
 	}
 }
 

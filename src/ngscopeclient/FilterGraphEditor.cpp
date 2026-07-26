@@ -2052,12 +2052,18 @@ bool FilterGraphEditor::OnNodeDeleted(FlowGraphNode* node)
  */
 bool FilterGraphEditor::OnFilterDeleted(Filter* node)
 {
-	LogTrace("Deleting filter %s (rc=%zu)\n", node->GetDisplayName().c_str(), node->GetRefCount());
+	LogTrace("Deleting filter %s (%p, rc=%zu)\n",
+		node->GetDisplayName().c_str(), (void*) node, node->GetRefCount());
 	LogIndenter li;
 
 	//Ref the node so it doesn't self-delete too soon
 	node->AddRef();
 	LogTrace("Added temporary ref, rc=%zu\n", node->GetRefCount());
+
+	//See if it's a packet decoder
+	auto pd = dynamic_cast<PacketDecoder*>(node);
+	if(pd)
+		m_session->RemovePacketFilter(pd);
 
 	//Find sinks from each source stream, and break the links
 	auto nstreams = node->GetStreamCount();

@@ -51,6 +51,9 @@ PacketManager::PacketManager(PacketDecoder* pd, Session& session)
 
 PacketManager::~PacketManager()
 {
+	LogTrace("Destroying packet manager for %p (%zu refs)\n",
+		m_filter->GetDisplayName().c_str(), m_filter->GetRefCount());
+
 	for(auto& it : m_packets)
 	{
 		for(auto p : it.second)

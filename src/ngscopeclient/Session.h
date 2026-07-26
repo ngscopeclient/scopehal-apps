@@ -164,6 +164,7 @@ public:
 	bool SerializeUniformWaveform(UniformWaveformBase* wfm, const std::string& path);
 
 	std::shared_ptr<PacketManager> AddPacketFilter(PacketDecoder* filter);
+	void RemovePacketFilter(PacketDecoder* filter);
 
 	void AddInstrument(std::shared_ptr<Instrument> inst, bool createDialogs = true);
 	void RemoveInstrument(std::shared_ptr<Instrument> inst);

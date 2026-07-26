@@ -1196,6 +1196,8 @@ void MainWindow::ToolbarButtons()
 
 void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 {
+	LogTrace("OnDialogClosed %p\n", (void*)dlg.get());
+
 	//Handle multi-instance dialogs
 	auto psuDlg = dynamic_pointer_cast<PowerSupplyDialog>(dlg);
 	if(psuDlg)
@@ -1223,7 +1225,21 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 
 	auto protoDlg = dynamic_pointer_cast<ProtocolAnalyzerDialog>(dlg);
 	if(protoDlg)
-		m_protocolAnalyzerDialogs.erase(protoDlg->GetFilter());
+	{
+		//We cannot always do the naive search because the dialog may have been disconnected
+		//and no longer have a pointer to the filter. So brute force search
+		PacketDecoder* pd = nullptr;
+		for(auto it : m_protocolAnalyzerDialogs)
+		{
+			if(it.second == protoDlg)
+			{
+				pd = it.first;
+				break;
+			}
+		}
+		if(pd)
+			m_protocolAnalyzerDialogs.erase(pd);
+	}
 
 	//Handle single-instance dialogs
 	if(m_filterPalette == dlg)
