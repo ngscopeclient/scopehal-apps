@@ -109,6 +109,8 @@ NOTE: This section only list changes which are potentially breaking to an *end u
   * PRBS Checker
 * The clock output of the I/Q Demux filter was removed as it was redundant.
 * The FSK Decoder filter was removed as it basically did the same thing as the Threshold filter
+* The CTLE filter no longer performs the equalization operation itself, it instead calculates S-parameters which must
+be applied with the Channel Emulation filter
 
 ## Bugs fixed since v0.1.1
 
