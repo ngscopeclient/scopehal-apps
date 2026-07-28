@@ -1531,6 +1531,8 @@ void WaveformGroup::AutofitHorizontal(float width)
 			auto data = stream.GetData();
 			if(data == nullptr)
 				continue;
+			if(data->size() == 0)
+				continue;
 			auto sdata = dynamic_cast<SparseWaveformBase*>(data);
 			auto udata = dynamic_cast<UniformWaveformBase*>(data);
 			auto ddata = dynamic_cast<DensityFunctionWaveform*>(data);
