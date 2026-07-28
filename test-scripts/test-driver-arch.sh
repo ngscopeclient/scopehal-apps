@@ -49,3 +49,4 @@ make package
 mkdir ~/artifacts
 mv *.tar.gz ~/artifacts/
 mv doc/*.pdf ~/artifacts/
+cp doc/ngscopeclient-manual.log ~/artifacts/
