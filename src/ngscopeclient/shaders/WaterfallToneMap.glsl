@@ -46,6 +46,7 @@ layout(std430, push_constant) uniform constants
 	uint outwidth;
 	uint outheight;
 	uint offset_samples;
+	uint writerow;
 	float xscale;
 };
 
@@ -59,11 +60,16 @@ void main()
 		return;
 
 	//Move the entire output display down if needed, so topmost (newest) row is always visible
-	uint yreal = gl_GlobalInvocationID.y + (height - outheight);
+	uint yin = gl_GlobalInvocationID.y + (height - outheight);
+
+	//Circular buffer row shift
+	yin = (yin + writerow);
+	if(yin >= height)
+		yin -= height;
 
 	//Figure out which input pixel(s) contribute to this output pixel
-	uint istart = uint(floor(gl_GlobalInvocationID.x / xscale)) + offset_samples;
-	uint iend = uint(floor((gl_GlobalInvocationID.x + 1) / xscale)) + offset_samples;
+	uint istart = uint(floor(gl_GlobalInvocationID.x * xscale)) + offset_samples;
+	uint iend = uint(floor((gl_GlobalInvocationID.x + 1) * xscale)) + offset_samples;
 
 	//Cap number of FFT bins per pixel if really zoomed out
 	uint maxbins = 256;
@@ -89,7 +95,7 @@ void main()
 		//Highest value of the input is our output (this keeps peaks from fading away as we zoom out)
 		float pixval = 0;
 		for(uint i=istart; i <= iend; i++)
-			pixval = max(pixval, pixels[yreal*width + i]);
+			pixval = max(pixval, pixels[yin*width + i]);
 
 		//Clamp to texture bounds
 		clampedValue = min(pixval, 0.99);

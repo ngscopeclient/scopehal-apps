@@ -87,12 +87,14 @@ public:
 class WaterfallToneMapArgs
 {
 public:
-	WaterfallToneMapArgs(uint32_t w, uint32_t h, uint32_t outwidth, uint32_t outheight, uint32_t o, float x)
+	WaterfallToneMapArgs(
+		uint32_t w, uint32_t h, uint32_t outwidth, uint32_t outheight, uint32_t o, uint32_t p, float x)
 	: m_width(w)
 	, m_height(h)
 	, m_outwidth(outwidth)
 	, m_outheight(outheight)
 	, m_offsetSamples(o)
+	, m_writeRow(p)
 	, m_xscale(x)
 	{}
 
@@ -101,6 +103,7 @@ public:
 	uint32_t m_outwidth;
 	uint32_t m_outheight;
 	uint32_t m_offsetSamples;
+	uint32_t m_writeRow;
 	float m_xscale;
 };
 

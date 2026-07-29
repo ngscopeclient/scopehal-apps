@@ -2600,7 +2600,7 @@ void WaveformArea::ToneMapAnalogOrDigitalWaveform(shared_ptr<DisplayedChannel> c
 }
 
 /**
-	@brief Tone maps a density function waveform by converting the internal fp32 buffer to RGBA and cropping/scaling
+	@brief Tone maps a waterfall waveform by converting the internal fp32 buffer to RGBA and cropping/scaling
  */
 void WaveformArea::ToneMapWaterfallWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
 {
@@ -2608,7 +2608,7 @@ void WaveformArea::ToneMapWaterfallWaveform(std::shared_ptr<DisplayedChannel> ch
 	if(tex == nullptr)
 		return;
 
-	auto data = dynamic_cast<DensityFunctionWaveform*>(channel->GetStream().GetData());
+	auto data = dynamic_cast<WaterfallWaveform*>(channel->GetStream().GetData());
 	if(data == nullptr)
 		return;
 
@@ -2639,7 +2639,7 @@ void WaveformArea::ToneMapWaterfallWaveform(std::shared_ptr<DisplayedChannel> ch
 	double pixelsPerX = m_group->GetPixelsPerXUnit();
 	double xscale = data->m_timescale * pixelsPerX;
 
-	WaterfallToneMapArgs args(width, height, m_width, m_height, offset_samples, xscale );
+	WaterfallToneMapArgs args(width, height, m_width, m_height, offset_samples, data->GetWriteRow(), 1.0 / xscale );
 	pipe->Dispatch(cmdbuf, args, GetComputeBlockCount(m_width, 64), m_height);
 
 	//Add a barrier before we read from the fragment shader
