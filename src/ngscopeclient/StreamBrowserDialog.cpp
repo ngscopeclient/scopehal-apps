@@ -1684,10 +1684,7 @@ void StreamBrowserDialog::renderChannelNode(
 		{
 			bool active = (vioout->GetInternalValue() != 0);
 			if(renderOnOffToggle("###active", true, active, "0", "1"))
-			{
-				LogDebug("SetValue to %d\n", active);
 				vioout->SetInternalValue(active);
-			}
 		}
 	}
 	else if(psu)
