@@ -2368,6 +2368,8 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 		return;
 	}
 
+	NamedDebugRange shaderRange(cmdbuf, "WaveformArea::RasterizeAnalogOrDigitalWaveform");
+
 	auto stream = channel->GetStream();
 	auto data = stream.GetData();
 

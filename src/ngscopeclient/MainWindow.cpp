@@ -588,6 +588,8 @@ void MainWindow::RenderWaveformTextures(
 	vk::raii::CommandBuffer& cmdbuf,
 	vector<shared_ptr<InputDescriptor> >& channels)
 {
+	NamedDebugRange shaderRange(cmdbuf, "MainWindow::RenderWaveformTextures");
+
 	bool clear = m_clearPersistence.exchange(false);
 	vector<shared_ptr<WaveformGroup>> groups;
 	{
