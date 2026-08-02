@@ -74,6 +74,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Filters: Peak detector for FFT etc now does quadratic interpolation for sub-sample peak fitting
 * Filters: Horizontal bathtub curve now works properly with MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
 * Filters: PcapNG export now has an additional mode selector for use with named pipes, allowing live streaming of PcapNG formatted data to WireShark
+* Filters: Un-bitrotted ParallelBus and RGMII decodes now that we have proper parallel data bus support again
 * GUI: Filter palette now uses case insensitive sorting rather than putting all capital letters before lowercase
 * GUI: Added performance counters for CPU/GPU copies to better identify bottlenecks
 * GUI: enabled mouseover BER measurements on MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.

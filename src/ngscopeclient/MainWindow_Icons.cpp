@@ -156,6 +156,7 @@
 #include "../scopeprotocols/OvershootMeasurement.h"
 #include "../scopeprotocols/PAM4DemodulatorFilter.h"
 #include "../scopeprotocols/PAMEdgeDetectorFilter.h"
+#include "../scopeprotocols/ParallelBus.h"
 #include "../scopeprotocols/PcapngExportFilter.h"
 #include "../scopeprotocols/PcapngImportFilter.h"
 #include "../scopeprotocols/PCIe128b130bDecoder.h"
@@ -389,6 +390,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-overshoot", FindDataFile("icons/filters/filter-overshoot.png"));
 	m_texmgr.LoadTexture("filter-pam4-edge-detect", FindDataFile("icons/filters/filter-pam4-edge-detect.png"));
 	m_texmgr.LoadTexture("filter-pam4-demodulator", FindDataFile("icons/filters/filter-pam4-demodulator.png"));
+	m_texmgr.LoadTexture("filter-parallel-bus", FindDataFile("icons/filters/filter-parallel-bus.png"));
 	m_texmgr.LoadTexture("filter-pcapng-export", FindDataFile("icons/filters/filter-pcapng-export.png"));
 	m_texmgr.LoadTexture("filter-pcapng-import", FindDataFile("icons/filters/filter-pcapng-import.png"));
 	m_texmgr.LoadTexture("filter-pcie-data-link", FindDataFile("icons/filters/filter-pcie-data-link.png"));
@@ -566,10 +568,11 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(MovingAverageFilter))] 					= "filter-moving-average";
 	m_filterIconMap[type_index(typeid(MultiplyFilter))] 						= "filter-multiply";
 	m_filterIconMap[type_index(typeid(NCOFilter))] 								= "filter-sine";
-	m_filterIconMap[type_index(typeid(NoiseFilter))] 								= "filter-noise";
+	m_filterIconMap[type_index(typeid(NoiseFilter))] 							= "filter-noise";
 	m_filterIconMap[type_index(typeid(OneWireDecoder))] 						= "filter-1-wire";
 	m_filterIconMap[type_index(typeid(PAMEdgeDetectorFilter))] 					= "filter-pam4-edge-detect";
 	m_filterIconMap[type_index(typeid(PAM4DemodulatorFilter))] 					= "filter-pam4-demodulator";
+	m_filterIconMap[type_index(typeid(ParallelBus))] 							= "filter-parallel-bus";
 	m_filterIconMap[type_index(typeid(PcapngExportFilter))] 					= "filter-pcapng-export";
 	m_filterIconMap[type_index(typeid(PcapngImportFilter))] 					= "filter-pcapng-import";
 	m_filterIconMap[type_index(typeid(PCIe128b130bDecoder))] 					= "filter-64b66bdecoder";
