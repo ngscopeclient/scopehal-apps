@@ -2550,7 +2550,6 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 
 	//Dispatch the shader
 	comp->Dispatch(cmdbuf, config, w, 1, 1);
-	comp->AddComputeMemoryBarrier(cmdbuf);
 	imgOut.MarkModifiedFromGpu();
 }
 

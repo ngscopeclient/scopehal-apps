@@ -598,6 +598,9 @@ void MainWindow::RenderWaveformTextures(
 	}
 	for(auto group : groups)
 		group->RenderWaveformTextures(cmdbuf, channels, clear);
+
+	//Add a single memory barrier at the end, so that uniform rasterization can run in parallel
+	ComputePipeline::AddComputeMemoryBarrier(cmdbuf);
 }
 
 void MainWindow::ResetStyle()
