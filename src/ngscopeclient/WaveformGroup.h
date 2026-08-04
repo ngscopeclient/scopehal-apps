@@ -49,7 +49,7 @@ public:
 	void Clear();
 
 	bool Render();
-	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
+	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf, std::vector<vk::ImageMemoryBarrier>& barriers);
 	void ReferenceWaveformTextures();
 
 	void RenderWaveformTextures(

@@ -2251,7 +2251,7 @@ void WaveformArea::MakePathSignalBody(ImDrawList* list, float xstart, float xend
 /**
 	@brief Tone map our waveforms
  */
-void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf, vector<vk::ImageMemoryBarrier>& barriers)
 {
 	for(size_t i=0; i<m_inputs.size(); i++)
 	{
@@ -2264,23 +2264,23 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		{
 			case Stream::STREAM_TYPE_ANALOG:
 			case Stream::STREAM_TYPE_DIGITAL:
-				ToneMapAnalogOrDigitalWaveform(chan, cmdbuf);
+				ToneMapAnalogOrDigitalWaveform(chan, cmdbuf, barriers);
 				break;
 
 			case Stream::STREAM_TYPE_WATERFALL:
-				ToneMapWaterfallWaveform(chan, cmdbuf);
+				ToneMapWaterfallWaveform(chan, cmdbuf, barriers);
 				break;
 
 			case Stream::STREAM_TYPE_SPECTROGRAM:
-				ToneMapSpectrogramWaveform(chan, cmdbuf);
+				ToneMapSpectrogramWaveform(chan, cmdbuf, barriers);
 				break;
 
 			case Stream::STREAM_TYPE_EYE:
-				ToneMapEyeWaveform(chan, cmdbuf);
+				ToneMapEyeWaveform(chan, cmdbuf, barriers);
 				break;
 
 			case Stream::STREAM_TYPE_CONSTELLATION:
-				ToneMapConstellationWaveform(chan, cmdbuf);
+				ToneMapConstellationWaveform(chan, cmdbuf, barriers);
 				break;
 
 			//no tone mapping required
@@ -2556,7 +2556,10 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 /**
 	@brief Tone maps an analog or digital waveform by converting the internal fp32 buffer to RGBA
  */
-void WaveformArea::ToneMapAnalogOrDigitalWaveform(shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::ToneMapAnalogOrDigitalWaveform(
+	shared_ptr<DisplayedChannel> channel,
+	vk::raii::CommandBuffer& cmdbuf,
+	vector<vk::ImageMemoryBarrier>& barriers)
 {
 	auto tex = channel->GetTexture();
 	if(tex == nullptr)
@@ -2591,19 +2594,16 @@ void WaveformArea::ToneMapAnalogOrDigitalWaveform(shared_ptr<DisplayedChannel> c
 		VK_QUEUE_FAMILY_IGNORED,
 		tex->GetImage(),
 		range);
-	cmdbuf.pipelineBarrier(
-			vk::PipelineStageFlagBits::eComputeShader,
-			vk::PipelineStageFlagBits::eFragmentShader,
-			{},
-			{},
-			{},
-			barrier);
+	barriers.push_back(barrier);
 }
 
 /**
 	@brief Tone maps a waterfall waveform by converting the internal fp32 buffer to RGBA and cropping/scaling
  */
-void WaveformArea::ToneMapWaterfallWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::ToneMapWaterfallWaveform(
+	shared_ptr<DisplayedChannel> channel,
+	vk::raii::CommandBuffer& cmdbuf,
+	vector<vk::ImageMemoryBarrier>& barriers)
 {
 	auto tex = channel->GetTexture();
 	if(tex == nullptr)
@@ -2654,19 +2654,16 @@ void WaveformArea::ToneMapWaterfallWaveform(std::shared_ptr<DisplayedChannel> ch
 		VK_QUEUE_FAMILY_IGNORED,
 		tex->GetImage(),
 		range);
-	cmdbuf.pipelineBarrier(
-			vk::PipelineStageFlagBits::eComputeShader,
-			vk::PipelineStageFlagBits::eFragmentShader,
-			{},
-			{},
-			{},
-			barrier);
+	barriers.push_back(barrier);
 }
 
 /**
 	@brief Tone maps a spectrogram waveform by converting the internal fp32 buffer to RGBA and cropping/scaling
  */
-void WaveformArea::ToneMapSpectrogramWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::ToneMapSpectrogramWaveform(
+	shared_ptr<DisplayedChannel> channel,
+	vk::raii::CommandBuffer& cmdbuf,
+	vector<vk::ImageMemoryBarrier>& barriers)
 {
 	auto tex = channel->GetTexture();
 	if(tex == nullptr)
@@ -2727,19 +2724,16 @@ void WaveformArea::ToneMapSpectrogramWaveform(std::shared_ptr<DisplayedChannel> 
 		VK_QUEUE_FAMILY_IGNORED,
 		tex->GetImage(),
 		range);
-	cmdbuf.pipelineBarrier(
-			vk::PipelineStageFlagBits::eComputeShader,
-			vk::PipelineStageFlagBits::eFragmentShader,
-			{},
-			{},
-			{},
-			barrier);
+	barriers.push_back(barrier);
 }
 
 /**
 	@brief Tone maps an eye waveform by converting the internal fp32 buffer to RGBA
  */
-void WaveformArea::ToneMapEyeWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::ToneMapEyeWaveform(
+	shared_ptr<DisplayedChannel> channel,
+	vk::raii::CommandBuffer& cmdbuf,
+	vector<vk::ImageMemoryBarrier>& barriers)
 {
 	auto tex = channel->GetTexture();
 	if(tex == nullptr)
@@ -2784,19 +2778,16 @@ void WaveformArea::ToneMapEyeWaveform(std::shared_ptr<DisplayedChannel> channel,
 		VK_QUEUE_FAMILY_IGNORED,
 		tex->GetImage(),
 		range);
-	cmdbuf.pipelineBarrier(
-			vk::PipelineStageFlagBits::eComputeShader,
-			vk::PipelineStageFlagBits::eFragmentShader,
-			{},
-			{},
-			{},
-			barrier);
+	barriers.push_back(barrier);
 }
 
 /**
 	@brief Tone maps a constellation waveform by converting the internal fp32 buffer to RGBA
  */
-void WaveformArea::ToneMapConstellationWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::ToneMapConstellationWaveform(
+	shared_ptr<DisplayedChannel> channel,
+	vk::raii::CommandBuffer& cmdbuf,
+	vector<vk::ImageMemoryBarrier>& barriers)
 {
 	auto tex = channel->GetTexture();
 	if(tex == nullptr)
@@ -2841,13 +2832,7 @@ void WaveformArea::ToneMapConstellationWaveform(std::shared_ptr<DisplayedChannel
 		VK_QUEUE_FAMILY_IGNORED,
 		tex->GetImage(),
 		range);
-	cmdbuf.pipelineBarrier(
-			vk::PipelineStageFlagBits::eComputeShader,
-			vk::PipelineStageFlagBits::eFragmentShader,
-			{},
-			{},
-			{},
-			barrier);
+	barriers.push_back(barrier);
 }
 
 /**

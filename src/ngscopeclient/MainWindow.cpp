@@ -559,7 +559,7 @@ void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
 	#ifdef HAVE_NVTX
-		nvtx3::scoped_range range("ToneMapAllWaveforms");
+		nvtx3::scoped_range nvrange("ToneMapAllWaveforms");
 	#endif
 
 	double start = GetTime();
@@ -567,15 +567,31 @@ void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 	lock_guard<mutex> lock(m_session.GetRasterizedWaveformMutex());
 
 	m_cmdBuffer->begin(vk::CommandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
-
-	//Tone map the waveforms, holding the group mutex for as short a time as possible
-	vector<shared_ptr<WaveformGroup>> groups;
 	{
-		lock_guard<recursive_mutex> lock2(m_waveformGroupsMutex);
-		groups = m_waveformGroups;
+		NamedDebugRange shaderRange(cmdbuf, "ToneMapAllWaveforms");
+
+		vector<vk::ImageMemoryBarrier> barriers;
+
+		//Tone map the waveforms, holding the group mutex for as short a time as possible
+		vector<shared_ptr<WaveformGroup>> groups;
+		{
+			lock_guard<recursive_mutex> lock2(m_waveformGroupsMutex);
+			groups = m_waveformGroups;
+		}
+		for(auto group : groups)
+			group->ToneMapAllWaveforms(cmdbuf, barriers);
+
+		if(!barriers.empty())
+		{
+			cmdbuf.pipelineBarrier(
+				vk::PipelineStageFlagBits::eComputeShader,
+				vk::PipelineStageFlagBits::eFragmentShader,
+				{},
+				{},
+				{},
+				vk::ArrayProxy<vk::ImageMemoryBarrier>(barriers.size(), &barriers[0]));
+		}
 	}
-	for(auto group : groups)
-		group->ToneMapAllWaveforms(cmdbuf);
 
 	m_cmdBuffer->end();
 	m_renderQueue->SubmitAndBlock(*m_cmdBuffer);

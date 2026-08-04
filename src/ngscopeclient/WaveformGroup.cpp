@@ -192,12 +192,12 @@ void WaveformGroup::MoveArea(WaveformArea& area, size_t newPosition)
 
 	Called by MainWindow::ToneMapAllWaveforms() at the start of each frame if new data is ready to render
  */
-void WaveformGroup::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
+void WaveformGroup::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf, vector<vk::ImageMemoryBarrier>& barriers)
 {
 	auto areas = GetWaveformAreas();
 
 	for(auto a : areas)
-		a->ToneMapAllWaveforms(cmdbuf);
+		a->ToneMapAllWaveforms(cmdbuf, barriers);
 }
 
 void WaveformGroup::ReferenceWaveformTextures()
