@@ -520,6 +520,14 @@ public:
 	virtual YAML::Node SerializeConfiguration(IDTable& table) override;
 	void LoadConfiguration(YAML::Node& node);
 
+	bool IsMouseOverYCursor(int iCursor, bool ignoreCursorsPlacedThisFrame);
+
+	bool IsMouseOverAnyYCursor(bool ignoreCursorsPlacedThisFrame)
+	{
+		return IsMouseOverYCursor(0, ignoreCursorsPlacedThisFrame) ||
+			IsMouseOverYCursor(1, ignoreCursorsPlacedThisFrame);
+	}
+
 protected:
 	void OnStreamAdded(StreamDescriptor desc);
 
@@ -733,6 +741,9 @@ protected:
 	float m_yAxisCursorPositions[2];
 
 	void DoCursor(int iCursor, DragState state);
+
+	///@brief True if the Y axis cursors were just placed in the current frame
+	bool m_cursorPlacedThisFrame;
 };
 
 typedef std::pair<WaveformArea*, size_t> DragDescriptor;

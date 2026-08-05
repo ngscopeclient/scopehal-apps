@@ -858,7 +858,8 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 		ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
 		!IsMouseOverButtonInWaveformArea() &&
 		!ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel) &&
-		!m_mouseOverMarker)
+		!m_mouseOverMarker &&
+		!IsMouseOverYCursorInChild(true))
 	{
 		auto xpos = ImGui::GetMousePos().x;
 
@@ -895,25 +896,54 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 	}
 }
 
-void WaveformGroup::DoCursor(int iCursor, DragState state)
+bool WaveformGroup::IsMouseOverYCursorInChild(bool ignoreCursorsPlacedThisFrame)
 {
-	float xpos = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[iCursor]));
-	float searchRadius = 0.5 * ImGui::GetFontSize();
+	auto areas = GetWaveformAreas();
+	for(auto a : areas)
+	{
+		if(a->IsMouseOverAnyYCursor(ignoreCursorsPlacedThisFrame))
+			return true;
+	}
+	return false;
+}
 
-	//Check if the mouse hit us
-	auto mouse = ImGui::GetMousePos();
+bool WaveformGroup::IsMouseOverXCursor(int iCursor)
+{
+	//Skip if the cursor in question isn't enabled
+	if(m_xAxisCursorMode == X_CURSOR_NONE)
+		return false;
+	if( (iCursor == 1) && (m_xAxisCursorMode == X_CURSOR_SINGLE) )
+		return false;
+
 	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !IsMouseOverButtonInWaveformArea())
 	{
-		if( fabs(mouse.x - xpos) < searchRadius)
-		{
-			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
-			m_parent->AddStatusHelp("mouse_lmb", "");
-			m_parent->AddStatusHelp("mouse_lmb_drag", "Move cursor");
+		float xpos = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[iCursor]));
+		float searchRadius = 0.5 * ImGui::GetFontSize();
+		auto mouse = ImGui::GetMousePos();
+		return ( fabs(mouse.x - xpos) < searchRadius);
+	}
+	else
+		return false;
+}
 
-			//Start dragging if clicked
-			if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-				m_dragState = state;
-		}
+void WaveformGroup::DoCursor(int iCursor, DragState state)
+{
+	//Check if the mouse hit us
+	auto mouse = ImGui::GetMousePos();
+	if(IsMouseOverXCursor(iCursor))
+	{
+		//If we are also over a Y cursor, show 4-way drag
+		if(IsMouseOverYCursorInChild(false))
+			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+		else
+			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+
+		m_parent->AddStatusHelp("mouse_lmb", "");
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Move cursor");
+
+		//Start dragging if clicked
+		if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+			m_dragState = state;
 	}
 
 	//If dragging, move the cursor to track

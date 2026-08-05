@@ -379,6 +379,7 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_dragPeakLabel(nullptr)
 	, m_mouseOverButton(false)
 	, m_yAxisCursorMode(Y_CURSOR_NONE)
+	, m_cursorPlacedThisFrame(false)
 {
 	m_yAxisCursorPositions[0] = 0;
 	m_yAxisCursorPositions[1] = 0;
@@ -761,6 +762,8 @@ StreamDescriptor WaveformArea::GetChannelBeingDragged()
  */
 bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 {
+	m_cursorPlacedThisFrame = false;
+
 	if(m_dragState != DRAG_STATE_NONE)
 		OnDragUpdate();
 
@@ -1022,12 +1025,14 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth)
 		m_parent->AddStatusHelp("mouse_lmb_drag", "Move cursor");
 
 	//If not currently dragging, a click places cursor 0 and starts dragging cursor 1 (if enabled)
-	//Don't process this if a popup is open
+	//Don't process this if a popup is open, or the group is already handling a drag
 	if( ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
 		(m_dragState == DRAG_STATE_NONE) &&
 		ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
 		!m_mouseOverButton &&
-		!ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
+		!ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel) &&
+		!m_group->IsDraggingSomething() &&
+		!m_group->IsMouseOverAnyXCursor() )
 	{
 		auto ypos = ImGui::GetMousePos().y;
 
@@ -1039,6 +1044,8 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth)
 		}
 		else
 			m_dragState = DRAG_STATE_Y_CURSOR0;
+
+		m_cursorPlacedThisFrame = true;
 	}
 
 	//Cursor 0 should always be above cursor 1 (if both are enabled).
@@ -1058,28 +1065,50 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth)
 	}
 }
 
+bool WaveformArea::IsMouseOverYCursor(int iCursor, bool ignoreCursorsPlacedThisFrame)
+{
+	if(ignoreCursorsPlacedThisFrame && m_cursorPlacedThisFrame)
+		return false;
+
+	//Skip if the cursor in question isn't enabled
+	if(m_yAxisCursorMode == Y_CURSOR_NONE)
+		return false;
+	if( (iCursor == 1) && (m_yAxisCursorMode == Y_CURSOR_SINGLE) )
+		return false;
+
+	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !m_mouseOverButton)
+	{
+		float ypos = round(YAxisUnitsToYPosition(m_yAxisCursorPositions[iCursor]));
+		float searchRadius = 0.5 * ImGui::GetFontSize();
+		auto mouse = ImGui::GetMousePos();
+
+		return ( fabs(mouse.y - ypos) < searchRadius);
+	}
+
+	else
+		return false;
+}
+
 /**
 	@brief Run interaction processing for dragging a Y axis cursor
  */
 void WaveformArea::DoCursor(int iCursor, DragState state)
 {
-	float ypos = round(YAxisUnitsToYPosition(m_yAxisCursorPositions[iCursor]));
-	float searchRadius = 0.5 * ImGui::GetFontSize();
-
 	//Check if the mouse hit us
 	auto mouse = ImGui::GetMousePos();
-	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !m_mouseOverButton)
+	if(IsMouseOverYCursor(iCursor, false))
 	{
-		if( fabs(mouse.y - ypos) < searchRadius)
-		{
-			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
-			m_parent->AddStatusHelp("mouse_lmb", "");
-			m_parent->AddStatusHelp("mouse_lmb_drag", "Move cursor");
+		ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+		m_parent->AddStatusHelp("mouse_lmb", "");
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Move cursor");
 
-			//Start dragging if clicked
-			if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-				m_dragState = state;
-		}
+		//If the waveform group is already dragging, don't start a new drag
+		if(m_group->IsDraggingSomething())
+		{}
+
+		//Start dragging if clicked
+		else if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+			m_dragState = state;
 	}
 
 	//If dragging, move the cursor to track
