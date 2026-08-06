@@ -5,6 +5,7 @@ This is a running list of significant bug fixes and new features since the last 
 ## New features since v0.1.1
 
 * Core: added official support and binary release for Debian aarch64
+* Core: Improvements to filter graph scheduler to more efficiently batch workloads going to the GPU.
 * Core: Changed rate limiting sleep in InstrumentThread loop from 10ms to 1ms to avoid bogging down high performance instruments like the ThunderScope
 * Core: Scopesession loading now uses multithreaded IO for significant performance gains especially when many channels and deep history are involved
 * Core: Significant rewrite of Vulkan queue allocation logic to reduce unnecessary locking and mutex contention on GPUs without a lot of Vulkan queues (most non-NVIDIA platforms)
