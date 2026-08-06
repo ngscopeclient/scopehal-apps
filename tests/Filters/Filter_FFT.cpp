@@ -74,6 +74,11 @@ TEST_CASE("Filter_FFT")
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
 	vk::raii::CommandBuffer cmdbuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 
+	//Set up executor for the graph
+	FilterGraphExecutor exec;
+	set<FlowGraphNode*> nodes;
+	nodes.emplace(filter);
+
 	//Create an empty input waveform
 	const size_t depth = 131072;
 	UniformAnalogWaveform ua;
@@ -106,7 +111,7 @@ TEST_CASE("Filter_FFT")
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			//Also precompute some sizes we need for the test code
-			filter->Refresh(cmdbuf, queue);
+			exec.RunBlocking(nodes);
 
 			//Output buffer
 			auto npoints = filter->test_GetNumPoints();
@@ -189,7 +194,7 @@ TEST_CASE("Filter_FFT")
 
 			//Try again on the GPU, this time for score
 			start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+			exec.RunBlocking(nodes);
 			double dt = GetTime() - start;
 			LogVerbose("GPU         : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 

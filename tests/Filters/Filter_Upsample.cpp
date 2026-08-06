@@ -74,15 +74,10 @@ TEST_CASE("Filter_Upsample")
 	REQUIRE(filter != nullptr);
 	filter->AddRef();
 
-	//Create a queue and command buffer
-	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Filter_Upsample.queue"));
-	vk::CommandPoolCreateInfo poolInfo(
-		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		queue->GetQueue()->m_family );
-	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
-
-	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
-	vk::raii::CommandBuffer cmdbuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+	//Set up executor for the graph
+	FilterGraphExecutor exec;
+	set<FlowGraphNode*> nodes;
+	nodes.emplace(filter);
 
 	//Create an empty input waveform
 	const size_t depth = 100000;
@@ -156,11 +151,11 @@ TEST_CASE("Filter_Upsample")
 			LogVerbose("CPU: %.2f ms\n", tbase * 1000);
 
 			//Run the filter once to get shaders loaded etc
-			filter->Refresh(cmdbuf, queue);
+			exec.RunBlocking(nodes);
 
 			//Run the real filter for score
 			start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+			exec.RunBlocking(nodes);
 			double dt = GetTime() - start;
 			LogVerbose("GPU: %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
