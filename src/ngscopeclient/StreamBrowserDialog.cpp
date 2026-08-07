@@ -1878,8 +1878,12 @@ void StreamBrowserDialog::renderChannelProperties(
 		scopechan->SetAttenuation(scopeState->m_committedAttenuation[channelIndex]);
 		scopeState->m_needsUpdate[channelIndex] = true;
 	}
+
 	//Only show coupling box if the instrument has configurable coupling
-	if( (scopeState->m_couplings[channelIndex].size() > 1) && (scopeState->m_probeName[channelIndex] == "") )
+	//Special case: LeCroy scopes return "Ring*" prefix for passive probes that still allow AC/DC coupling
+	string probeName = scopeState->m_probeName[channelIndex];
+	bool probeIsConfigurable = (probeName == "") || (probeName.find("Ring") == 0);
+	if( (scopeState->m_couplings[channelIndex].size() > 1) && probeIsConfigurable )
 	{
 		ImGui::SetNextItemWidth(width);
 		if(renderCombo(
