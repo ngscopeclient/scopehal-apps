@@ -217,6 +217,7 @@ target_link_libraries(ngscopeclient
 	scopeprotocols
 	${NFD_LIBS}
 	PNG::PNG
+	ZLIB::ZLIB
 	${PLATFORM_LIBS}
 	)
 

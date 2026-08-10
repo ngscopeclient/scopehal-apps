@@ -171,6 +171,7 @@ endif()
 
 # Package detection
 find_package(PkgConfig MODULE REQUIRED)
+find_package(ZLIB REQUIRED)
 
 # yaml-cpp is used in scopehal and ngscopeclient
 find_package(yaml-cpp REQUIRED)
