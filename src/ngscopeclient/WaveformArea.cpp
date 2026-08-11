@@ -4264,7 +4264,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 
 	//Add unique ID (the raw pointer) so if we have two channels with the same name
 	//they have different IDs
-	fqname += "###" + to_string_hex(reinterpret_cast<uintptr_t>(rchan));
+	fqname += "###" + to_string_hex(reinterpret_cast<uintptr_t>(rchan)) + "." + to_string(stream.m_stream);
 
 	//Foreground color is used to determine background color and hovered/active colors
 	float bgmul = 0.2;
