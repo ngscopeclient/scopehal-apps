@@ -95,11 +95,14 @@ bool FontManager::UpdateFonts(PreferenceCategory& root)
 			fclose(fp);
 		else
 		{
-			LogWarning(
-				"Could not find font file \"%s\" requested in preferences database. "
-				"Using default font \"%s\" instead\n",
-				fname.c_str(),
-				defaultFontPath.c_str());
+			// No need to warn the user if nothing is specified
+			if(fname.size() != 0) {
+				LogWarning(
+					"Could not find font file \"%s\" requested in preferences database. "
+					"Using default font \"%s\" instead\n",
+					fname.c_str(),
+					defaultFontPath.c_str());
+			}
 			fname = defaultFontPath;
 		}
 
