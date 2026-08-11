@@ -139,7 +139,7 @@ endif()
 
 # Compiler warnings specific to GCC or Clang
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
-	add_compile_options(-Woverloaded-virtual=1)
+	add_compile_options($<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Woverloaded-virtual=1>)
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Woverloaded-virtual -Wpointer-sign -Wno-gnu-zero-variadic-macro-arguments -Wno-unknown-warning-option)
 endif()
