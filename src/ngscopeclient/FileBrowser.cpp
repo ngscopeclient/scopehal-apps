@@ -74,6 +74,11 @@ shared_ptr<FileBrowser> MakeFileBrowser(
 	pref = BROWSER_IMGUI;
 #endif
 
+	//Using Wayland forces imgui browser because NFD uses libdecor to draw clientside window decorations
+	//and this results in GTK calls from the main thread even though all GTK *should* live in our worker thread...
+	if(glfwGetPlatform() == GLFW_PLATFORM_WAYLAND)
+		pref = BROWSER_IMGUI;
+
 	//Fullscreen mode overrides preferences and forces use of imgui browser
 	if( (pref == BROWSER_IMGUI) || wnd->IsFullscreen() )
 	{
