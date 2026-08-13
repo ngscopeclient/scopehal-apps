@@ -2055,24 +2055,44 @@ void StreamBrowserDialog::renderStreamNode(
 							// No streams => display channel properties here
 							renderChannelProperties(scope,scopechan,channelIndex,scopeState);
 						}
-						if(renderEditablePropertyWithExplicitApply(
-							0,
-							"Offset",
-							scopeState->m_strOffset[channelIndex][streamIndex],
-							scopeState->m_committedOffset[channelIndex][streamIndex],unit))
-						{	// Update offset
-							scopechan->SetOffset(scopeState->m_committedOffset[channelIndex][streamIndex],streamIndex);
-							scopeState->m_needsUpdate[channelIndex] = true;
-						}
-						if(renderEditablePropertyWithExplicitApply(
-							0,
-							"Vertical range",
-							scopeState->m_strRange[channelIndex][streamIndex],
-							scopeState->m_committedRange[channelIndex][streamIndex],unit))
-						{	// Update offset
-							scopechan->SetVoltageRange(
-								scopeState->m_committedRange[channelIndex][streamIndex],streamIndex);
-							scopeState->m_needsUpdate[channelIndex] = true;
+						{
+							//Check if the offset changed under us
+							auto actualOffset = scopechan->GetOffset(streamIndex);
+							if(scopeState->m_committedOffset[channelIndex][streamIndex] != actualOffset)
+							{
+								scopeState->m_committedOffset[channelIndex][streamIndex] = actualOffset;
+								scopeState->m_strOffset[channelIndex][streamIndex] = unit.PrettyPrint(actualOffset);
+							}
+
+							//Ditto for range
+							auto actualRange = scopechan->GetVoltageRange(streamIndex);
+							if(scopeState->m_committedRange[channelIndex][streamIndex] != actualRange)
+							{
+								scopeState->m_committedRange[channelIndex][streamIndex] = actualRange;
+								scopeState->m_strRange[channelIndex][streamIndex] = unit.PrettyPrint(actualRange);
+							}
+
+							if(renderEditablePropertyWithExplicitApply(
+								0,
+								"Offset",
+								scopeState->m_strOffset[channelIndex][streamIndex],
+								scopeState->m_committedOffset[channelIndex][streamIndex],
+								unit))
+							{	// Update offset
+								scopechan->SetOffset(
+									scopeState->m_committedOffset[channelIndex][streamIndex], streamIndex);
+								scopeState->m_needsUpdate[channelIndex] = true;
+							}
+							if(renderEditablePropertyWithExplicitApply(
+								0,
+								"Vertical range",
+								scopeState->m_strRange[channelIndex][streamIndex],
+								scopeState->m_committedRange[channelIndex][streamIndex],unit))
+							{	// Update offset
+								scopechan->SetVoltageRange(
+									scopeState->m_committedRange[channelIndex][streamIndex],streamIndex);
+								scopeState->m_needsUpdate[channelIndex] = true;
+							}
 						}
 						break;
 					case Stream::STREAM_TYPE_DIGITAL:
