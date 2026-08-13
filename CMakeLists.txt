@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(ngscopeclient VERSION 0.1.1)
+project(ngscopeclient VERSION 0.2)
 include_directories(cmake) #WORKAROUND needed for find_package(Vulkan) for Vulkan SDK
 enable_language(CXX)
 
@@ -87,7 +87,7 @@ if(Git_FOUND OR NGSCOPECLIENT_PACKAGE_VERSION)
 
 else()
 	set(NGSCOPECLIENT_VERSION "unknown")
-	set(MSI_VERSION "0.1")
+	set(MSI_VERSION "0.2")
 	message("Git not detected, scopehal-apps version unknown")
 endif()
 
