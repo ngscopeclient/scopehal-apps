@@ -20,6 +20,8 @@ The following is a list of all contributors to ngscopeclient, libscopehal, and l
   * daglem (Dag Lem)
   * dannas (Dan Näslund)
   * dizzystem
+  * dj-bauer
+  * dreisiebner
   * dresco (Jon Escombe)
   * drandyhaas (Andy Haas)
   * elemecca (Sam Hanes)
@@ -37,9 +39,11 @@ The following is a list of all contributors to ngscopeclient, libscopehal, and l
   * fridtjof (Fridtjof Mund)
   * gammeflamme
   * gherkin
+  * helaslo (Hegyi László)
   * icamaster (Cezar Chirila)
   * iromero91 (Jose Ignacio Romero)
   * johnsel (John Simons)
+  * jordanconley (Jordan Conley)
   * juan-domenech (Juan Domenech Fernandez)
   * jwise (Joshua Wise)
   * kench (Kenley Cheung)
@@ -49,10 +53,12 @@ The following is a list of all contributors to ngscopeclient, libscopehal, and l
   * laminar-oss
   * ledvinap (Petr Ledvina)
   * lethalbit (Aki)
+  * lukas1811 (Lukas)
   * macaba
   * mandl
   * matfi
   * mastensg (Martin Stensgård)
+  * mdejw (Marcin Dawidowicz)
   * mldulaney (Mairi Dulaney)
   * megabytephreak
   * miek (Mike Walters)
@@ -61,8 +67,9 @@ The following is a list of all contributors to ngscopeclient, libscopehal, and l
   * natemeyer (Nate Meyer)
   * noopwafel (Alyssa Milburn)
   * nshcat (Alex)
-  * pepijndevos (Pepijn de Vos)
   * pd0wm (William Melching)
+  * pepijndevos (Pepijn de Vos)
+  * preamp-org (Lasse Beyer)
   * qduff (Quentin Duff)
   * randomplum (Dominik Sliwa)
   * rroohhh (Robin Heinemann)
@@ -77,6 +84,7 @@ The following is a list of all contributors to ngscopeclient, libscopehal, and l
   * tarunik
   * tech2077
   * tiltmesenpai (Joshua Koike)
+  * timp3289
   * tomverbeure (Tom Verbeure)
   * travisgoodspeed (Travis Goodspeed)
   * umarcor (Unai Martinez-Corral)
