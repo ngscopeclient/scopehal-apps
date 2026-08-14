@@ -16,6 +16,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 
 ## Bugs fixed since v0.2
 
+* PicoScope: fixed race condition where if waveform conversion took too long a buffer could leak
 * ThunderScope: fixed race condition where if waveform conversion took too long a buffer could leak (https://github.com/ngscopeclient/scopehal-apps/issues/1023)
 * Core: progress display would incorrectly show disabled channels as downloading (https://github.com/ngscopeclient/scopehal/pull/1108)
 * Core: Fixed race condition in SCPITransport::FlushCommandQueue that could lead to hangs or dropped commands
