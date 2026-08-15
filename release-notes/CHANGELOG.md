@@ -2,26 +2,23 @@
 
 This is a running list of significant bug fixes and new features since the last release, which will eventually be merged into release notes for the next version.
 
-## New features since v0.2
+## New features since v0.2.1
 
 * None yet
 
-## Breaking changes since v0.2
+## Breaking changes since v0.2.1
 
 We try to maintain compatibility with older versions of ngscopeclient but occasionally we have no choice to change the interface of a block in a way that requires old filter graphs to be updated.
 
-NOTE: This section only list changes which are potentially breaking to an *end user*. Prior to the version 1.0 release, there is no expectation of API/ABI stability and internal software interfaces may change at any time with no warning.
+NOTE: This section only lists changes which are potentially breaking to an *end user*. Prior to the version 1.0 release, there is no expectation of API/ABI stability and internal software interfaces may change at any time with no warning.
 
 * None yet
 
-## Bugs fixed since v0.2
+## Bugs fixed since v0.2.1
 
-* PicoScope: fixed race condition where if waveform conversion took too long a buffer could leak
-* ThunderScope: fixed race condition where if waveform conversion took too long a buffer could leak (https://github.com/ngscopeclient/scopehal-apps/issues/1023)
-* Core: progress display would incorrectly show disabled channels as downloading (https://github.com/ngscopeclient/scopehal/pull/1108)
-* Core: Fixed race condition in SCPITransport::FlushCommandQueue that could lead to hangs or dropped commands
+* None yet
 
-## Other changes since v0.2
+## Other changes since v0.2.2
 
 * None yet
 
