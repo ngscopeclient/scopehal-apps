@@ -289,7 +289,7 @@ if(APPLE)
 	install(FILES "${MOLTEN_VK_OUTPUT}/lib/libMoltenVK.dylib" DESTINATION lib)
 	install(CODE "
 		include(BundleUtilities)
-		fixup_bundle(\"${APPS}\" \"lib/libMoltenVK.dylib\" \"${DIRS}\")
+		fixup_bundle(\"${APPS}\" \"${DIRS}/libMoltenVK.dylib\" \"${DIRS}\")
 		include(\"${CMAKE_SOURCE_DIR}/src/ngscopeclient/macos/signing.cmake\")
 		")
 endif()
