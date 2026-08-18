@@ -402,6 +402,8 @@ VulkanWindow::~VulkanWindow()
 {
 	LogTrace("Shutting down Vulkan\n");
 
+	ScratchBufferManager::clear();
+
 	g_vkComputeDevice->waitIdle();
 
 	m_texturesUsedThisFrame.clear();

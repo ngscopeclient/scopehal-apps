@@ -188,6 +188,9 @@ TEST_CASE("Filter_EyePattern")
 	g_scope->GetOscilloscopeChannel(4)->Detach(0);
 
 	filter->Release();
+
+	//Clear scratch buffers before we shut down
+	ScratchBufferManager::clear();
 }
 
 ///@brief Helper function not called if the test passes, but may be useful for troubleshooting if it fails
