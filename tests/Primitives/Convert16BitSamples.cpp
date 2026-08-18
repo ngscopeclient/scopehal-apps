@@ -55,7 +55,9 @@ void Convert16BitSamplesGeneric(float* pout, const int16_t* pin, float gain, flo
 TEST_CASE("Primitive_Convert16BitSamples")
 {
 	//Create a queue and command buffer
-	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Primitive_Convert16BitSamples.queue"));
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetQueueFromPool(
+		QueueManager::QUEUE_POOL_FILTER,
+		"Primitive_Convert16BitSamples.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		queue->GetQueue()->m_family );

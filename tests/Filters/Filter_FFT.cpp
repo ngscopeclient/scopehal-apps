@@ -65,7 +65,9 @@ TEST_CASE("Filter_FFT")
 	FilterReferencer ref(filter);
 
 	//Create a queue and command buffer
-	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Filter_FFT.queue"));
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetQueueFromPool(
+		QueueManager::QUEUE_POOL_FILTER,
+		"Filter_FFT.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		queue->GetQueue()->m_family );

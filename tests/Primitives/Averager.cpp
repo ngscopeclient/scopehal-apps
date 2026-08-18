@@ -49,7 +49,9 @@ using namespace std;
 TEST_CASE("Primitive_Averager")
 {
 	//Create a queue and command buffer
-	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Primitive_Averager.queue"));
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetQueueFromPool(
+		QueueManager::QUEUE_POOL_FILTER,
+		"Primitive_Averager.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		queue->GetQueue()->m_family );

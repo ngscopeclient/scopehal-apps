@@ -172,12 +172,18 @@ add_custom_target(
 	COMMENT "Copying markdown files..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/md ${CMAKE_BINARY_DIR}/src/ngscopeclient/md)
 
+add_custom_target(
+	ngprotobake
+	COMMENT "Copying protocol baking shaders..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/lib/scopeprotocols/shaderfusion ${CMAKE_BINARY_DIR}/src/ngscopeclient/shaderfusion)
+
 add_dependencies(ngscopeclient
 	ngfonts
 	ngicons
 	ngmasks
 	ngmd
 	ngrendershaders
+	ngprotobake
 	ngprotoshaders
 	nghalshaders
 	ngchannels
@@ -250,6 +256,8 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/masks
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/shaders
 	DESTINATION share/ngscopeclient)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/md
+	DESTINATION share/ngscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/lib/scopeprotocols/shaderfusion
 	DESTINATION share/ngscopeclient)
 
 if(LINUX)

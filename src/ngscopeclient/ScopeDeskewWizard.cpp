@@ -82,7 +82,7 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 	, m_bestCorrelationOffset(0)
 	, m_maxSkewSamples(30000)
 	, m_medianSkew(0)
-	, m_queue(g_vkQueueManager->GetComputeQueue("ScopeDeskewWizard.queue"))
+	, m_queue(g_vkQueueManager->GetQueueFromPool(QueueManager::QUEUE_POOL_MISC, "ScopeDeskewWizard.queue"))
 	, m_pool(*g_vkComputeDevice,
 		vk::CommandPoolCreateInfo(
 			vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,

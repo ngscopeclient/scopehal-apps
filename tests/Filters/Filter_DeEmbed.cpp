@@ -54,7 +54,9 @@ TEST_CASE("Filter_DeEmbed")
 	FilterReferencer ref(filter);
 
 	//Create a queue and command buffer
-	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Filter_DeEmbed.queue"));
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetQueueFromPool(
+		QueueManager::QUEUE_POOL_FILTER,
+		"Filter_DeEmbed.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		queue->GetQueue()->m_family );

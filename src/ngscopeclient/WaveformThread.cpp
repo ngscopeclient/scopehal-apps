@@ -64,7 +64,9 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 	LogTrace("Starting\n");
 
 	//Create a queue and command buffer for this thread's accelerated processing
-	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("WaveformThread.queue"));
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetQueueFromPool(
+		QueueManager::QUEUE_POOL_RASTERIZE,
+		"WaveformThread.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		queue->GetQueue()->m_family );
