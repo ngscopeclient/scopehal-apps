@@ -2,11 +2,11 @@
 
 This is a running list of significant bug fixes and new features since the last release, which will eventually be merged into release notes for the next version.
 
-## New features since v0.2.1
+## New features since v0.2.2
 
 * None yet
 
-## Breaking changes since v0.2.1
+## Breaking changes since v0.2.2
 
 We try to maintain compatibility with older versions of ngscopeclient but occasionally we have no choice to change the interface of a block in a way that requires old filter graphs to be updated.
 
@@ -14,7 +14,7 @@ NOTE: This section only lists changes which are potentially breaking to an *end 
 
 * None yet
 
-## Bugs fixed since v0.2.1
+## Bugs fixed since v0.2.2
 
 * None yet
 
