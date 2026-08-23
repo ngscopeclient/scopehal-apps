@@ -1131,10 +1131,14 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 
 			for(size_t i = 0; i<channelCount; i++)
 			{
-				if(scope->IsChannelEnabled(i))
-					lastEnabledChannelIndex = i;
 				auto scopechan = scope->GetChannel(i);
 				auto streamType = scopechan->GetType(0);
+				
+				if(scope->IsChannelEnabled(i) && streamType != Stream::STREAM_TYPE_TRIGGER)
+					// This is used for tracking elapsed time for waveform download for the GUI
+					// In this sense a trigger channel is not real / not downloaded.
+					lastEnabledChannelIndex = i;
+				
 				if(streamType != Stream::STREAM_TYPE_DIGITAL)
 				{
 					if(streamType ==  Stream::STREAM_TYPE_ANALOG)
