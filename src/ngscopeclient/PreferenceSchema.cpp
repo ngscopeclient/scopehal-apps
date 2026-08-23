@@ -35,6 +35,10 @@ PreferenceManager PreferenceManager::m_instance;
 
 void PreferenceManager::InitializeDefaults()
 {
+	//Make sure search paths are valid before we try finding fonts
+	//(this can get called from global constructors before DriverStaticInit is called)
+	InitializeSearchPaths();
+
 	auto& appearance = this->m_treeRoot.AddCategory("Appearance");
 
 		auto& consts = appearance.AddCategory("Constellations");

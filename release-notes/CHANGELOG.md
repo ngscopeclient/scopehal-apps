@@ -4,7 +4,7 @@ This is a running list of significant bug fixes and new features since the last 
 
 ## New features since v0.2.2
 
-* None yet
+* PointSample filter now accepts a scalar input from the graph, allowing the sample position to be dynamically adjusted
 
 ## Breaking changes since v0.2.2
 
@@ -16,7 +16,7 @@ NOTE: This section only lists changes which are potentially breaking to an *end 
 
 ## Bugs fixed since v0.2.2
 
-* None yet
+* Font preferences would have invalid default values because InitializeSearchPaths() was not called before the PreferenceManager constructor, leading to an empty search path and inability to find the default font
 
 ## Other changes since v0.2.2
 
