@@ -49,15 +49,15 @@ void PreferenceManager::InitializeDefaults()
 
 		auto& cursors = appearance.AddCategory("Cursors");
 			cursors.AddPreference(
-				Preference::Color("cursor_1_color", ColorFromString("#ffff00"))
+				Preference::ThemedColor("cursor_1_color", ColorFromString("#808000"), ColorFromString("#ffff00"))
 				.Label("Cursor #1 color")
 				.Description("Color for the left or top cursor"));
 			cursors.AddPreference(
-				Preference::Color("cursor_2_color", ColorFromString("#ff8000"))
+				Preference::ThemedColor("cursor_2_color", ColorFromString("#ff8000"), ColorFromString("#ff8000"))
 				.Label("Cursor #2 color")
 				.Description("Color for the right or bottom cursor"));
 			cursors.AddPreference(
-				Preference::Color("cursor_fill_color", ColorFromString("#ffff0040"))
+				Preference::ThemedColor("cursor_fill_color", ColorFromString("#ffff0040"), ColorFromString("#ffff0040"))
 				.Label("Cursor fill color")
 				.Description("Color for the filled area between cursors"));
 			/*cursors.AddPreference(
@@ -69,11 +69,11 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Label font")
 				.Description("Font used for cursor labels"));
 			cursors.AddPreference(
-				Preference::Color("marker_color", ColorFromString("#ff00a0"))
+				Preference::ThemedColor("marker_color", ColorFromString("#ff00a0"), ColorFromString("#ff00a0"))
 				.Label("Marker color")
 				.Description("Color for markers"));
 			cursors.AddPreference(
-				Preference::Color("hover_color", ColorFromString("#ffffff80"))
+				Preference::ThemedColor("hover_color", ColorFromString("#00000080"), ColorFromString("#ffffff80"))
 				.Label("Hover color")
 				.Description("Color for the hovered-packet indicator"));
 
@@ -341,11 +341,11 @@ void PreferenceManager::InitializeDefaults()
 
 		auto& graphs = appearance.AddCategory("Graphs");
 			graphs.AddPreference(
-				Preference::Color("bottom_color", ColorFromString("#000000ff"))
+				Preference::ThemedColor("bottom_color", ColorFromString("#e0e0e0ff"), ColorFromString("#000000ff"))
 				.Label("Background color bottom")
 				.Description("Color for the bottom side of the background gradient in a waveform graph"));
 			graphs.AddPreference(
-				Preference::Color("top_color", ColorFromString("#202020ff"))
+				Preference::ThemedColor("top_color", ColorFromString("#ffffffff"), ColorFromString("#202020ff"))
 				.Label("Background color top")
 				.Description("Color for the top side of the background gradient in a waveform graph"));
 			graphs.AddPreference(
@@ -365,7 +365,7 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Grid width")
 				.Description("Width of grid lines"));
 			graphs.AddPreference(
-				Preference::Color("y_axis_text_color", ColorFromString("#ffffffff"))
+				Preference::ThemedColor("y_axis_text_color", ColorFromString("#000000ff"), ColorFromString("#ffffffff"))
 				.Label("Y axis text color")
 				.Description("Color for Y axis text"));
 			graphs.AddPreference(
@@ -457,15 +457,15 @@ void PreferenceManager::InitializeDefaults()
 
 		auto& timeline = appearance.AddCategory("Timeline");
 			timeline.AddPreference(
-				Preference::Color("axis_color", ColorFromString("#ffffff"))
+				Preference::ThemedColor("axis_color", ColorFromString("#000000"), ColorFromString("#ffffff"))
 				.Label("Axis color")
 				.Description("Color for the X axis line and tick marks"));
 			timeline.AddPreference(
-				Preference::Color("text_color", ColorFromString("#ffffff"))
+				Preference::ThemedColor("text_color", ColorFromString("#000000"), ColorFromString("#ffffff"))
 				.Label("Text color")
 				.Description("Color for text labels on the X axis"));
 			timeline.AddPreference(
-				Preference::Color("trigger_bar_color", ColorFromString("#ffffff40"))
+				Preference::ThemedColor("trigger_bar_color", ColorFromString("#00000040"), ColorFromString("#ffffff40"))
 				.Label("Trigger bar color")
 				.Description("Color for the vertical position line shown when dragging a trigger"));
 			timeline.AddPreference(
