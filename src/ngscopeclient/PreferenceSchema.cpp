@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -150,6 +150,60 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Header font")
 				.Description("Font for filter/channel names"));
 			graph.AddPreference(
+				Preference::ThemedColor("background_color", ColorFromString("#c0c0c0c8"), ColorFromString("#3c3c46c8"))
+				.Label("Background color")
+				.Description("Color for the filter graph canvas"));
+			graph.AddPreference(
+				Preference::ThemedColor("grid_color", ColorFromString("#78787828"), ColorFromString("#78787828"))
+				.Label("Grid color")
+				.Description("Color for grid lines on the filter graph canvas"));
+			graph.AddPreference(
+				Preference::ThemedColor("node_bg_color", ColorFromString("#a0a0a0c8"), ColorFromString("#202020c8"))
+				.Label("Node background color")
+				.Description("Color for graph nodes"));
+			graph.AddPreference(
+				Preference::ThemedColor("node_border_color", ColorFromString("#00000060"), ColorFromString("#ffffff60"))
+				.Label("Node border color")
+				.Description("Color for graph node outlines"));
+			graph.AddPreference(
+				Preference::ThemedColor("node_border_hovered_color", ColorFromString("#0d81ffff"), ColorFromString("#50b0ffff"))
+				.Label("Hovered node border color")
+				.Description("Color for graph node outlines when hovered"));
+			graph.AddPreference(
+				Preference::ThemedColor("node_border_selected_color", ColorFromString("#ff9d04ff"), ColorFromString("#ffb032ff"))
+				.Label("Selected node border color")
+				.Description("Color for graph node outlines when selected"));
+			graph.AddPreference(
+				Preference::ThemedColor("node_select_rect", ColorFromString("#0582ff40"), ColorFromString("#0582ff40"))
+				.Label("Node selection rectangle color")
+				.Description("Color for selection rectangle fill"));
+			graph.AddPreference(
+				Preference::ThemedColor("node_select_border", ColorFromString("#0582ff80"), ColorFromString("#0582ff80"))
+				.Label("Node selection rectangle border")
+				.Description("Color for selection rectangle border"));
+			graph.AddPreference(
+				Preference::ThemedColor("edge_select_rect", ColorFromString("#0582ff40"), ColorFromString("#0582ff40"))
+				.Label("Edge selection rectangle color")
+				.Description("Color for selection rectangle fill"));
+			graph.AddPreference(
+				Preference::ThemedColor("edge_select_border", ColorFromString("#0582ff80"), ColorFromString("#0582ff80"))
+				.Label("Edge selection rectangle border")
+				.Description("Color for selection rectangle border"));
+			graph.AddPreference(
+				Preference::ThemedColor("edge_hovered_border", ColorFromString("#32b0ffff"), ColorFromString("#32b0ffff"))
+				.Label("Hovered edge border border")
+				.Description("Color for the outline of a graph edge when hovered"));
+			graph.AddPreference(
+				Preference::ThemedColor("edge_selected_border", ColorFromString("#ffb032ff"), ColorFromString("#ffb032ff"))
+				.Label("Selected edge border border")
+				.Description("Color for the outline of a graph edge when selected"));
+			graph.AddPreference(
+				Preference::ThemedColor("edge_highlight_border", ColorFromString("#cc6900ff"), ColorFromString("#cc6900ff"))
+				.Label("Highlighted edge border border")
+				.Description("Color for the outline of a graph edge when highlighted"));
+
+
+			graph.AddPreference(
 				Preference::ThemedColor("header_text_color", ColorFromString("#000000"), ColorFromString("#000000"))
 				.Label("Header text color")
 				.Description("Color for filter/channel names"));
@@ -162,7 +216,7 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Invalid link color")
 				.Description("Color indicating a potential connection path is invalid"));
 			graph.AddPreference(
-				Preference::ThemedColor("infobubble_color", ColorFromString("#c0c0c0"), ColorFromString("#404040"))
+				Preference::ThemedColor("infobubble_color", ColorFromString("#a0a0a0"), ColorFromString("#404040"))
 				.Label("Info bubble color")
 				.Description("Color for information bubbles displayed above graph nodes"));
 			graph.AddPreference(
@@ -170,8 +224,8 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Icon font")
 				.Description("Font for icon captions"));
 			graph.AddPreference(
-				Preference::ThemedColor("icon_caption_color", ColorFromString("#ffffff"), ColorFromString("#ffffff"))
-				.Label("Icon color")
+				Preference::ThemedColor("icon_caption_color", ColorFromString("#000000"), ColorFromString("#ffffff"))
+				.Label("Icon caption color")
 				.Description("Color for icon captions"));
 
 			graph.AddPreference(

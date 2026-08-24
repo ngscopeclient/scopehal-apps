@@ -441,6 +441,43 @@ bool FilterGraphEditor::DoRender()
 	ax::NodeEditor::SetCurrentEditor(m_context);
 	ax::NodeEditor::Begin("Filter Graph", ImVec2(0, 0));
 
+	//Update theme colors from preferences
+	auto& prefs = m_session->GetPreferences();
+	auto& style = ax::NodeEditor::GetStyle();
+	style.Colors[ax::NodeEditor::StyleColor_Bg] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.background_color"));
+	style.Colors[ax::NodeEditor::StyleColor_Grid] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.grid_color"));
+	style.Colors[ax::NodeEditor::StyleColor_NodeBg] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.node_bg_color"));
+	style.Colors[ax::NodeEditor::StyleColor_NodeBorder] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.node_border_color"));
+	style.Colors[ax::NodeEditor::StyleColor_HovNodeBorder] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.node_border_hovered_color"));
+	style.Colors[ax::NodeEditor::StyleColor_SelNodeBorder] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.node_border_selected_color"));
+	style.Colors[ax::NodeEditor::StyleColor_NodeSelRect] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.node_select_rect"));
+	style.Colors[ax::NodeEditor::StyleColor_NodeSelRectBorder] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.node_select_border"));
+	style.Colors[ax::NodeEditor::StyleColor_HovLinkBorder] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.edge_hovered_border"));
+	style.Colors[ax::NodeEditor::StyleColor_SelLinkBorder] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.edge_selected_border"));
+	style.Colors[ax::NodeEditor::StyleColor_HighlightLinkBorder] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.edge_highlight_border"));
+	style.Colors[ax::NodeEditor::StyleColor_LinkSelRect] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.edge_select_rect"));
+	style.Colors[ax::NodeEditor::StyleColor_LinkSelRectBorder] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.edge_select_border"));
+	/*
+	Colors[StyleColor_PinRect]            = ImColor( 60, 180, 255, 100);
+	Colors[StyleColor_PinRectBorder]      = ImColor( 60, 180, 255, 128);
+	Colors[StyleColor_Flow]               = ImColor(255, 128,  64, 255);
+	Colors[StyleColor_FlowMarker]         = ImColor(255, 128,  64, 255);
+	Colors[StyleColor_GroupBg]            = ImColor(  0,   0,   0, 160);
+	Colors[StyleColor_GroupBorder]        = ImColor(255, 255, 255,  32);*/
+
 	// NodeEditor seems to handle DPI scaling on its own
 	// so turn off global scaling to avoid double scaling
 	SetCanvasManagedDPI();
