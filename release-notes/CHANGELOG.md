@@ -5,6 +5,7 @@ This is a running list of significant bug fixes and new features since the last 
 ## New features since v0.2.2
 
 * PointSample filter now accepts a scalar input from the graph, allowing the sample position to be dynamically adjusted
+* Color preferences are now attached to the GUI theme, so changing theme will select a new set of color preferences (https://github.com/ngscopeclient/scopehal-apps/issues/526). If you already have an existing preferences file, you will need to reset the "appearances" preference settings to default in order to get the new light-mode colors.
 
 ## Breaking changes since v0.2.2
 

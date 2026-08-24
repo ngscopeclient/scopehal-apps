@@ -328,6 +328,34 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 			}
 			break;
 
+		case PreferenceType::ThemedColor:
+			{
+				auto& tc = pref.GetThemedColor();
+				auto theme = PreferenceManager::GetTheme();
+				auto& color = tc.m_colors[theme];
+
+				float fcolor[4] =
+				{
+					color.m_r / 255.0f,
+					color.m_g / 255.0f,
+					color.m_b / 255.0f,
+					color.m_a / 255.0f
+				};
+
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 15);
+				if(ImGui::ColorEdit4(label.c_str(), fcolor))
+				{
+					pref.SetThemedColor(theme, impl::Color(
+						static_cast<uint8_t>(fcolor[0] * 255),
+						static_cast<uint8_t>(fcolor[1] * 255),
+						static_cast<uint8_t>(fcolor[2] * 255),
+						static_cast<uint8_t>(fcolor[3] * 255)
+						));
+				}
+
+			}
+			break;
+
 		//Colors: show color chooser widget
 		case PreferenceType::Color:
 			{

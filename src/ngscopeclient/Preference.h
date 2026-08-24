@@ -232,6 +232,7 @@ public:
 	void SetInt(std::int64_t value);
 	void SetString(const std::string& value);
 	void SetThemedColor(const impl::ThemedColor& value);
+	void SetThemedColor(size_t i, const impl::Color& value);
 	void SetColor(const ImU32& value);
 	void SetColorRaw(const impl::Color& value);
 	void SetLabel(std::string label);

@@ -216,7 +216,7 @@ bool Preference::HasUnit()
 
 void Preference::ResetToDefault()
 {
-	m_value = std::move(m_defaultValue);
+	m_value = m_defaultValue;
 }
 
 Unit& Preference::GetUnit()
@@ -397,6 +397,15 @@ void Preference::SetThemedColor(const impl::ThemedColor& color)
 {
 	CleanUp();
 	Construct<impl::ThemedColor>(color);
+}
+
+void Preference::SetThemedColor(size_t i, const impl::Color& color)
+{
+	//assumes we are already a ThemedColor
+	if(m_type != PreferenceType::ThemedColor)
+		throw runtime_error("Preference type mismatch");
+
+	GetValueRaw<impl::ThemedColor>().m_colors[i] = color;
 }
 
 const EnumMapping& Preference::GetMapping() const
