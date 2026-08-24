@@ -62,7 +62,7 @@ TutorialWizard::TutorialWizard(Session* session, MainWindow* parent)
 	//DEBUG: automatically jump ahead a bit
 	//m_step = TUTORIAL_06_FILTER_GRAPH;
 
-	m_continueEnabled = false;
+	m_continueEnabled = true;
 }
 
 TutorialWizard::~TutorialWizard()
