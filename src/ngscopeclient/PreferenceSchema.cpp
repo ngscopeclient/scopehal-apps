@@ -117,15 +117,15 @@ void PreferenceManager::InitializeDefaults()
 
 		auto& eye = appearance.AddCategory("Eye Patterns");
 			eye.AddPreference(
-				Preference::Color("border_color_pass", ColorFromString("#00ff00ff"))
+				Preference::ThemedColor("border_color_pass", ColorFromString("#00ff00ff"), ColorFromString("#00ff00ff"))
 				.Label("Border color (pass)")
 				.Description("Color for drawing mask polygon border if no or acceptable violations"));
 			eye.AddPreference(
-				Preference::Color("border_color_fail", ColorFromString("#ff0000ff"))
+				Preference::ThemedColor("border_color_fail", ColorFromString("#ff0000ff"), ColorFromString("#ff0000ff"))
 				.Label("Border color (fail)")
 				.Description("Color for drawing mask polygon border if unacceptable violations"));
 			eye.AddPreference(
-				Preference::Color("mask_color", ColorFromString("#0000ff80"))
+				Preference::ThemedColor("mask_color", ColorFromString("#0000ff80"), ColorFromString("#0000ff80"))
 				.Label("Mask color")
 				.Description("Color for drawing mask overlays"));
 
@@ -150,19 +150,19 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Header font")
 				.Description("Font for filter/channel names"));
 			graph.AddPreference(
-				Preference::Color("header_text_color", ColorFromString("#000000"))
+				Preference::ThemedColor("header_text_color", ColorFromString("#000000"), ColorFromString("#000000"))
 				.Label("Header text color")
 				.Description("Color for filter/channel names"));
 			graph.AddPreference(
-				Preference::Color("valid_link_color", ColorFromString("#00ff00"))
+				Preference::ThemedColor("valid_link_color", ColorFromString("#00ff00"), ColorFromString("#00ff00"))
 				.Label("Valid link color")
 				.Description("Color indicating a potential connection path is valid"));
 			graph.AddPreference(
-				Preference::Color("invalid_link_color", ColorFromString("#ff0000"))
+				Preference::ThemedColor("invalid_link_color", ColorFromString("#ff0000"), ColorFromString("#ff0000"))
 				.Label("Invalid link color")
 				.Description("Color indicating a potential connection path is invalid"));
 			graph.AddPreference(
-				Preference::Color("infobubble_color", ColorFromString("#404040"))
+				Preference::ThemedColor("infobubble_color", ColorFromString("#c0c0c0"), ColorFromString("#404040"))
 				.Label("Info bubble color")
 				.Description("Color for information bubbles displayed above graph nodes"));
 			graph.AddPreference(
@@ -170,39 +170,39 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Icon font")
 				.Description("Font for icon captions"));
 			graph.AddPreference(
-				Preference::Color("icon_caption_color", ColorFromString("#ffffff"))
+				Preference::ThemedColor("icon_caption_color", ColorFromString("#ffffff"), ColorFromString("#ffffff"))
 				.Label("Icon color")
 				.Description("Color for icon captions"));
 
 			graph.AddPreference(
-				Preference::Color("error_outline_color", ColorFromString("#ff0000"))
+				Preference::ThemedColor("error_outline_color", ColorFromString("#ff0000"), ColorFromString("#ff0000"))
 				.Label("Error outline color")
 				.Description("Color for outlining graph nodes with errors"));
 			graph.AddPreference(
-				Preference::Color("warning_outline_color", ColorFromString("#ffff00"))
+				Preference::ThemedColor("warning_outline_color", ColorFromString("#ffff00"), ColorFromString("#ffff00"))
 				.Label("Warning outline color")
 				.Description("Color for outlining graph nodes with warnings"));
 			graph.AddPreference(
-				Preference::Color("notice_outline_color", ColorFromString("#00ff00"))
+				Preference::ThemedColor("notice_outline_color", ColorFromString("#00ff00"), ColorFromString("#00ff00"))
 				.Label("Notice outline color")
 				.Description("Color for outlining graph nodes with notice messages"));
 			graph.AddPreference(
-					Preference::Color("verbose_outline_color", ColorFromString("#a0a0ff"))
+					Preference::ThemedColor("verbose_outline_color", ColorFromString("#a0a0ff"), ColorFromString("#a0a0ff"))
 					.Label("Verbose outline color")
 					.Description("Color for outlining graph nodes with verbose messages"));
 			graph.AddPreference(
-					Preference::Color("debug_outline_color", ColorFromString("#a0a0a0"))
+					Preference::ThemedColor("debug_outline_color", ColorFromString("#a0a0a0"), ColorFromString("#a0a0a0"))
 					.Label("Debug outline color")
 					.Description("Color for outlining graph nodes with debug messages"));
 
 		auto& ahelp = appearance.AddCategory("Help");
 			ahelp.AddPreference(
-				Preference::Color("bubble_outline_color", ColorFromString("#00ff00"))
+				Preference::ThemedColor("bubble_outline_color", ColorFromString("#00ff00"), ColorFromString("#00ff00"))
 				.Label("Bubble outline color")
 				.Description("Color for tutorial bubble outlines"));
 
 			ahelp.AddPreference(
-				Preference::Color("bubble_fill_color", ColorFromString("#202020e0"))
+				Preference::ThemedColor("bubble_fill_color", ColorFromString("#e0e0e0e0"), ColorFromString("#202020e0"))
 				.Label("Bubble fill color")
 				.Description("Color for tutorial bubble fill"));
 
@@ -229,87 +229,87 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Intrument badge latch duration (seconds)")
 				.Description("Duration during which instrument badges are preserved (to prevent flashing)."));
 			stream.AddPreference(
-				Preference::Color("download_wait_badge_color", ColorFromString("#CC4C4C"))
+				Preference::ThemedColor("download_wait_badge_color", ColorFromString("#CC4C4C"), ColorFromString("#CC4C4C"))
 				.Label("Download wait badge color")
 				.Description("Color for download 'wait' badge"));
 			stream.AddPreference(
-				Preference::Color("download_progress_badge_color", ColorFromString("#B3B44D"))
+				Preference::ThemedColor("download_progress_badge_color", ColorFromString("#B3B44D"), ColorFromString("#B3B44D"))
 				.Label("Download progress badge color")
 				.Description("Color for download 'progress' badge"));
 			stream.AddPreference(
-				Preference::Color("download_finished_badge_color", ColorFromString("#4CCC4C"))
+				Preference::ThemedColor("download_finished_badge_color", ColorFromString("#4CCC4C"), ColorFromString("#4CCC4C"))
 				.Label("Download finished badge color")
 				.Description("Color for download 'finished' badge"));
 			stream.AddPreference(
-				Preference::Color("download_active_badge_color", ColorFromString("#4CCC4C"))
+				Preference::ThemedColor("download_active_badge_color", ColorFromString("#4CCC4C"), ColorFromString("#4CCC4C"))
 				.Label("Download active badge color")
 				.Description("Color for download 'active' badge"));
 			stream.AddPreference(
-				Preference::Color("trigger_armed_badge_color", ColorFromString("#4CCC4C"))
+				Preference::ThemedColor("trigger_armed_badge_color", ColorFromString("#4CCC4C"), ColorFromString("#4CCC4C"))
 				.Label("Trigger armed badge color")
 				.Description("Color for trigger 'armed' badge"));
 			stream.AddPreference(
-				Preference::Color("trigger_stopped_badge_color", ColorFromString("#CC4C4C"))
+				Preference::ThemedColor("trigger_stopped_badge_color", ColorFromString("#CC4C4C"), ColorFromString("#CC4C4C"))
 				.Label("Trigger stopped badge color")
 				.Description("Color for trigger 'stopped' badge"));
 			stream.AddPreference(
-				Preference::Color("trigger_triggered_badge_color", ColorFromString("#B3B44D"))
+				Preference::ThemedColor("trigger_triggered_badge_color", ColorFromString("#B3B44D"), ColorFromString("#B3B44D"))
 				.Label("Trigger triggered badge color")
 				.Description("Color for trigger 'triggered' badge"));
 			stream.AddPreference(
-				Preference::Color("trigger_busy_badge_color", ColorFromString("#CC4C4C"))
+				Preference::ThemedColor("trigger_busy_badge_color", ColorFromString("#CC4C4C"), ColorFromString("#CC4C4C"))
 				.Label("Trigger busy badge color")
 				.Description("Color for trigger 'busy' badge"));
 			stream.AddPreference(
-				Preference::Color("trigger_auto_badge_color", ColorFromString("#4CCC4C"))
+				Preference::ThemedColor("trigger_auto_badge_color", ColorFromString("#4CCC4C"), ColorFromString("#4CCC4C"))
 				.Label("Trigger auto badge color")
 				.Description("Color for trigger 'auto' badge"));
 			stream.AddPreference(
-				Preference::Color("instrument_disabled_badge_color", ColorFromString("#666666"))
+				Preference::ThemedColor("instrument_disabled_badge_color", ColorFromString("#666666"), ColorFromString("#666666"))
 				.Label("Instrument disabled badge color")
 				.Description("Color for instrument 'disabled' badge"));
 			stream.AddPreference(
-				Preference::Color("instrument_offline_badge_color", ColorFromString("#CC4C4C"))
+				Preference::ThemedColor("instrument_offline_badge_color", ColorFromString("#CC4C4C"), ColorFromString("#CC4C4C"))
 				.Label("Instrument offline badge color")
 				.Description("Color for instrument 'offline' badge"));
 			stream.AddPreference(
-				Preference::Color("instrument_on_badge_color", ColorFromString("#4CCC4C"))
+				Preference::ThemedColor("instrument_on_badge_color", ColorFromString("#4CCC4C"), ColorFromString("#4CCC4C"))
 				.Label("Instrument on badge color")
 				.Description("Color for instrument 'on' badge"));
 			stream.AddPreference(
-				Preference::Color("instrument_partial_badge_color", ColorFromString("#E2CD23FF"))
+				Preference::ThemedColor("instrument_partial_badge_color", ColorFromString("#E2CD23FF"), ColorFromString("#E2CD23FF"))
 				.Label("Instrument partial on badge color")
 				.Description("Color for intrument partial 'on' badge"));
 			stream.AddPreference(
-				Preference::Color("instrument_off_badge_color", ColorFromString("#808000ff"))
+				Preference::ThemedColor("instrument_off_badge_color", ColorFromString("#808000ff"), ColorFromString("#808000ff"))
 				.Label("Instrument off badge color")
 				.Description("Color for instrument 'off' badge"));
 			stream.AddPreference(
-				Preference::Color("psu_cv_badge_color", ColorFromString("#4CCC4C"))
+				Preference::ThemedColor("psu_cv_badge_color", ColorFromString("#4CCC4C"), ColorFromString("#4CCC4C"))
 				.Label("PSU cv badge color")
 				.Description("Color for PSU 'cv' badge"));
 			stream.AddPreference(
-				Preference::Color("psu_cc_badge_color", ColorFromString("#CC4C4C"))
+				Preference::ThemedColor("psu_cc_badge_color", ColorFromString("#CC4C4C"), ColorFromString("#CC4C4C"))
 				.Label("PCU CC badge color")
 				.Description("Color for psu 'c' badge"));
 			stream.AddPreference(
-				Preference::Color("psu_set_label_color", ColorFromString("#FFFF00"))
+				Preference::ThemedColor("psu_set_label_color", ColorFromString("#FFFF00"), ColorFromString("#FFFF00"))
 				.Label("PSU set label color")
 				.Description("Color for PSU 'set' label"));
 			stream.AddPreference(
-				Preference::Color("psu_meas_label_color", ColorFromString("#00C100"))
+				Preference::ThemedColor("psu_meas_label_color", ColorFromString("#00C100"), ColorFromString("#00C100"))
 				.Label("PSU measured label color")
 				.Description("Color for PSU 'meas.' label"));
 			stream.AddPreference(
-				Preference::Color("psu_7_segment_color", ColorFromString("#B2FFFF"))
+				Preference::ThemedColor("psu_7_segment_color", ColorFromString("#B2FFFF"), ColorFromString("#B2FFFF"))
 				.Label("PSU 7 segment display color")
 				.Description("Color for PSU 7 segment style display"));
 			stream.AddPreference(
-				Preference::Color("awg_hiz_badge_color", ColorFromString("#666600"))
+				Preference::ThemedColor("awg_hiz_badge_color", ColorFromString("#666600"), ColorFromString("#666600"))
 				.Label("Function Generator HI-Z badge color")
 				.Description("Color for Function Generator 'HI-Z' badge"));
 			stream.AddPreference(
-				Preference::Color("awg_50ohms_badge_color", ColorFromString("#B54C85"))
+				Preference::ThemedColor("awg_50ohms_badge_color", ColorFromString("#B54C85"), ColorFromString("#B54C85"))
 				.Label("Function Generator 50 Ohms badge color")
 				.Description("Color for Function Generator '50Ohm' badge"));
 
