@@ -49,6 +49,7 @@
 
 #include "Unit.h"
 #include "FontManager.h"
+#include "PreferenceTypes.h"
 
 enum class PreferenceType
 {
@@ -56,6 +57,7 @@ enum class PreferenceType
 	String,
 	Real,
 	Color,
+	ThemedColor,
 	Enum,
 	Font,
 	Int,
@@ -75,6 +77,32 @@ namespace impl
 		}
 
 		std::uint8_t m_r, m_g, m_b, m_a;
+
+		ImU32 GetColor() const
+		{
+			return
+				(m_b << IM_COL32_B_SHIFT) |
+				(m_g << IM_COL32_G_SHIFT) |
+				(m_r << IM_COL32_R_SHIFT) |
+				(m_a << IM_COL32_A_SHIFT);
+		}
+	};
+
+	struct ThemedColor
+	{
+		//for now take 3 explicit colors
+		ThemedColor(Color cLight, Color cDark, Color cClassic)
+			: m_colors{cLight, cDark, cClassic}
+		{
+		}
+
+		//or two making dark and classic the same
+		ThemedColor(Color cLight, Color cDark)
+			: m_colors{cLight, cDark, cDark}
+		{
+		}
+
+		Color m_colors[THEME_COUNT];
 	};
 }
 
@@ -127,6 +155,7 @@ private:
 		{
 			sizeof(std::int64_t),
 			sizeof(impl::Color),
+			sizeof(impl::ThemedColor),
 			sizeof(bool),
 			sizeof(double),
 			sizeof(std::string),
@@ -136,6 +165,7 @@ private:
 		std::string,
 		double,
 		impl::Color,
+		impl::ThemedColor,
 		std::int64_t,
 		FontDescription
 	>::type;
@@ -195,11 +225,13 @@ public:
 	std::string ToString() const;
 	bool GetIsVisible() const;
 	ImU32 GetColor() const;
+	const impl::ThemedColor& GetThemedColor() const;
 	const impl::Color& GetColorRaw() const;
 	void SetBool(bool value);
 	void SetReal(double value);
 	void SetInt(std::int64_t value);
 	void SetString(const std::string& value);
+	void SetThemedColor(const impl::ThemedColor& value);
 	void SetColor(const ImU32& value);
 	void SetColorRaw(const impl::Color& value);
 	void SetLabel(std::string label);
@@ -227,6 +259,10 @@ public:
 	static impl::PreferenceBuilder Bool(std::string identifier, bool defaultValue);
 	static impl::PreferenceBuilder String(std::string identifier, std::string defaultValue);
 	static impl::PreferenceBuilder Color(std::string identifier, const ImU32& defaultValue);
+	static impl::PreferenceBuilder ThemedColor(
+		std::string identifier,
+		const ImU32& defaultValueLight,
+		const ImU32& defaultValueDark);
 	static impl::PreferenceBuilder EnumRaw(std::string identifier, std::int64_t defaultValue);
 	static impl::PreferenceBuilder Font(std::string identifier, FontDescription defaultValue);
 

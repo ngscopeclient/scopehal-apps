@@ -46,7 +46,10 @@ enum GuiTheme
 {
 	THEME_LIGHT = 0,
 	THEME_DARK = 1,
-	THEME_CLASSIC = 2
+	THEME_CLASSIC = 2,
+
+	//max number of themes
+	THEME_COUNT
 };
 
 enum ViewportMode

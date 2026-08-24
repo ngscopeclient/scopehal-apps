@@ -95,6 +95,9 @@ public:
         return this->GetPreference(path).GetEnum<E>();
     }
 
+    GuiTheme GetTheme() const
+    { return GetEnum<GuiTheme>("Appearance.General.theme"); }
+
 private:
     // Internal helpers
     void DeterminePath();

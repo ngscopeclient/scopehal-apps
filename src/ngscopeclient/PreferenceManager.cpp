@@ -146,7 +146,12 @@ bool PreferenceManager::GetBool(const string& path) const
 
 ImU32 PreferenceManager::GetColor(const std::string& path) const
 {
-	return GetPreference(path).GetColor();
+	auto& pref = GetPreference(path);
+
+	if(pref.GetType() == PreferenceType::ThemedColor)
+		return pref.GetThemedColor().m_colors[GetTheme()].GetColor();
+	else
+		return pref.GetColor();
 }
 
 FontDescription PreferenceManager::GetFont(const std::string& path) const

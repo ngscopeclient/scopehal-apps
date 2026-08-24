@@ -17,6 +17,7 @@ NOTE: This section only lists changes which are potentially breaking to an *end 
 ## Bugs fixed since v0.2.2
 
 * Font preferences would have invalid default values because InitializeSearchPaths() was not called before the PreferenceManager constructor, leading to an empty search path and inability to find the default font
+* Flickering in stream browser when external trigger channel is present (https://github.com/ngscopeclient/scopehal-apps/pull/1026)
 
 ## Other changes since v0.2.2
 

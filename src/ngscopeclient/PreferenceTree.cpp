@@ -46,6 +46,13 @@
 
 using namespace std;
 
+const char* g_themeNames[THEME_COUNT] =
+{
+	"light",
+	"dark",
+	"classic"
+};
+
 namespace internal
 {
 	PreferencePath::PreferencePath(const string& path)
@@ -131,6 +138,31 @@ namespace internal
 	{
 		switch(this->m_pref.GetType())
 		{
+			case PreferenceType::ThemedColor:
+			{
+				YAML::Node child{ };
+
+				const auto& tc = this->m_pref.GetThemedColor();
+
+				for(size_t i=0; i<THEME_COUNT; i++)
+				{
+					YAML::Node cnode {};
+
+					const auto& color = tc.m_colors[i];
+
+					//Save as int rather than uint8 because uint8 is often a character type
+					cnode["r"] = (int)color.m_r;
+					cnode["g"] = (int)color.m_g;
+					cnode["b"] = (int)color.m_b;
+					cnode["a"] = (int)color.m_a;
+
+					child[g_themeNames[i]] = cnode;
+				}
+
+				node[this->m_identifier] = child;
+				break;
+			}
+
 			case PreferenceType::Color:
 			{
 				YAML::Node child{ };
@@ -205,6 +237,50 @@ namespace internal
 						const auto value = n.as<string>();
 						const auto& mapper = this->m_pref.GetMapping();
 						this->m_pref.SetEnumRaw(mapper.GetValue(value));
+						break;
+					}
+
+					case PreferenceType::ThemedColor:
+					{
+						//See if it has a child "light", if so it's using the new theme format
+						const auto n_light = n["light"];
+						const auto n_dark = n["dark"];
+						const auto n_classic = n["classic"];
+						if(n_light)
+						{
+							impl::Color light(
+								n_light["r"].as<int>(),
+								n_light["g"].as<int>(),
+								n_light["b"].as<int>(),
+								n_light["a"].as<int>());
+							impl::Color dark(
+								n_dark["r"].as<int>(),
+								n_dark["g"].as<int>(),
+								n_dark["b"].as<int>(),
+								n_dark["a"].as<int>());
+							impl::Color classic(
+								n_classic["r"].as<int>(),
+								n_classic["g"].as<int>(),
+								n_classic["b"].as<int>(),
+								n_classic["a"].as<int>());
+
+							this->m_pref.SetThemedColor(impl::ThemedColor(light, dark, classic));
+						}
+
+						//if not, assume it's the legacy single-color format
+						else
+						{
+							//Load as int rather than uint8 because uint8 is often a character type
+							const auto n_r = n["r"].as<int>();
+							const auto n_g = n["g"].as<int>();
+							const auto n_b = n["b"].as<int>();
+							const auto n_a = n["a"].as<int>();
+
+							impl::Color color(n_r, n_g, n_b, n_a);
+
+							this->m_pref.SetThemedColor(impl::ThemedColor(color, color, color));
+						}
+
 						break;
 					}
 

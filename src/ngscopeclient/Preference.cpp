@@ -182,13 +182,15 @@ ImU32 Preference::GetColor() const
 	if(m_type != PreferenceType::Color)
 		throw runtime_error("Preference type mismatch");
 
-	const auto& value = GetValueRaw<impl::Color>();
+	return GetValueRaw<impl::Color>().GetColor();
+}
 
-	return
-		(value.m_b << IM_COL32_B_SHIFT) |
-		(value.m_g << IM_COL32_G_SHIFT) |
-		(value.m_r << IM_COL32_R_SHIFT) |
-		(value.m_a << IM_COL32_A_SHIFT);
+const impl::ThemedColor& Preference::GetThemedColor() const
+{
+	if(m_type != PreferenceType::ThemedColor)
+		throw runtime_error("Preference type mismatch");
+
+	return GetValueRaw<impl::ThemedColor>();
 }
 
 const impl::Color& Preference::GetColorRaw() const
@@ -252,6 +254,8 @@ string Preference::ToString() const
 			return to_string(GetInt());
 		case PreferenceType::Color:
 			return "Color";
+		case PreferenceType::ThemedColor:
+			return "ThemedColor";
 		case PreferenceType::Enum:
 		{
 			const auto& mapper = this->GetMapping();
@@ -298,6 +302,10 @@ void Preference::MoveFrom(Preference& other)
 				Construct<impl::Color>(other.GetValueRaw<impl::Color>());
 				break;
 
+			case PreferenceType::ThemedColor:
+				Construct<impl::ThemedColor>(other.GetValueRaw<impl::ThemedColor>());
+				break;
+
 			case PreferenceType::Enum:
 			case PreferenceType::Int:
 				Construct<std::int64_t>(other.GetValueRaw<std::int64_t>());
@@ -312,7 +320,6 @@ void Preference::MoveFrom(Preference& other)
 
 	other.m_type = PreferenceType::None;
 }
-
 
 const std::string& Preference::GetLabel() const
 {
@@ -386,6 +393,12 @@ void Preference::SetColorRaw(const impl::Color& color)
 	Construct<impl::Color>(color);
 }
 
+void Preference::SetThemedColor(const impl::ThemedColor& color)
+{
+	CleanUp();
+	Construct<impl::ThemedColor>(color);
+}
+
 const EnumMapping& Preference::GetMapping() const
 {
 	return this->m_mapping;
@@ -445,6 +458,31 @@ impl::PreferenceBuilder Preference::Color(std::string identifier, const ImU32& d
 			static_cast<uint8_t>((defaultValue >> IM_COL32_G_SHIFT) & 0xff),
 			static_cast<uint8_t>((defaultValue >> IM_COL32_B_SHIFT) & 0xff),
 			static_cast<uint8_t>((defaultValue >> IM_COL32_A_SHIFT) & 0xff));
+
+	return impl::PreferenceBuilder{ std::move(pref) };
+}
+
+impl::PreferenceBuilder Preference::ThemedColor(
+	string identifier,
+	const ImU32& defaultValueLight,
+	const ImU32& defaultValueDark)
+{
+	Preference pref(PreferenceType::ThemedColor, std::move(identifier));
+
+	impl::Color light(
+		static_cast<uint8_t>((defaultValueLight >> IM_COL32_R_SHIFT) & 0xff),
+		static_cast<uint8_t>((defaultValueLight >> IM_COL32_G_SHIFT) & 0xff),
+		static_cast<uint8_t>((defaultValueLight >> IM_COL32_B_SHIFT) & 0xff),
+		static_cast<uint8_t>((defaultValueLight >> IM_COL32_A_SHIFT) & 0xff));
+
+	impl::Color dark(
+		static_cast<uint8_t>((defaultValueDark >> IM_COL32_R_SHIFT) & 0xff),
+		static_cast<uint8_t>((defaultValueDark >> IM_COL32_G_SHIFT) & 0xff),
+		static_cast<uint8_t>((defaultValueDark >> IM_COL32_B_SHIFT) & 0xff),
+		static_cast<uint8_t>((defaultValueDark >> IM_COL32_A_SHIFT) & 0xff));
+
+	pref.Construct<impl::ThemedColor>(impl::ThemedColor(light, dark));
+	new (&pref.m_defaultValue) impl::ThemedColor(light, dark);
 
 	return impl::PreferenceBuilder{ std::move(pref) };
 }

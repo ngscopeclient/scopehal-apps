@@ -43,7 +43,7 @@ void PreferenceManager::InitializeDefaults()
 
 		auto& consts = appearance.AddCategory("Constellations");
 			consts.AddPreference(
-				Preference::Color("point_color", ColorFromString("#ff0000ff"))
+				Preference::ThemedColor("point_color", ColorFromString("#ff0000ff"), ColorFromString("#ff0000ff"))
 				.Label("Point color")
 				.Description("Color for nominal constellation points"));
 
