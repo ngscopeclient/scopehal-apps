@@ -4267,12 +4267,25 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	fqname += "###" + to_string_hex(reinterpret_cast<uintptr_t>(rchan)) + "." + to_string(stream.m_stream);
 
 	//Foreground color is used to determine background color and hovered/active colors
+	auto theme = PreferenceManager::GetTheme();
 	float bgmul = 0.2;
 	float hmul = 0.4;
 	float amul = 0.6;
 	auto color = ColorFromString(rchan->m_displaycolor);
 	auto fcolor = ImGui::ColorConvertU32ToFloat4(color);
-	auto bcolor = ImGui::ColorConvertFloat4ToU32(ImVec4(fcolor.x*bgmul, fcolor.y*bgmul, fcolor.z*bgmul, fcolor.w) );
+	ImVec4 bgcolor(fcolor.x*bgmul, fcolor.y*bgmul, fcolor.z*bgmul, fcolor.w);
+	if(theme == THEME_LIGHT)
+	{
+		bgmul = 4;
+		hmul = 2;
+		amul = 3;
+
+		bgcolor = ImVec4(fcolor.x*bgmul, fcolor.y*bgmul, fcolor.z*bgmul, fcolor.w);
+		bgcolor.x = max(bgcolor.x, 0.7f);
+		bgcolor.y = max(bgcolor.y, 0.7f);
+		bgcolor.z = max(bgcolor.z, 0.7f);
+	}
+	auto bcolor = ImGui::ColorConvertFloat4ToU32(bgcolor);
 	auto hcolor = ImGui::ColorConvertFloat4ToU32(ImVec4(fcolor.x*hmul, fcolor.y*hmul, fcolor.z*hmul, fcolor.w) );
 	auto acolor = ImGui::ColorConvertFloat4ToU32(ImVec4(fcolor.x*amul, fcolor.y*amul, fcolor.z*amul, fcolor.w) );
 
