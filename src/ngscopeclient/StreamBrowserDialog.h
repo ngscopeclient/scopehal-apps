@@ -127,7 +127,7 @@ protected:
 
 	// Rendeding of StreamBrowserDialog elements
 	void startBadgeLine();
-	void renderBadge(ImVec4 color, ... /* labels, ending in NULL */);
+	void renderBadge(ImU32 color, ... /* labels, ending in nullptr */);
 	void renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge);
 	bool renderCombo(
 		const char* label,
@@ -149,9 +149,9 @@ protected:
 		const char* label,
 		bool alignRight,
 		ImVec4 color,
-		bool& curValue, 
-		const char* valueOff = "OFF", 
-		const char* valueOn = "ON", 
+		bool& curValue,
+		const char* valueOff = "OFF",
+		const char* valueOn = "ON",
 		uint8_t cropTextTo = 0,
 		float paddingRight = 0);
 	bool renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff = "OFF", const char* valueOn = "ON", uint8_t cropTextTo = 0, float paddingRight = 0);

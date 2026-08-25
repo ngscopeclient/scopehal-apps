@@ -179,13 +179,28 @@ void StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst
 				* for trigger" or "currently
 				* capturing samples post-trigger",
 				* "ARMED" is unambiguous */
-			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_armed_badge_color")), "ARMED", "A", NULL);
+			renderBadge(
+				prefs.GetColor("Appearance.Stream Browser.trigger_armed_badge_color"),
+				"ARMED",
+				"A",
+				nullptr);
 			break;
 		case StreamBrowserDialog::BADGE_STOPPED:
-			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_stopped_badge_color")), "STOPPED", "STOP", "S", NULL);
+			renderBadge(
+				prefs.GetColor("Appearance.Stream Browser.trigger_stopped_badge_color"),
+				"STOPPED",
+				"STOP",
+				"S",
+				nullptr);
 			break;
 		case StreamBrowserDialog::BADGE_TRIGGERED:
-			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_triggered_badge_color")), "TRIGGERED", "TRIG'D", "T'D", "T", NULL);
+			renderBadge(
+				prefs.GetColor("Appearance.Stream Browser.trigger_triggered_badge_color"),
+				"TRIGGERED",
+				"TRIG'D",
+				"T'D",
+				"T",
+				nullptr);
 			break;
 		case StreamBrowserDialog::BADGE_BUSY:
 			/* prefer language "BUSY" to "WAIT":
@@ -193,10 +208,18 @@ void StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst
 				* trigger", "BUSY" means "I am
 				* doing something internally and am
 				* not ready for some reason" */
-			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_busy_badge_color")), "BUSY", "B", NULL);
+			renderBadge(
+				prefs.GetColor("Appearance.Stream Browser.trigger_busy_badge_color"),
+				"BUSY",
+				"B",
+				nullptr);
 			break;
 		case StreamBrowserDialog::BADGE_AUTO:
-			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_auto_badge_color")), "AUTO", "A", NULL);
+			renderBadge(
+				prefs.GetColor("Appearance.Stream Browser.trigger_auto_badge_color"),
+				"AUTO",
+				"A",
+				nullptr);
 			break;
 		default:
 			break;
@@ -209,7 +232,7 @@ void StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst
 	@param color the color of the badge
 	@param ... a null terminated list of labels form the largest to the smallest to use as a badge label according to the available space
 */
-void StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NULL */)
+void StreamBrowserDialog::renderBadge(ImU32 color, ... /* labels, ending in nullptr */)
 {
 	va_list ap;
 	va_start(ap, color);
@@ -1019,7 +1042,13 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 	if (scope)
 	{
 		if (scope->IsOffline())
-			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_offline_badge_color")), "OFFLINE", "OFFL", NULL);
+		{
+			renderBadge(
+				prefs.GetColor("Appearance.Stream Browser.instrument_offline_badge_color"),
+				"OFFLINE",
+				"OFFL",
+				nullptr);
+		}
 		else
 		{
 			Oscilloscope::TriggerMode mode = state ? state->m_lastTriggerState : Oscilloscope::TRIGGER_MODE_STOP;
@@ -1053,7 +1082,13 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 	if (psu)
 	{
 		if (psu->IsOffline())
-			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_offline_badge_color")), "OFFLINE", "OFFL", NULL);
+		{
+			renderBadge(
+				prefs.GetColor("Appearance.Stream Browser.instrument_offline_badge_color"),
+				"OFFLINE",
+				"OFFL",
+				nullptr);
+		}
 		else
 		{
 			//Get the state
@@ -1639,7 +1674,14 @@ void StreamBrowserDialog::renderChannelNode(
 
 		//"trigger" badge on trigger inputs to show they're not displayable channels
 		if(scopechan->GetType(0) == Stream::STREAM_TYPE_TRIGGER)
-			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "TRIG ONLY", "TRIG","--", nullptr);
+		{
+			renderBadge(
+				prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color"),
+				"TRIG ONLY",
+				"TRIG",
+				"--",
+				nullptr);
+		}
 		/* Currently, enable/disable state is coupled to node reference counting, so we can't let the user manually enable/disable channels
 		// Scope channel
 		else if (!chanEnabled)
