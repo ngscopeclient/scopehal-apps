@@ -216,7 +216,8 @@ void StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NUL
 
 	while (const char *label = va_arg(ap, const char *))
 	{
-		float xsz = ImGui::CalcTextSize(label).x + ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
+		float xsz = ImGui::CalcTextSize(label).x + ImGui::GetStyle().ItemSpacing.x +
+			ImGui::GetStyle().FramePadding.x * 2;
 		if ((m_badgeXCur - xsz) < m_badgeXMin)
 			continue;
 
@@ -1133,12 +1134,12 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 			{
 				auto scopechan = scope->GetChannel(i);
 				auto streamType = scopechan->GetType(0);
-				
+
 				if(scope->IsChannelEnabled(i) && streamType != Stream::STREAM_TYPE_TRIGGER)
 					// This is used for tracking elapsed time for waveform download for the GUI
 					// In this sense a trigger channel is not real / not downloaded.
 					lastEnabledChannelIndex = i;
-				
+
 				if(streamType != Stream::STREAM_TYPE_DIGITAL)
 				{
 					if(streamType ==  Stream::STREAM_TYPE_ANALOG)

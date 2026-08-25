@@ -169,7 +169,6 @@ public:
 	{ return m_errorWindow; }
 
 protected:
-	ImU32 GetTextColor(ImU32 bgColor);
 
 	friend class FilterGraphGroup;
 

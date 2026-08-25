@@ -2153,20 +2153,6 @@ bool FilterGraphEditor::OnFilterDeleted(Filter* node)
 	return (finalRefCount <= 1);
 }
 
-ImU32 FilterGraphEditor::GetTextColor(ImU32 bgColor)
-{
-	float r = (bgColor >> IM_COL32_R_SHIFT) & 0xff;
-	float g = (bgColor >> IM_COL32_G_SHIFT) & 0xff;
-	float b = (bgColor >> IM_COL32_B_SHIFT) & 0xff;
-
-	float y = 0.2126*r + 0.7152*g + 0.0722*b;
-
-	if(y > 128)
-		return ColorFromString("#000000");
-	else
-		return ColorFromString("#ffffff");
-}
-
 /**
 	@brief Make a node for a trigger
  */
