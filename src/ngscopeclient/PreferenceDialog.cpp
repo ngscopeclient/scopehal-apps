@@ -356,31 +356,6 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 			}
 			break;
 
-		//Colors: show color chooser widget
-		case PreferenceType::Color:
-			{
-				auto color = pref.GetColorRaw();
-				float fcolor[4] =
-				{
-					color.m_r / 255.0f,
-					color.m_g / 255.0f,
-					color.m_b / 255.0f,
-					color.m_a / 255.0f
-				};
-
-				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 15);
-				if(ImGui::ColorEdit4(label.c_str(), fcolor))
-				{
-					pref.SetColorRaw(impl::Color(
-						static_cast<uint8_t>(fcolor[0] * 255),
-						static_cast<uint8_t>(fcolor[1] * 255),
-						static_cast<uint8_t>(fcolor[2] * 255),
-						static_cast<uint8_t>(fcolor[3] * 255)
-						));
-				}
-			}
-			break;
-
 		//Real: show a text box
 		case PreferenceType::Real:
 			{

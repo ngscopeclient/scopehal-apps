@@ -163,22 +163,6 @@ namespace internal
 				break;
 			}
 
-			case PreferenceType::Color:
-			{
-				YAML::Node child{ };
-
-				const auto& color = this->m_pref.GetColorRaw();
-
-				//Save as int rather than uint8 because uint8 is often a character type
-				child["r"] = (int)color.m_r;
-				child["g"] = (int)color.m_g;
-				child["b"] = (int)color.m_b;
-				child["a"] = (int)color.m_a;
-
-				node[this->m_identifier] = child;
-				break;
-			}
-
 			case PreferenceType::Font:
 			{
 				YAML::Node child{ };
@@ -281,18 +265,6 @@ namespace internal
 							this->m_pref.SetThemedColor(impl::ThemedColor(color, color, color));
 						}
 
-						break;
-					}
-
-					case PreferenceType::Color:
-					{
-						//Load as int rather than uint8 because uint8 is often a character type
-						const auto n_r = n["r"].as<int>();
-						const auto n_g = n["g"].as<int>();
-						const auto n_b = n["b"].as<int>();
-						const auto n_a = n["a"].as<int>();
-
-						this->m_pref.SetColorRaw(impl::Color(n_r, n_g, n_b, n_a));
 						break;
 					}
 

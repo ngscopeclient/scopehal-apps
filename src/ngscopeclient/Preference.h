@@ -56,7 +56,6 @@ enum class PreferenceType
 	Boolean,
 	String,
 	Real,
-	Color,
 	ThemedColor,
 	Enum,
 	Font,
@@ -154,7 +153,6 @@ private:
 		std::max(
 		{
 			sizeof(std::int64_t),
-			sizeof(impl::Color),
 			sizeof(impl::ThemedColor),
 			sizeof(bool),
 			sizeof(double),
@@ -224,9 +222,7 @@ public:
 	const std::string& GetString() const;
 	std::string ToString() const;
 	bool GetIsVisible() const;
-	ImU32 GetColor() const;
 	const impl::ThemedColor& GetThemedColor() const;
-	const impl::Color& GetColorRaw() const;
 	void SetBool(bool value);
 	void SetReal(double value);
 	void SetInt(std::int64_t value);
@@ -259,7 +255,6 @@ public:
 	static impl::PreferenceBuilder Real(std::string identifier, double defaultValue);
 	static impl::PreferenceBuilder Bool(std::string identifier, bool defaultValue);
 	static impl::PreferenceBuilder String(std::string identifier, std::string defaultValue);
-	static impl::PreferenceBuilder Color(std::string identifier, const ImU32& defaultValue);
 	static impl::PreferenceBuilder ThemedColor(
 		std::string identifier,
 		const ImU32& defaultValueLight,

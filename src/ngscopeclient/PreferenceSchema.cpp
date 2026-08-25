@@ -201,12 +201,41 @@ void PreferenceManager::InitializeDefaults()
 				Preference::ThemedColor("edge_highlight_border", ColorFromString("#cc6900ff"), ColorFromString("#cc6900ff"))
 				.Label("Highlighted edge border border")
 				.Description("Color for the outline of a graph edge when highlighted"));
+			graph.AddPreference(
+				Preference::ThemedColor("pin_rect", ColorFromString("#0280D164"), ColorFromString("#3cb4ff64"))
+				.Label("Port rectangle")
+				.Description("Color for background rectangle of a highlighted node port"));
+			graph.AddPreference(
+				Preference::ThemedColor("pin_rect_border", ColorFromString("#3cb4ff80"), ColorFromString("#3cb4ff80"))
+				.Label("Port rectangle border")
+				.Description("Color for outline of a highlighted node port"));
+			graph.AddPreference(
+				Preference::ThemedColor("edge_flow", ColorFromString("#ff8040ff"), ColorFromString("#ff8040ff"))
+				.Label("Edge flow color")
+				.Description("Color for flow glow on edges"));
+			graph.AddPreference(
+				Preference::ThemedColor("edge_flow_marker", ColorFromString("#ff8040ff"), ColorFromString("#ff8040ff"))
+				.Label("Edge flow marker color")
+				.Description("Color for flow markers on edges"));
+			graph.AddPreference(
+				Preference::ThemedColor("edge_color", ColorFromString("#000000ff"), ColorFromString("#ffffffff"))
+				.Label("Edge color")
+				.Description("Color for edges"));
+			graph.AddPreference(
+				Preference::ThemedColor("group_bg", ColorFromString("#00000030"), ColorFromString("#000000a0"))
+				.Label("Group background")
+				.Description("Color for background rectangle of node groups"));
+			graph.AddPreference(
+				Preference::ThemedColor("group_border", ColorFromString("#00000020"), ColorFromString("#ffffff20"))
+				.Label("Group border")
+				.Description("Color for border of node groups"));
 
-
+			//TODO delete
 			graph.AddPreference(
 				Preference::ThemedColor("header_text_color", ColorFromString("#000000"), ColorFromString("#000000"))
 				.Label("Header text color")
 				.Description("Color for filter/channel names"));
+
 			graph.AddPreference(
 				Preference::ThemedColor("valid_link_color", ColorFromString("#00ff00"), ColorFromString("#00ff00"))
 				.Label("Valid link color")
@@ -389,7 +418,7 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Console font")
 				.Description("Font used for SCPI console, log viewer and PSU/DMM numeric values in Stream Browser"));
 			general.AddPreference(
-				Preference::Color("apply_button_color", ColorFromString("#4CCC4C"))
+				Preference::ThemedColor("apply_button_color", ColorFromString("#4CCC4C"), ColorFromString("#4CCC4C"))
 				.Label("Apply button color")
 				.Description("Color for the apply value button"));
 
@@ -403,11 +432,11 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Background color top")
 				.Description("Color for the top side of the background gradient in a waveform graph"));
 			graphs.AddPreference(
-				Preference::Color("grid_centerline_color", ColorFromString("#c0c0c0ff"))
+				Preference::ThemedColor("grid_centerline_color", ColorFromString("#c0c0c0ff"), ColorFromString("#c0c0c0ff"))
 				.Label("Grid centerline color")
 				.Description("Color for the grid line at Y=0"));
 			graphs.AddPreference(
-				Preference::Color("grid_color", ColorFromString("#c0c0c040"))
+				Preference::ThemedColor("grid_color", ColorFromString("#c0c0c040"), ColorFromString("#c0c0c040"))
 				.Label("Grid color")
 				.Description("Color for grid lines at Y=0"));
 			graphs.AddPreference(
@@ -429,12 +458,12 @@ void PreferenceManager::InitializeDefaults()
 
 		auto& logs = appearance.AddCategory("Log Viewer");
 			logs.AddPreference(
-				Preference::Color("error_color", ColorFromString("#800000"))
+				Preference::ThemedColor("error_color", ColorFromString("#c00000"), ColorFromString("#800000"))
 				.Label("Error color")
 				.Description("Background color for log messages with \"error\" severity"));
 
 			logs.AddPreference(
-				Preference::Color("warning_color", ColorFromString("#404000"))
+				Preference::ThemedColor("warning_color", ColorFromString("#c0c000"), ColorFromString("#404000"))
 				.Label("Warning color")
 				.Description("Background color for log messages with \"warning\" severity"));
 
@@ -461,7 +490,7 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Outline color")
 				.Description("Color for the outline of peak labels"));*/
 			peaks.AddPreference(
-				Preference::Color("peak_text_color", ColorFromString("#ffffff"))
+				Preference::ThemedColor("peak_text_color", ColorFromString("#000000"), ColorFromString("#ffffff"))
 				.Label("Text color")
 				.Description("Color for the text on peak labels"));
 			/*peaks.AddPreference(

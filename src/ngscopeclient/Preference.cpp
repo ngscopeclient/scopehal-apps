@@ -177,28 +177,12 @@ std::int64_t Preference::GetEnumRaw() const
 	return GetValueRaw<std::int64_t>();
 }
 
-ImU32 Preference::GetColor() const
-{
-	if(m_type != PreferenceType::Color)
-		throw runtime_error("Preference type mismatch");
-
-	return GetValueRaw<impl::Color>().GetColor();
-}
-
 const impl::ThemedColor& Preference::GetThemedColor() const
 {
 	if(m_type != PreferenceType::ThemedColor)
 		throw runtime_error("Preference type mismatch");
 
 	return GetValueRaw<impl::ThemedColor>();
-}
-
-const impl::Color& Preference::GetColorRaw() const
-{
-	if(m_type != PreferenceType::Color)
-		throw runtime_error("Preference type mismatch");
-
-	return GetValueRaw<impl::Color>();
 }
 
 double Preference::GetReal() const
@@ -252,8 +236,6 @@ string Preference::ToString() const
 			return to_string(GetReal());
 		case PreferenceType::Int:
 			return to_string(GetInt());
-		case PreferenceType::Color:
-			return "Color";
 		case PreferenceType::ThemedColor:
 			return "ThemedColor";
 		case PreferenceType::Enum:
@@ -296,10 +278,6 @@ void Preference::MoveFrom(Preference& other)
 
 			case PreferenceType::Font:
 				Construct<FontDescription>(other.GetFont());
-				break;
-
-			case PreferenceType::Color:
-				Construct<impl::Color>(other.GetValueRaw<impl::Color>());
 				break;
 
 			case PreferenceType::ThemedColor:
@@ -372,27 +350,6 @@ void Preference::SetString(const string& value)
 	Construct<string>(value);
 }
 
-void Preference::SetColor(const ImU32& color)
-{
-	CleanUp();
-
-	impl::Color clr
-	{
-		static_cast<uint8_t>((color >> IM_COL32_R_SHIFT) & 0xff),
-		static_cast<uint8_t>((color >> IM_COL32_G_SHIFT) & 0xff),
-		static_cast<uint8_t>((color >> IM_COL32_B_SHIFT) & 0xff),
-		static_cast<uint8_t>((color >> IM_COL32_A_SHIFT) & 0xff)
-	};
-
-	Construct<impl::Color>(clr);
-}
-
-void Preference::SetColorRaw(const impl::Color& color)
-{
-	CleanUp();
-	Construct<impl::Color>(color);
-}
-
 void Preference::SetThemedColor(const impl::ThemedColor& color)
 {
 	CleanUp();
@@ -450,23 +407,6 @@ impl::PreferenceBuilder Preference::String(std::string identifier, std::string d
 	Preference pref(PreferenceType::String, std::move(identifier));
 	pref.Construct<std::string>(defaultValue);
 	new (&pref.m_defaultValue) std::string(std::move(defaultValue));
-
-	return impl::PreferenceBuilder{ std::move(pref) };
-}
-
-impl::PreferenceBuilder Preference::Color(std::string identifier, const ImU32& defaultValue)
-{
-	Preference pref(PreferenceType::Color, std::move(identifier));
-	pref.Construct<impl::Color>(impl::Color(
-			static_cast<uint8_t>((defaultValue >> IM_COL32_R_SHIFT) & 0xff),
-			static_cast<uint8_t>((defaultValue >> IM_COL32_G_SHIFT) & 0xff),
-			static_cast<uint8_t>((defaultValue >> IM_COL32_B_SHIFT) & 0xff),
-			static_cast<uint8_t>((defaultValue >> IM_COL32_A_SHIFT) & 0xff)));
-	new (&pref.m_defaultValue) impl::Color(
-			static_cast<uint8_t>((defaultValue >> IM_COL32_R_SHIFT) & 0xff),
-			static_cast<uint8_t>((defaultValue >> IM_COL32_G_SHIFT) & 0xff),
-			static_cast<uint8_t>((defaultValue >> IM_COL32_B_SHIFT) & 0xff),
-			static_cast<uint8_t>((defaultValue >> IM_COL32_A_SHIFT) & 0xff));
 
 	return impl::PreferenceBuilder{ std::move(pref) };
 }
