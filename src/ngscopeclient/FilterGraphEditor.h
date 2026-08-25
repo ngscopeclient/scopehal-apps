@@ -169,6 +169,8 @@ public:
 	{ return m_errorWindow; }
 
 protected:
+	ImU32 GetTextColor(ImU32 bgColor);
+
 	friend class FilterGraphGroup;
 
 	std::map<std::shared_ptr<Instrument>, std::vector<InstrumentChannel*> > GetAllVisibleChannels();

@@ -470,13 +470,20 @@ bool FilterGraphEditor::DoRender()
 		ImColor(prefs.GetColor("Appearance.Filter Graph.edge_select_rect"));
 	style.Colors[ax::NodeEditor::StyleColor_LinkSelRectBorder] =
 		ImColor(prefs.GetColor("Appearance.Filter Graph.edge_select_border"));
-	/*
-	Colors[StyleColor_PinRect]            = ImColor( 60, 180, 255, 100);
-	Colors[StyleColor_PinRectBorder]      = ImColor( 60, 180, 255, 128);
-	Colors[StyleColor_Flow]               = ImColor(255, 128,  64, 255);
-	Colors[StyleColor_FlowMarker]         = ImColor(255, 128,  64, 255);
-	Colors[StyleColor_GroupBg]            = ImColor(  0,   0,   0, 160);
-	Colors[StyleColor_GroupBorder]        = ImColor(255, 255, 255,  32);*/
+	style.Colors[ax::NodeEditor::StyleColor_PinRect] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.pin_rect"));
+	style.Colors[ax::NodeEditor::StyleColor_PinRectBorder] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.pin_rect_border"));
+	style.Colors[ax::NodeEditor::StyleColor_Flow] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.edge_flow"));
+	style.Colors[ax::NodeEditor::StyleColor_FlowMarker] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.edge_flow_marker"));
+	style.Colors[ax::NodeEditor::StyleColor_GroupBg] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.group_bg"));
+	style.Colors[ax::NodeEditor::StyleColor_GroupBorder] =
+		ImColor(prefs.GetColor("Appearance.Filter Graph.group_border"));
+
+	ImVec4 linkColor = ImColor(prefs.GetColor("Appearance.Filter Graph.edge_color"));
 
 	// NodeEditor seems to handle DPI scaling on its own
 	// so turn off global scaling to avoid double scaling
@@ -627,7 +634,7 @@ bool FilterGraphEditor::DoRender()
 				auto dstid = GetSinkPinForLink(stream, pair<FlowGraphNode*, size_t>(f, i));
 				auto linkid = GetID(pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>(srcid, dstid));
 				freshLinks.emplace(linkid);
-				ax::NodeEditor::Link(linkid, srcid, dstid);
+				ax::NodeEditor::Link(linkid, srcid, dstid, linkColor);
 			}
 		}
 	}
@@ -648,7 +655,7 @@ bool FilterGraphEditor::DoRender()
 					auto dstid = GetID(pair<FlowGraphNode*, size_t>(trig, i));
 					auto linkid = GetID(pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>(srcid, dstid));
 					freshLinks.emplace(linkid);
-					ax::NodeEditor::Link(linkid, srcid, dstid);
+					ax::NodeEditor::Link(linkid, srcid, dstid, linkColor);
 				}
 			}
 		}
@@ -1023,6 +1030,9 @@ void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group
  */
 void FilterGraphEditor::DoInternalLinksForGroup(shared_ptr<FilterGraphGroup> group)
 {
+	auto& prefs = m_session->GetPreferences();
+	ImVec4 linkColor = ImColor(prefs.GetColor("Appearance.Filter Graph.edge_color"));
+
 	//Add links from node outputs to the hierarchical port node
 	for(auto it : group->m_hierOutputInternalMap)
 	{
@@ -1040,7 +1050,7 @@ void FilterGraphEditor::DoInternalLinksForGroup(shared_ptr<FilterGraphGroup> gro
 			group->m_hierOutputLinkMap.emplace(fromstream, lid);
 		}
 
-		ax::NodeEditor::Link(lid, fromPin, toPin);
+		ax::NodeEditor::Link(lid, fromPin, toPin, linkColor);
 	}
 
 	//And then again for the inputs
@@ -1060,7 +1070,7 @@ void FilterGraphEditor::DoInternalLinksForGroup(shared_ptr<FilterGraphGroup> gro
 			group->m_hierInputLinkMap.emplace(toport, lid);
 		}
 
-		ax::NodeEditor::Link(lid, fromPin, toPin);
+		ax::NodeEditor::Link(lid, fromPin, toPin, linkColor);
 	}
 }
 
@@ -2143,6 +2153,12 @@ bool FilterGraphEditor::OnFilterDeleted(Filter* node)
 	return (finalRefCount <= 1);
 }
 
+ImU32 FilterGraphEditor::GetTextColor(ImU32 bgColor)
+{
+	//IM_COL32_R_SHIFT
+	return ColorFromString("#000000");
+}
+
 /**
 	@brief Make a node for a trigger
  */
@@ -2154,9 +2170,11 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 	auto tsize = ImGui::GetFontSize();
 	auto color = ColorFromString("#808080");
 	auto id = GetID(trig);
-	auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
+	//auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
 	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
 	float rounding = ax::NodeEditor::GetStyle().NodeRounding;
+
+	auto headercolor = GetTextColor(color);
 
 	ax::NodeEditor::BeginNode(id);
 	ImGui::PushID(id.AsPointer());
