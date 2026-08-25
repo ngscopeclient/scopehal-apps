@@ -230,12 +230,6 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Group border")
 				.Description("Color for border of node groups"));
 
-			//TODO delete
-			graph.AddPreference(
-				Preference::ThemedColor("header_text_color", ColorFromString("#000000"), ColorFromString("#000000"))
-				.Label("Header text color")
-				.Description("Color for filter/channel names"));
-
 			graph.AddPreference(
 				Preference::ThemedColor("valid_link_color", ColorFromString("#00ff00"), ColorFromString("#00ff00"))
 				.Label("Valid link color")

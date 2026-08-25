@@ -2155,8 +2155,16 @@ bool FilterGraphEditor::OnFilterDeleted(Filter* node)
 
 ImU32 FilterGraphEditor::GetTextColor(ImU32 bgColor)
 {
-	//IM_COL32_R_SHIFT
-	return ColorFromString("#000000");
+	float r = (bgColor >> IM_COL32_R_SHIFT) & 0xff;
+	float g = (bgColor >> IM_COL32_G_SHIFT) & 0xff;
+	float b = (bgColor >> IM_COL32_B_SHIFT) & 0xff;
+
+	float y = 0.2126*r + 0.7152*g + 0.0722*b;
+
+	if(y > 128)
+		return ColorFromString("#000000");
+	else
+		return ColorFromString("#ffffff");
 }
 
 /**
@@ -2170,11 +2178,9 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 	auto tsize = ImGui::GetFontSize();
 	auto color = ColorFromString("#808080");
 	auto id = GetID(trig);
-	//auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
+	auto headercolor = GetTextColor(color);
 	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
 	float rounding = ax::NodeEditor::GetStyle().NodeRounding;
-
-	auto headercolor = GetTextColor(color);
 
 	ax::NodeEditor::BeginNode(id);
 	ImGui::PushID(id.AsPointer());
@@ -2269,7 +2275,6 @@ void FilterGraphEditor::DoNodeForChannel(
 	if(displaycolor.empty())
 		displaycolor = "#808080";
 
-	auto& prefs = m_session->GetPreferences();
 	ImU32 messageColors[] = {
 		prefs.GetColor("Appearance.Filter Graph.error_outline_color"), // 0 zero in enum is not set, therefore placeholder
 		prefs.GetColor("Appearance.Filter Graph.error_outline_color"), // Also no fatal error should be ever sent, but better than crash
@@ -2283,7 +2288,7 @@ void FilterGraphEditor::DoNodeForChannel(
 
 	//Get some configuration / style settings
 	auto color = ColorFromString(displaycolor);
-	auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
+	auto headercolor = GetTextColor(color);
 	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
 	auto textfont = m_parent->GetFontPref("Appearance.Filter Graph.icon_caption_font");
 	ImGui::PushFont(textfont.first, textfont.second);
