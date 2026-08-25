@@ -2174,7 +2174,6 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 {
 	//TODO: special color for triggers?
 	//Or use a preference?
-	auto& prefs = m_session->GetPreferences();
 	auto tsize = ImGui::GetFontSize();
 	auto color = ColorFromString("#808080");
 	auto id = GetID(trig);
@@ -2275,6 +2274,7 @@ void FilterGraphEditor::DoNodeForChannel(
 	if(displaycolor.empty())
 		displaycolor = "#808080";
 
+	auto& prefs = m_session->GetPreferences();
 	ImU32 messageColors[] = {
 		prefs.GetColor("Appearance.Filter Graph.error_outline_color"), // 0 zero in enum is not set, therefore placeholder
 		prefs.GetColor("Appearance.Filter Graph.error_outline_color"), // Also no fatal error should be ever sent, but better than crash
