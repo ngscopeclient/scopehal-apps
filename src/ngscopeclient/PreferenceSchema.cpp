@@ -358,7 +358,7 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Instrument partial on badge color")
 				.Description("Color for intrument partial 'on' badge"));
 			stream.AddPreference(
-				Preference::ThemedColor("instrument_off_badge_color", ColorFromString("#808000ff"), ColorFromString("#808000ff"))
+				Preference::ThemedColor("instrument_off_badge_color", ColorFromString("#EBEB00FF"), ColorFromString("#808000ff"))
 				.Label("Instrument off badge color")
 				.Description("Color for instrument 'off' badge"));
 			stream.AddPreference(
