@@ -248,8 +248,9 @@ void StreamBrowserDialog::renderBadge(ImU32 color, ... /* labels, ending in null
 		m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 		ImGui::SameLine(m_badgeXCur);
 		ImGui::PushStyleColor(ImGuiCol_Button, color);
+		ImGui::PushStyleColor(ImGuiCol_Text, GetTextColor(color));
 		SmallDisabledButton(label);
-		ImGui::PopStyleColor();
+		ImGui::PopStyleColor(2);
 		break;
 	}
 	va_end(ap);
