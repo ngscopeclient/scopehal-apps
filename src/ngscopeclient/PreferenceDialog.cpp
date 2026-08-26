@@ -110,7 +110,7 @@ void PreferenceDialog::FindFontFiles(const string& path)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-bool PreferenceDialog::DefaultButton(const std::string& label, const std::string& id, bool centered)
+bool PreferenceDialog::DefaultButton(const string& label, const string& id, bool centered)
 {
 	float buttonWidth = ImGui::CalcTextSize(label.c_str()).x + ImGui::GetStyle().FramePadding.x * 2.0f;
 	float availWidth = ImGui::GetContentRegionAvail().x;
@@ -124,38 +124,42 @@ bool PreferenceDialog::DefaultButton(const std::string& label, const std::string
 	return result;
 }
 
-void PreferenceDialog::OpenConfirmDialog(const std::string& title, const std::string& message, const std::string& identifier)
+void PreferenceDialog::OpenConfirmDialog(const string& title, const string& message, const string& identifier)
 {
-	ImGui::OpenPopup((title + "###" + identifier).c_str());
+	ImGui::OpenPopup((title + "###ConfirmDialog_" + identifier).c_str());
 	m_confirmDialogTitle = title;
 	m_confirmDialogMessage = message;
 }
 
-bool PreferenceDialog::RenderConfirmDialog(const std::string& identifier)
+bool PreferenceDialog::RenderConfirmDialog(const string& identifier)
 {
-   bool confirmed = false;
-    if (ImGui::BeginPopupModal((m_confirmDialogTitle + "###" + identifier).c_str(), nullptr,ImGuiWindowFlags_AlwaysAutoResize))
-    {
-        ImGui::TextWrapped("%s", m_confirmDialogMessage.c_str());
-        ImGui::Separator();
+	bool confirmed = false;
+	if (ImGui::BeginPopupModal(
+		(m_confirmDialogTitle + "###ConfirmDialog_" + identifier).c_str(),
+		nullptr,
+		ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::TextWrapped("%s", m_confirmDialogMessage.c_str());
+		ImGui::Separator();
 		float buttonWidth = ImGui::GetFontSize()*6;
-        // OK button
-        if (ImGui::Button("OK", ImVec2(buttonWidth, 0)))
-        {
-            confirmed = true;
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine();
-        // Cancel button
-        if (ImGui::Button("Cancel", ImVec2(buttonWidth, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape))
-        {
-            ImGui::CloseCurrentPopup();
-        }
-        // Default focus on cancel buttun
-        ImGui::SetItemDefaultFocus();
-        ImGui::EndPopup();
-    }
-    return confirmed;
+
+		// OK button
+		if (ImGui::Button("OK", ImVec2(buttonWidth, 0)))
+		{
+			confirmed = true;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+
+		// Cancel button
+		if (ImGui::Button("Cancel", ImVec2(buttonWidth, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape))
+			ImGui::CloseCurrentPopup();
+
+		// Default focus on cancel buttun
+		ImGui::SetItemDefaultFocus();
+		ImGui::EndPopup();
+	}
+	return confirmed;
 }
 
 
@@ -171,6 +175,7 @@ bool PreferenceDialog::DoRender()
 	auto& children = root.GetChildren();
 
 	//Top level uses collapsing headers
+	ImGui::PushID("PreferenceDialog");
 	for(const auto& identifier: root.GetOrdering())
 	{
 		auto& node = children[identifier];
@@ -181,7 +186,7 @@ bool PreferenceDialog::DoRender()
 			if(subCategory.IsVisible())
 			{
 				ImGui::PushID(identifier.c_str());
-				if(DefaultButton("Reset section",identifier))
+				if(DefaultButton("Reset section", identifier))
 				{
 					OpenConfirmDialog("Reset to default","Reset all settings in this section to default?",identifier);
 				}
@@ -214,6 +219,7 @@ bool PreferenceDialog::DoRender()
 			}
 		}
 	}
+	ImGui::PopID();
 	return true;
 }
 
@@ -234,7 +240,7 @@ void PreferenceDialog::ProcessCategory(PreferenceCategory& cat)
 
 			if(subCategory.IsVisible())
 			{
-				if(DefaultButton("Reset category",identifier))
+				if(DefaultButton("Reset category", identifier))
 				{
 					OpenConfirmDialog("Reset to default","Reset all settings in this category to default?",identifier);
 				}
