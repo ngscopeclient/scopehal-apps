@@ -1603,7 +1603,10 @@ void StreamBrowserDialog::renderChannelNode(
 	bool hasChildren = !singleStream || renderProps;
 
 	if (channel->m_displaycolor != "")
-		ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(channel->m_displaycolor));
+	{
+		auto channelColor = ColorFromString(channel->m_displaycolor);
+		ImGui::PushStyleColor(ImGuiCol_Text, channelColor);
+	}
 
 	int flags = 0;
 	if(!hasChildren)
@@ -1615,7 +1618,7 @@ void StreamBrowserDialog::renderChannelNode(
 		channel->GetDisplayName().c_str(),
 		flags);
 	if (channel->m_displaycolor != "")
-		ImGui::PopStyleColor();
+		ImGui::PopStyleColor(1);
 
 	//Open properties dialog on double click
 	if(ImGui::IsItemHovered())
@@ -2190,16 +2193,36 @@ void StreamBrowserDialog::renderFilterNode(Filter* filter)
 	bool singleStream = filter->GetStreamCount() == 1;
 
 	if (filter->m_displaycolor != "")
-		ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(filter->m_displaycolor));
+	{
+		auto color = ColorFromString(filter->m_displaycolor);
+		ImGui::PushStyleColor(ImGuiCol_Text, color);
+
+		//Check if we have bad contrast with ImGuiCol_WindowBg
+		auto wbg = ImGui::GetColorU32(ImGuiCol_WindowBg);
+		bool colorIsDark = IsColorDark(color);
+		bool windowIsDark = IsColorDark(wbg);
+
+		//darken background of light-on-light
+		if(!colorIsDark && !windowIsDark)
+			ImGui::PushStyleColor(ImGuiCol_Header, ColorFromString("#000000c0"));
+
+		//transparent background otherwise
+		else
+			ImGui::PushStyleColor(ImGuiCol_Header, ColorFromString("#00000000"));
+	}
 
 	//Don't expand filters with a single stream by default
 	int flags = ImGuiTreeNodeFlags_OpenOnArrow;
 	if(!singleStream)
 		flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
+	//Force the node to think it's selected so the background color renders
+	//(https://github.com/ocornut/imgui/issues/9185)
+	flags |= ImGuiTreeNodeFlags_Selected;
+
 	bool open = ImGui::TreeNodeEx(filter->GetDisplayName().c_str(), flags);
 	if (filter->m_displaycolor != "")
-		ImGui::PopStyleColor();
+		ImGui::PopStyleColor(2);
 
 	//Open properties dialog on double click
 	if(ImGui::IsItemHovered())
