@@ -13,13 +13,14 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 
 NOTE: This section only lists changes which are potentially breaking to an *end user*. Prior to the version 1.0 release, there is no expectation of API/ABI stability and internal software interfaces may change at any time with no warning.
 
-* None yet
+* Changed data type of XY sweep gate signal, scalar pulse delay input and output, and scalar stairstep updated output from analog scalar to digital scalar since they are actually digital values
 
 ## Bugs fixed since v0.2.2
 
 * CSV import was broken on MacOS (https://github.com/ngscopeclient/scopehal-apps/issues/1112)
 * Font preferences would have invalid default values because InitializeSearchPaths() was not called before the PreferenceManager constructor, leading to an empty search path and inability to find the default font
 * Flickering in stream browser when external trigger channel is present (https://github.com/ngscopeclient/scopehal-apps/pull/1026)
+* Scalar Stairstep filter would fail to generate "updated" signal when trigger was stopped and restarted
 
 ## Other changes since v0.2.2
 
