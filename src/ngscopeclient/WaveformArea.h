@@ -483,11 +483,17 @@ public:
 		if(s)
 			return s->GetStream();
 		else
-			return nullptr;	//should never happen
+			// Can happen if waveform has been dragged away
+			return nullptr;	
 	}
 
 	std::shared_ptr<DisplayedChannel> GetDisplayedChannel(size_t i)
-	{ return std::dynamic_pointer_cast<DisplayedChannel>(m_inputs[i]); }
+	{
+		// If the waveform has been dragged away, m_inputs can be empty.
+		if(i < m_inputs.size())
+			return std::dynamic_pointer_cast<DisplayedChannel>(m_inputs[i]); 
+		else return nullptr;
+	}
 
 	bool IsStreamBeingDisplayed(StreamDescriptor target);
 

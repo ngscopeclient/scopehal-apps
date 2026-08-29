@@ -251,7 +251,9 @@ bool WaveformGroup::Render()
 	float plotWidth = clientArea.x - yAxisWidthSpaced;
 
 	//Update X axis unit
-	if(!areas.empty())
+	// Check if the area has a stream, it could have been moved to another
+	// waveform area and we have not closed this waveform group as a result.
+	if(!areas.empty() && areas[0]->GetStreamCount() > 0)
 	{
 		m_displayingEye = false;
 		m_xAxisUnit = areas[0]->GetStream(0).GetXAxisUnits();
