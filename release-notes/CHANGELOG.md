@@ -6,6 +6,7 @@ This is a running list of significant bug fixes and new features since the last 
 
 * PointSample filter now accepts a scalar input from the graph, allowing the sample position to be dynamically adjusted
 * Color preferences are now attached to the GUI theme, so changing theme will select a new set of color preferences (https://github.com/ngscopeclient/scopehal-apps/issues/526). If you already have an existing preferences file, you will need to reset the "appearances" preference settings to default in order to get the new light-mode colors.
+* Initial Keysight Infiniium driver
 
 ## Breaking changes since v0.2.2
 
@@ -17,6 +18,7 @@ NOTE: This section only lists changes which are potentially breaking to an *end 
 
 ## Bugs fixed since v0.2.2
 
+* Crash dragging waveform between groups (https://github.com/ngscopeclient/scopehal-apps/issues/983, https://github.com/ngscopeclient/scopehal-apps/pull/1030)
 * CSV import was broken on MacOS (https://github.com/ngscopeclient/scopehal-apps/issues/1112)
 * Font preferences would have invalid default values because InitializeSearchPaths() was not called before the PreferenceManager constructor, leading to an empty search path and inability to find the default font
 * Flickering in stream browser when external trigger channel is present (https://github.com/ngscopeclient/scopehal-apps/pull/1026)
