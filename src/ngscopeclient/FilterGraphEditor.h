@@ -197,7 +197,7 @@ protected:
 	void HandleDeletionRequests(Filter*& fReconfigure);
 	bool OnNodeDeleted(FlowGraphNode* node);
 	bool OnFilterDeleted(Filter* node);
-	void HandleBackgroundContextMenu();
+	void HandleBackgroundContextMenu(bool windowHovered);
 	void DoAddMenu();
 
 	void HandleOverlaps();

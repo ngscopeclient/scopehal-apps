@@ -18,6 +18,7 @@ NOTE: This section only lists changes which are potentially breaking to an *end 
 
 ## Bugs fixed since v0.2.2
 
+* Filter graph editor would steal right-click events meant for dialogs floating above it (https://github.com/ngscopeclient/scopehal-apps/issues/1031)
 * Crash dragging waveform between groups (https://github.com/ngscopeclient/scopehal-apps/issues/983, https://github.com/ngscopeclient/scopehal-apps/pull/1030)
 * CSV import was broken on MacOS (https://github.com/ngscopeclient/scopehal-apps/issues/1112)
 * Font preferences would have invalid default values because InitializeSearchPaths() was not called before the PreferenceManager constructor, leading to an empty search path and inability to find the default font

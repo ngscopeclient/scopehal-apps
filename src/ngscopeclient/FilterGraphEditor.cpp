@@ -677,7 +677,7 @@ bool FilterGraphEditor::DoRender()
 	HandleDeletionRequests(fReconfigure);
 	HandleDoubleClicks();
 	bool triggerChanged = HandleNodeProperties();
-	HandleBackgroundContextMenu();
+	HandleBackgroundContextMenu(windowHovered);
 
 	//Done with canvas stuff
 	SetImGuiManagedDPI();
@@ -2836,9 +2836,9 @@ bool FilterGraphEditor::HandleNodeProperties()
 /**
 	@brief Show add menu when background is right clicked
  */
-void FilterGraphEditor::HandleBackgroundContextMenu()
+void FilterGraphEditor::HandleBackgroundContextMenu(bool windowHovered)
 {
-	if(ax::NodeEditor::ShowBackgroundContextMenu())
+	if(ax::NodeEditor::ShowBackgroundContextMenu() && windowHovered)
 	{
 		ax::NodeEditor::Suspend();
 			m_createMousePos = ImGui::GetMousePos();
