@@ -26,7 +26,7 @@ NOTE: This section only lists changes which are potentially breaking to an *end 
 
 ## Other changes since v0.2.2
 
-* None yet
+* The "agilent" oscilloscope driver is now aliased as "keysight" and can be used under either name with any supported scope
 
 ## Known issues
 
