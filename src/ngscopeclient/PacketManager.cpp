@@ -82,9 +82,12 @@ void PacketManager::RefreshRows()
 	m_refreshPending = false;
 	m_rows.clear();
 
+	auto& filteredPackets = GetFilteredPackets();
+	auto& filteredChildren = GetFilteredChildPackets();
+
 	//Make a list of waveform timestamps and make sure we display them in order
 	vector<TimePoint> times;
-	for(auto& it : m_filteredPackets)
+	for(auto& it : filteredPackets)
 		times.push_back(it.first);
 	std::sort(times.begin(), times.end());
 	LogTrace("%zu times\n", times.size());
@@ -105,7 +108,11 @@ void PacketManager::RefreshRows()
 	//Process packets from each waveform
 	for(auto wavetime : times)
 	{
-		auto& wpackets = m_filteredPackets[wavetime];
+		auto wit = filteredPackets.find(wavetime);
+		if(wit == filteredPackets.end())
+			continue;
+
+		const auto& wpackets = wit->second;
 
 		//Get markers for this waveform, if any
 		auto& markers = m_session.GetMarkers(wavetime);
@@ -155,8 +162,8 @@ void PacketManager::RefreshRows()
 			if(IsChildOpen(pack))
 			{
 				//See if we have child packets
-				auto cit = m_filteredChildPackets.find(pack);
-				if(cit == m_filteredChildPackets.end())
+				auto cit = filteredChildren.find(pack);
+				if(cit == filteredChildren.end())
 					continue;
 				for(auto& child : cit->second)
 				{

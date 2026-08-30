@@ -175,6 +175,14 @@ public:
 			return m_filteredPackets;
 	}
 
+	const std::map<Packet*, std::vector<Packet*> >& GetFilteredChildPackets()
+	{
+		if(m_filterExpression == nullptr)
+			return m_childPackets;
+		else
+			return m_filteredChildPackets;
+	}
+
 	const std::vector<Packet*>& GetFilteredChildPackets(Packet* pack)
 	{
 		if(m_filterExpression == nullptr)
