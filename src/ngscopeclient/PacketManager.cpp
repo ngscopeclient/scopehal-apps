@@ -133,9 +133,6 @@ void PacketManager::RefreshRows()
 				imarker ++;
 			}
 
-			//See if we have child packets
-			auto& children = m_filteredChildPackets[pack];
-
 			//Add an entry for the top level
 			RowData dat(wavetime, pack);
 			lastoff = pack->m_offset;
@@ -157,7 +154,11 @@ void PacketManager::RefreshRows()
 
 			if(IsChildOpen(pack))
 			{
-				for(auto& child : children)
+				//See if we have child packets
+				auto cit = m_filteredChildPackets.find(pack);
+				if(cit == m_filteredChildPackets.end())
+					continue;
+				for(auto& child : cit->second)
 				{
 					//Add an entry for the top level
 					RowData cdat(wavetime, child);
@@ -312,14 +313,16 @@ void PacketManager::FilterPackets()
 	m_filteredChildPackets.clear();
 
 	//Check all top level packets against the filter
-	for(auto it : m_packets)
+	for(auto& it : m_packets)
 	{
 		auto timestamp = it.first;
 		auto& packets = it.second;
+
 		for(auto p : packets)
 		{
 			//If no children, just check the top level packet for a match
-			if(m_childPackets[p].empty())
+			auto cit = m_childPackets.find(p);
+			if(cit == m_childPackets.end())
 			{
 				if(m_filterExpression->Match(p))
 					m_filteredPackets[timestamp].push_back(p);
@@ -330,11 +333,12 @@ void PacketManager::FilterPackets()
 			else
 			{
 				bool anyChildMatched = false;
-				for(auto c : m_childPackets[p])
+				auto& fp = m_filteredChildPackets[p];
+				for(auto c : cit->second)
 				{
 					if(m_filterExpression->Match(c))
 					{
-						m_filteredChildPackets[p].push_back(c);
+						fp.push_back(c);
 						anyChildMatched = true;
 					}
 				}
