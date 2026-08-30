@@ -297,20 +297,16 @@ void PacketManager::Update()
  */
 void PacketManager::FilterPackets()
 {
-	//If we do NOT have a filter, early out: just copy stuff
+	//Start out by clearing output, then we can re-add the ones that match if applicable
+	m_filteredPackets.clear();
+	m_filteredChildPackets.clear();
+
+	//If we do NOT have a filter, early out (but still refresh the set of rows being displayed)
 	if(m_filterExpression == nullptr)
 	{
-		m_filteredPackets = m_packets;
-		m_filteredChildPackets = m_childPackets;
-
-		//but still refresh the set of rows being displayed
 		m_refreshPending = true;
 		return;
 	}
-
-	//We have a filter! Start out by clearing output, then we can re-add the ones that match
-	m_filteredPackets.clear();
-	m_filteredChildPackets.clear();
 
 	//Check all top level packets against the filter
 	for(auto& it : m_packets)
