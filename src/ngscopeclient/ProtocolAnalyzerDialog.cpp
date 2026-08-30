@@ -174,11 +174,11 @@ bool ProtocolAnalyzerDialog::DoRender()
 			lock_guard<recursive_mutex> lock(m_mgr->GetMutex());
 
 			auto& packets = m_mgr->GetPackets();
-			for(auto it : packets)
+			for(auto& it : packets)
 				itotal += it.second.size();
 
 			auto& filt = m_mgr->GetFilteredPackets();
-			for(auto it : filt)
+			for(auto& it : filt)
 				idisplayed += it.second.size();
 		}
 		char stmp[128];
@@ -644,6 +644,7 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, FontWithSize dataFont, v
 	string firstLine;
 
 	auto& bytes = pack->m_data;
+	size_t len = bytes.size();
 
 	string lineHex;
 	string lineAscii;
@@ -653,7 +654,7 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, FontWithSize dataFont, v
 	if(!bytes.empty())
 	{
 		//If we have more than one line worth of data, show the tree
-		if(bytes.size() > m_bytesPerLine)
+		if(len > m_bytesPerLine)
 		{
 			open = ImGui::TreeNodeEx("##data", ImGuiTreeNodeFlags_OpenOnArrow);
 			ImGui::SameLine();
@@ -662,8 +663,20 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, FontWithSize dataFont, v
 
 	//Format the data
 	string data;
-	char tmp[32];
-	for(size_t i=0; i<bytes.size(); i++)
+	char tmp[32] = {0};
+	char tmpAddr[32] = {0};
+
+	//Pre-fill temp buffer for some formats
+	switch(m_dataFormat)
+	{
+		case FORMAT_HEX:
+			tmp[2] = ' ';
+			tmp[3] = '\0';
+		default:
+			break;
+	}
+
+	for(size_t i=0; i<len; i++)
 	{
 		//Address block
 		if( (i % m_bytesPerLine) == 0)
@@ -671,8 +684,8 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, FontWithSize dataFont, v
 			//Is this the first block of an open tree view? Show address
 			if(open)
 			{
-				snprintf(tmp, sizeof(tmp), "%04zx ", i);
-				data += tmp;
+				snprintf(tmpAddr, sizeof(tmp), "%04zx ", i);
+				data += tmpAddr;
 			}
 
 			//Tree closed or single line: don't show the 0000 which can be confused with data
@@ -683,7 +696,8 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, FontWithSize dataFont, v
 		switch(m_dataFormat)
 		{
 			case FORMAT_HEX:
-				snprintf(tmp, sizeof(tmp), "%02x ", bytes[i]);
+				tmp[0] = g_hex[ (bytes[i] >> 4) & 0xf],
+				tmp[1] = g_hex[ (bytes[i] >> 0) & 0xf],
 				data += tmp;
 				break;
 
