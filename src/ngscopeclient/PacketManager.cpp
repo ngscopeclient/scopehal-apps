@@ -134,7 +134,7 @@ void PacketManager::RefreshRows()
 			}
 
 			//See if we have child packets
-			auto children = m_filteredChildPackets[pack];
+			auto& children = m_filteredChildPackets[pack];
 
 			//Add an entry for the top level
 			RowData dat(wavetime, pack);
@@ -157,7 +157,7 @@ void PacketManager::RefreshRows()
 
 			if(IsChildOpen(pack))
 			{
-				for(auto child : children)
+				for(auto& child : children)
 				{
 					//Add an entry for the top level
 					RowData cdat(wavetime, child);
