@@ -681,25 +681,29 @@ void VulkanWindow::Render()
 		//Start render pass
 		auto& cmdBuf = *m_cmdBuffers[m_frameIndex];
 		cmdBuf.begin(vk::CommandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
-		vk::ClearValue clearValue;
-		vk::ClearColorValue clearColor;
-		clearColor.setFloat32({0.1f, 0.1f, 0.1f, 1.0f});
-		clearValue.setColor(clearColor);
-		vk::RenderPassBeginInfo passInfo(
-			**m_renderPass,
-			**m_framebuffers[m_frameIndex],
-			vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_width, m_height)),
-			clearValue);
-		cmdBuf.beginRenderPass(passInfo, vk::SubpassContents::eInline);
 
-		//Draw GUI
-		ImGui_ImplVulkan_RenderDrawData(main_draw_data, *cmdBuf);
+		{
+			NamedDebugRange shaderRange(cmdBuf, "VulkanWindow::Render");
 
-		//Draw waveform data etc
-		DoRender(cmdBuf);
+			vk::ClearValue clearValue;
+			vk::ClearColorValue clearColor;
+			clearColor.setFloat32({0.1f, 0.1f, 0.1f, 1.0f});
+			clearValue.setColor(clearColor);
+			vk::RenderPassBeginInfo passInfo(
+				**m_renderPass,
+				**m_framebuffers[m_frameIndex],
+				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_width, m_height)),
+				clearValue);
+			cmdBuf.beginRenderPass(passInfo, vk::SubpassContents::eInline);
 
-		//Finish up and submit
-		cmdBuf.endRenderPass();
+			//Draw GUI
+			ImGui_ImplVulkan_RenderDrawData(main_draw_data, *cmdBuf);
+
+			//Draw waveform data etc
+			DoRender(cmdBuf);
+
+			cmdBuf.endRenderPass();
+		}
 		cmdBuf.end();
 
 		vk::PipelineStageFlags flags(vk::PipelineStageFlagBits::eColorAttachmentOutput);
