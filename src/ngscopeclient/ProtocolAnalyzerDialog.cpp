@@ -389,7 +389,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 							if(firstRow)
 								ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
 
-							ImGui::TextUnformatted(pack->m_headers[cols[j]].c_str());
+							ImGui::TextUnformatted(f->GetDecodedField(pack, j).c_str());
 						}
 					}
 
