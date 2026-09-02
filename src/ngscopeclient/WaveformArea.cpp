@@ -1866,6 +1866,7 @@ void WaveformArea::RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> chan
 	//Draw the actual stuff
 	size_t len = data->size();
 	size_t xend = start.x + size.x;
+	const double mincellwidth = 2;
 	for(size_t i=ifirst; i<len; i++)
 	{
 		int64_t tstart = (data->m_offsets[i] * data->m_timescale) + data->m_triggerPhase;
@@ -1881,9 +1882,12 @@ void WaveformArea::RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> chan
 
 		double cellwidth = xe - xs;
 		auto color = data->GetColorCached(i);
-		if(cellwidth < 2)
+		if(cellwidth < mincellwidth)
 		{
 			//This sample is really skinny. There's no text to render so don't waste time with that.
+
+			//Calculate the end timestamp of the decode bubble we're drawing
+			int64_t cellend = m_group->XPositionToXAxisUnits(xs + mincellwidth);
 
 			//Average the color of all samples touching this pixel
 			size_t nmerged = 1;
@@ -1894,9 +1898,8 @@ void WaveformArea::RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> chan
 			for(size_t j=i+1; j<len; j++)
 			{
 				int64_t cellstart = (data->m_offsets[j] * data->m_timescale) + data->m_triggerPhase;
-				double cellxs = m_group->XAxisUnitsToXPosition(cellstart);
 
-				if(cellxs > xs+2)
+				if(cellstart > cellend)
 					break;
 
 				auto c = data->GetColorCached(j);
