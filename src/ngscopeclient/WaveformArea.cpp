@@ -1890,6 +1890,7 @@ void WaveformArea::RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> chan
 			float sum_red = (color >> IM_COL32_R_SHIFT) & 0xff;
 			float sum_green = (color >> IM_COL32_G_SHIFT) & 0xff;
 			float sum_blue = (color >> IM_COL32_B_SHIFT) & 0xff;
+			size_t ibase = i;
 			for(size_t j=i+1; j<len; j++)
 			{
 				int64_t cellstart = (data->m_offsets[j] * data->m_timescale) + data->m_triggerPhase;
@@ -1904,10 +1905,13 @@ void WaveformArea::RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> chan
 				sum_green += (c >> IM_COL32_G_SHIFT) & 0xff;
 				sum_blue += (c >> IM_COL32_B_SHIFT) & 0xff;
 				nmerged ++;
-
-				//Skip these samples in the outer loop
-				i = j-1;
 			}
+
+			//Update loop counter with anything we averaged
+			if(nmerged > 1)
+				i = (ibase + nmerged - 2);
+
+			//TODO: weight by size of samples so bigger ones are heavier?
 
 			//Render a single box for them all
 			sum_red /= nmerged;
@@ -1918,7 +1922,6 @@ void WaveformArea::RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> chan
 				((static_cast<int>(sum_green) & 0xff) << IM_COL32_G_SHIFT) |
 				((static_cast<int>(sum_blue) & 0xff) << IM_COL32_B_SHIFT) |
 				(0xff << IM_COL32_A_SHIFT);
-
 
 			RenderComplexSignal(
 				list,
