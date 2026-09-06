@@ -6,6 +6,8 @@ This is a running list of significant bug fixes and new features since the last 
 
 * Core: Back-end performance improvements to protocol-analyzer table subsystem
 * Drivers: Initial Keysight Infiniium driver
+* Drivers: ThunderScope native auto trigger support
+* Drivers: Switched ThunderScope wire format to new tagged protocol for improved upward compatibility
 * Filters: PointSample filter now accepts a scalar input from the graph, allowing the sample position to be dynamically adjusted
 * Filters: added GPU offload of CRC calculation for 100baseT1
 * Filters: optimized Ethernet protocol decode to do much less unnecessary string manipulation
@@ -17,7 +19,8 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 
 NOTE: This section only lists changes which are potentially breaking to an *end user*. Prior to the version 1.0 release, there is no expectation of API/ABI stability and internal software interfaces may change at any time with no warning.
 
-* Changed data type of XY sweep gate signal, scalar pulse delay input and output, and scalar stairstep updated output from analog scalar to digital scalar since they are actually digital values
+* Filters: Changed data type of XY sweep gate signal, scalar pulse delay input and output, and scalar stairstep updated output from analog scalar to digital scalar since they are actually digital values
+* Drivers: ThunderScope TS.NET versions prior to 0.1.0 are no longer supported due to SCPI interface changes
 
 ## Bugs fixed since v0.2.2
 
@@ -27,6 +30,7 @@ NOTE: This section only lists changes which are potentially breaking to an *end 
 * Font preferences would have invalid default values because InitializeSearchPaths() was not called before the PreferenceManager constructor, leading to an empty search path and inability to find the default font
 * Flickering in stream browser when external trigger channel is present (https://github.com/ngscopeclient/scopehal-apps/pull/1026)
 * Scalar Stairstep filter would fail to generate "updated" signal when trigger was stopped and restarted
+* SCPIDevice no longer fails to parse *IDN? replies containing an empty serial number (found on older ThunderScope beta/dev units)
 
 ## Other changes since v0.2.2
 

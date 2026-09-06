@@ -232,16 +232,27 @@ void TriggerGroup::Arm(TriggerType type)
 				break;
 
 			//Same as normal trigger, but also set auto flag
+			//(unless driver does auto natively)
 			case TriggerGroup::TRIGGER_TYPE_AUTO:
-				m_autoTriggerArmed = true;
 
-				if(!m_secondaries.empty())
+				if(m_primary->HasAutoTrigger())
 				{
-					LogTrace("Starting trigger for primary\n");
-					m_primary->StartSingleTrigger();
+					//TODO: how does auto trigger interact with secondary scopes in this mode?
+					m_primary->StartAutoTrigger();
 				}
+
 				else
-					m_primary->Start();
+				{
+					m_autoTriggerArmed = true;
+
+					if(!m_secondaries.empty())
+					{
+						LogTrace("Starting trigger for primary\n");
+						m_primary->StartSingleTrigger();
+					}
+					else
+						m_primary->Start();
+				}
 
 				break;
 
