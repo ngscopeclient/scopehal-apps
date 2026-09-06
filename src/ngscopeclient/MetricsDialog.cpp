@@ -211,6 +211,24 @@ bool MetricsDialog::DoRender()
 					"up with the instrument."
 					);
 
+				const auto& diag = s->GetDiagnosticsValues();
+				if(!diag.empty())
+				{
+					if(ImGui::TreeNode("Driver Diagnostics"))
+					{
+						ImGui::BeginDisabled();
+							for(auto& it : diag)
+							{
+								str = it.second->ToString();
+								ImGui::SetNextItemWidth(width);
+								ImGui::InputText(it.first.c_str(), &str);
+							}
+						ImGui::EndDisabled();
+
+						ImGui::TreePop();
+					}
+				}
+
 				ImGui::TreePop();
 			}
 		}
