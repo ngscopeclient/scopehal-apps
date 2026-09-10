@@ -51,7 +51,7 @@ elseif(${HOSTNAME} STREQUAL "arch" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=TGZ")
 
-# CI Debian Trixie
+# CI Debian Trixie with RTX 3050
 elseif(${HOSTNAME} STREQUAL "debian-stable" )
 	set(CTEST_SITE ci-debian-stable)
 	set(CTEST_BUILD_NAME x86_64-linux-debian-13-nvidia)
@@ -61,6 +61,17 @@ elseif(${HOSTNAME} STREQUAL "debian-stable" )
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
+
+# CI Debian Trixie with Intel Coffee Lake iGPU
+elseif(${HOSTNAME} STREQUAL "debian-stable-intel" )
+	set(CTEST_SITE ci-debian-stable-intel)
+	set(CTEST_BUILD_NAME x86_64-linux-debian-13-intel)
+	set(CTEST_DASHBOARD Continuous)
+	set(CTEST_GIT_COMMAND "/usr/bin/git")
+	message(STATUS "Found known CI config: debian-stable-intel")
+
+	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=OFF" "-DCPACK_GENERATOR=DEB")
 
 # CI Debian Trixie aarch64
 elseif(${HOSTNAME} STREQUAL "debian-stable-aarch64" )
