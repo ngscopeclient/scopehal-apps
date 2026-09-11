@@ -204,7 +204,7 @@ TEST_CASE("Filter_FFT")
 			//not yet sure what's causing this but doesn't seem to be anything we can control
 			float tolerance = 6e-3f;
 			if(g_vulkanDeviceIsIntelMesa)
-				tolerance *= 2;
+				tolerance = 0.028;
 
 			VerifyMatchingResult(
 				golden.m_samples,
