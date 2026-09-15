@@ -24,13 +24,15 @@ NOTE: This section only lists changes which are potentially breaking to an *end 
 
 ## Bugs fixed since v0.2.2
 
-* Filter graph editor would steal right-click events meant for dialogs floating above it (https://github.com/ngscopeclient/scopehal-apps/issues/1031)
-* Crash dragging waveform between groups (https://github.com/ngscopeclient/scopehal-apps/issues/983, https://github.com/ngscopeclient/scopehal-apps/pull/1030)
-* CSV import was broken on MacOS (https://github.com/ngscopeclient/scopehal-apps/issues/1112)
-* Font preferences would have invalid default values because InitializeSearchPaths() was not called before the PreferenceManager constructor, leading to an empty search path and inability to find the default font
-* Flickering in stream browser when external trigger channel is present (https://github.com/ngscopeclient/scopehal-apps/pull/1026)
-* Scalar Stairstep filter would fail to generate "updated" signal when trigger was stopped and restarted
-* SCPIDevice no longer fails to parse *IDN? replies containing an empty serial number (found on older ThunderScope beta/dev units)
+* Core: SCPIDevice no longer fails to parse *IDN? replies containing an empty serial number (found on older ThunderScope beta/dev units)
+* Filters: Scalar Stairstep filter would fail to generate "updated" signal when trigger was stopped and restarted
+* Filters: CSV import was broken on MacOS (https://github.com/ngscopeclient/scopehal-apps/issues/1112)
+* Filters: removed extra unconnected output from RGB LED decode
+* GUI: Filter graph editor would steal right-click events meant for dialogs floating above it (https://github.com/ngscopeclient/scopehal-apps/issues/1031)
+* GUI: Crash loading malformed scopesessions with invalid stream indexes
+* GUI: Crash dragging waveform between groups (https://github.com/ngscopeclient/scopehal-apps/issues/983, https://github.com/ngscopeclient/scopehal-apps/pull/1030)
+* GUI: Font preferences would have invalid default values because InitializeSearchPaths() was not called before the PreferenceManager constructor, leading to an empty search path and inability to find the default font
+* GUI: Flickering in stream browser when external trigger channel is present (https://github.com/ngscopeclient/scopehal-apps/pull/1026)
 
 ## Other changes since v0.2.2
 

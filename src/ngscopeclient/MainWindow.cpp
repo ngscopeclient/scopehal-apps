@@ -2857,11 +2857,14 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 				auto streams = an["streams"];
 				for(auto jt : streams)
 				{
-					auto chan = m_session.m_idtable.Lookup<OscilloscopeChannel>(jt.second["channel"].as<int>());
+					auto nchan = jt.second["channel"].as<int>();
+					auto chan = m_session.m_idtable.Lookup<OscilloscopeChannel>(nchan);
 					auto stream = jt.second["stream"].as<int>();
 					auto persist = jt.second["persistence"].as<bool>();
 					auto ramp = jt.second["colorRamp"].as<string>();
-					if(chan)
+
+					//Channel must exist, and also the stream
+					if(chan && (stream < (int)chan->GetStreamCount()) )
 					{
 						//Make the waveform area if needed
 						if(!area)
@@ -2874,8 +2877,9 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 					}
 					else
 					{
-						LogWarning("channel %d not found in area %d\n",
-							jt.second["channel"].as<int>(),
+						LogWarning("channel %d or stream %d not found in area %d\n",
+							nchan,
+							stream,
 							aid);
 					}
 				}
