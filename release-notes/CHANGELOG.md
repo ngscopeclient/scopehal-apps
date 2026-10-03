@@ -4,7 +4,9 @@ This is a running list of significant bug fixes and new features since the last 
 
 ## New features since v0.3
 
-None yet
+* Drivers: Initial R&S RTP support
+* Drivers: Improved stability of Keysight Infiniium driver
+* Filters: Initial version of 1000base-X raw driver (decodes 1000base-X PCS without Ethernet framing for strange proprietary devices)
 
 ## Breaking changes since v0.3
 
@@ -16,7 +18,7 @@ None yet
 
 ## Bugs fixed since v0.3
 
-None yet
+* PicoScope driver did not cache sample rate and memory depths
 
 ## Other changes since v0.3
 
