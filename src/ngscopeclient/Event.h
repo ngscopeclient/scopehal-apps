@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -46,7 +46,10 @@ public:
 	 */
 	void Signal()
 	{
-		m_ready = true;
+		{
+			std::unique_lock<std::mutex> lock(m_mutex);
+			m_ready = true;
+		}
 		m_cond.notify_one();
 	}
 
