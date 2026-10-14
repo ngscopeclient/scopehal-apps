@@ -55,12 +55,17 @@ public:
 	// Global initialization
     void testRunStarting(Catch::TestRunInfo const&) override
     {
-		g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
+		auto sink = new ColoredSTDLogSink(Severity::VERBOSE);
+		//auto sink = new ColoredSTDLogSink(Severity::TRACE);
+		//g_trace_filters.emplace("SCPISocketTransport");
+
+		g_log_sinks.emplace(g_log_sinks.begin(), sink);
 
 		if(!VulkanInit(true))
 			exit(1);
 		TransportStaticInit();
 		DriverStaticInit();
+		ScopeProtocolStaticInit();
 		InitializePlugins();
 
 		//This is a bit hacky but should work at least on Linux
@@ -121,6 +126,7 @@ void SetupScopeForSingleChannelDigitalInput(SCPIOscilloscope& scope)
 	trig->SetInput(0, scope.GetChannel(0));
 	trig->SetLevel(0.9);
 	scope.SetTrigger(trig);
+	scope.PushTrigger();
 
 	//Stop the trigger if it had been previously armed
 	scope.Stop();

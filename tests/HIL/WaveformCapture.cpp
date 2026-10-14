@@ -57,37 +57,58 @@ TEST_CASE("HIL_WaveformCapture")
 	LogNotice("Connected to scope make=%s model=%s serial=%s\n",
 		scope.GetVendor().c_str(), scope.GetName().c_str(), scope.GetSerial().c_str());
 
-	//Default setup for one digital input
-	SetupScopeForSingleChannelDigitalInput(scope);
+	{
+		LogNotice("Hardware setup\n");
+		LogIndenter li;
 
-	//Disable the output
-	//then wait to make sure the output of the signal generator has turned off
-	LogNotice("Disable output\n");
-	siggen.SendCommandQueued("SMA1:MUX OFF");		//for some reason we have to cycle from off to prbs and back to actually be off??
-	siggen.SendCommandQueued("SMA1:MUX PRBS7");
-	siggen.SendCommandQueued("SMA1:MUX OFF");
-	siggen.FlushCommandQueue();
-	this_thread::sleep_for(chrono::milliseconds(100));
+		//Default setup for one digital input
+		SetupScopeForSingleChannelDigitalInput(scope);
 
-	//Arm the trigger.
-	//It should NOT trigger as we have no signal coming in, make sure of this
-	LogNotice("Arm trigger\n");
-	scope.StartSingleTrigger();
-	scope.GetTransport()->FlushCommandQueue();
-	VerifyNoTrigger(scope);
+		//Disable the output
+		//then wait to make sure the output of the signal generator has turned off
+		LogNotice("Disable output\n");
+		siggen.SendCommandQueued("SMA1:MUX OFF");		//for some reason we have to cycle from off to prbs and back to actually be off??
+		siggen.SendCommandQueued("SMA1:MUX PRBS7");
+		siggen.SendCommandQueued("SMA1:MUX OFF");
+		siggen.FlushCommandQueue();
+		this_thread::sleep_for(chrono::milliseconds(100));
+	}
 
-	//Enable the output as a clock
-	LogNotice("Enable clock output\n");
-	siggen.SendCommandQueued("SMA1:MUX CLOCK");
-	siggen.FlushCommandQueue();
+	{
+		LogNotice("Check trigger with no signal applied\n");
+		LogIndenter li;
 
-	//Grab the waveform
-	AcquireWaveformWithTimeout(scope, 0.25);
+		//Arm the trigger.
+		//It should NOT trigger as we have no signal coming in, make sure of this
+		LogNotice("Arm trigger\n");
+		scope.StartSingleTrigger();
+		scope.GetTransport()->FlushCommandQueue();
+		VerifyNoTrigger(scope);
+	}
 
-	//Verify it's plausible (non-null, right number of samples)
-	auto data = scope.GetChannel(0)->GetData(0);
-	REQUIRE(data != nullptr);
-	auto dwfm = dynamic_cast<UniformAnalogWaveform*>(data);
-	REQUIRE(dwfm != nullptr);
-	REQUIRE(dwfm->size() == (1000 * 1000));
+	{
+		LogNotice("Check trigger with signal applied\n");
+		LogIndenter li;
+
+		//Enable the output as a clock
+		LogNotice("Enable clock output\n");
+		siggen.SendCommandQueued("SMA1:MUX CLOCK");
+		siggen.FlushCommandQueue();
+
+		//Grab the waveform
+		AcquireWaveformWithTimeout(scope, 0.25);
+	}
+
+	{
+		LogNotice("Validate acquired waveform\n");
+		LogIndenter li;
+
+		//Verify it's plausible (non-null, right number of samples)
+		auto data = scope.GetChannel(0)->GetData(0);
+		REQUIRE(data != nullptr);
+		auto dwfm = dynamic_cast<UniformAnalogWaveform*>(data);
+		REQUIRE(dwfm != nullptr);
+		LogNotice("Data is a non-null uniform analog waveform, %zu samples\n", dwfm->size());
+		REQUIRE(dwfm->size() == (1000 * 1000));
+	}
 }

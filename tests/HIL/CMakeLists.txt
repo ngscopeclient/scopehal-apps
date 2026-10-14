@@ -1,5 +1,6 @@
 add_executable(HIL
 	main.cpp
+	BasicMetrics.cpp
 	WaveformCapture.cpp
 )
 
