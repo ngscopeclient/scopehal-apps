@@ -16,7 +16,8 @@ None yet
 
 ## Bugs fixed since v0.3
 
-None yet
+* Fixed several issues related to triggering and memory depth control in Keysight Infiniium driver
+* Fixed several initialization bugs in R&S RTP driver
 
 ## Other changes since v0.3
 
