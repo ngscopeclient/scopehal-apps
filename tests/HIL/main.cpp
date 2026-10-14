@@ -63,8 +63,10 @@ public:
 		DriverStaticInit();
 		InitializePlugins();
 
-		//FIXME FIXME
-		g_searchPaths.push_back("/ceph/fast/home/azonenberg/code/scopehal-apps/debug-build/src/ngscopeclient");
+		//This is a bit hacky but should work at least on Linux
+		auto searchPath = GetDirOfCurrentExecutable() + "/../../src/ngscopeclient";
+		LogNotice("Adding %s to search path\n", searchPath.c_str());
+		g_searchPaths.push_back(searchPath);
 	}
 
 	//Clean up after the scope goes out of scope (pun not intended)
@@ -98,7 +100,7 @@ int main(int argc, char* argv[])
 /**
 	@brief Helper for initializing a scope with a single digital input channel
  */
-void SetupScopeForSingleChannelDigitalInput(Oscilloscope& scope)
+void SetupScopeForSingleChannelDigitalInput(SCPIOscilloscope& scope)
 {
 	//Enable channel 1 and only channel 1
 	LogNotice("Channel setup\n");
@@ -120,6 +122,9 @@ void SetupScopeForSingleChannelDigitalInput(Oscilloscope& scope)
 	trig->SetLevel(0.9);
 	scope.SetTrigger(trig);
 
+	//Stop the trigger if it had been previously armed
+	scope.Stop();
+
 	//Configure the channel
 	LogNotice("Frontend setup\n");
 	scope.SetChannelCoupling(0, OscilloscopeChannel::COUPLE_DC_1M);
@@ -127,6 +132,8 @@ void SetupScopeForSingleChannelDigitalInput(Oscilloscope& scope)
 	scope.SetChannelBandwidthLimit(0, 0);
 	scope.SetChannelVoltageRange(0, 0, 2.25);
 	scope.SetChannelOffset(0, 0, -0.9);
+
+	scope.GetTransport()->FlushCommandQueue();
 
 	//Sanity check only CH1 is enabled
 	REQUIRE(scope.GetEnabledChannelCount() == 1);
@@ -140,6 +147,12 @@ void VerifyNoTrigger(Oscilloscope& scope)
 	LogNotice("Wait, verify no trigger\n");
 	this_thread::sleep_for(chrono::milliseconds(250));
 	auto stat = scope.PollTrigger();
+
+	if(stat != Oscilloscope::TRIGGER_MODE_RUN)
+	{
+		LogError("Scope should not have triggered, but did anyway\n");
+	}
+
 	REQUIRE(stat == Oscilloscope::TRIGGER_MODE_RUN);
 }
 

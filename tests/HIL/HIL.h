@@ -38,7 +38,7 @@
 extern std::string g_siggenPath;
 extern std::string g_scopePath;
 
-void SetupScopeForSingleChannelDigitalInput(Oscilloscope& scope);
+void SetupScopeForSingleChannelDigitalInput(SCPIOscilloscope& scope);
 void VerifyNoTrigger(Oscilloscope& scope);
 bool AcquireWaveformWithTimeout(Oscilloscope& scope, float timeoutSec);
 
