@@ -112,11 +112,14 @@ TEST_CASE("HIL_BasicMetrics")
 	REQUIRE(ffmax != nullptr);
 	auto ffmin = dynamic_cast<MinimumFilter*>(Filter::CreateFilter("Minimum", "#ffffff"));
 	REQUIRE(ffmin != nullptr);
+	auto favg = dynamic_cast<AverageFilter*>(Filter::CreateFilter("Average", "#ffffff"));
+	REQUIRE(favg != nullptr);
 	fbase->SetInput("din", chan);
 	ftop->SetInput("din", chan);
 	ffreq->SetInput("din", chan);
 	ffmax->SetInput("in", chan);
 	ffmin->SetInput("in", chan);
+	favg->SetInput("in", chan);
 
 	//Set up executor
 	FilterGraphExecutor exec;
@@ -126,6 +129,7 @@ TEST_CASE("HIL_BasicMetrics")
 	nodes.emplace(ffreq);
 	nodes.emplace(ffmax);
 	nodes.emplace(ffmin);
+	nodes.emplace(favg);
 
 	{
 		LogNotice("Filter graph\n");
@@ -150,8 +154,10 @@ TEST_CASE("HIL_BasicMetrics")
 		auto vtop = ftop->GetScalarValue(1);
 		auto vmin = ffmin->GetScalarValue(1);
 		auto vmax = ffmax->GetScalarValue(1);
+		auto vavg = favg->GetScalarValue(0);
 		LogNotice("Min:  %s\n", volts.PrettyPrint(vmin).c_str());
 		LogNotice("Base: %s\n", volts.PrettyPrint(vbase).c_str());
+		LogNotice("Avg:  %s\n", volts.PrettyPrint(vavg).c_str());
 		LogNotice("Top:  %s\n", volts.PrettyPrint(vtop).c_str());
 		LogNotice("Max:  %s\n", volts.PrettyPrint(vmax).c_str());
 
@@ -160,6 +166,9 @@ TEST_CASE("HIL_BasicMetrics")
 
 		REQUIRE(vbase > -0.05);
 		REQUIRE(vbase < 0.15);
+
+		REQUIRE(vavg > 0.8);
+		REQUIRE(vavg < 1.0);
 
 		REQUIRE(vtop > 1.5);
 		REQUIRE(vtop < 1.95);

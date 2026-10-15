@@ -70,7 +70,7 @@ public:
 
 		//This is a bit hacky but should work at least on Linux
 		auto searchPath = GetDirOfCurrentExecutable() + "/../../src/ngscopeclient";
-		LogNotice("Adding %s to search path\n", searchPath.c_str());
+		//LogNotice("Adding %s to search path\n", searchPath.c_str());
 		g_searchPaths.push_back(searchPath);
 	}
 
