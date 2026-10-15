@@ -126,6 +126,7 @@ void SetupScopeForSingleChannelDigitalInput(SCPIOscilloscope& scope)
 	trig->SetInput(0, scope.GetChannel(0));
 	trig->SetLevel(0.9);
 	scope.SetTrigger(trig);
+	scope.SetTriggerOffset(0);
 	scope.PushTrigger();
 
 	//Stop the trigger if it had been previously armed

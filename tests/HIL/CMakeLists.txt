@@ -1,6 +1,7 @@
 add_executable(HIL
 	main.cpp
 	BasicMetrics.cpp
+	UARTDecode.cpp
 	WaveformCapture.cpp
 )
 

@@ -30,7 +30,7 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Unit test for basic waveform acquisition
+	@brief Unit test for waveform capture and some simple measurements
  */
 #ifdef _CATCH2_V3
 #include <catch2/catch_all.hpp>
@@ -185,6 +185,8 @@ TEST_CASE("HIL_BasicMetrics")
 	}
 
 	//Delete filters
+	for(auto n : nodes)
+		n->DetachInputs();
 	for(auto n : nodes)
 		delete n;
 }
