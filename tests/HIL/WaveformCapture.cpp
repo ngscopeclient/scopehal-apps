@@ -67,8 +67,7 @@ TEST_CASE("HIL_WaveformCapture")
 		//Disable the output
 		//then wait to make sure the output of the signal generator has turned off
 		LogNotice("Disable output\n");
-		siggen.SendCommandQueued("SMA1:MUX OFF");		//for some reason we have to cycle from off to prbs and back to actually be off??
-		siggen.SendCommandQueued("SMA1:MUX PRBS7");
+		siggen.SendCommandQueued("SMA1:MUX OFF");
 		siggen.SendCommandQueued("SMA1:MUX OFF");
 		siggen.FlushCommandQueue();
 		this_thread::sleep_for(chrono::milliseconds(100));
@@ -92,6 +91,7 @@ TEST_CASE("HIL_WaveformCapture")
 
 		//Enable the output as a clock
 		LogNotice("Enable clock output\n");
+		siggen.SendCommandQueued("SMA1:MUX CLOCK");
 		siggen.SendCommandQueued("SMA1:MUX CLOCK");
 		siggen.FlushCommandQueue();
 

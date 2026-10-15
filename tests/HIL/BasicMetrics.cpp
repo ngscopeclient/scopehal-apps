@@ -77,6 +77,7 @@ TEST_CASE("HIL_BasicMetrics")
 		//Enable the output as a clock
 		LogNotice("Enable clock output\n");
 		siggen.SendCommandQueued("SMA1:MUX CLOCK");
+		siggen.SendCommandQueued("SMA1:MUX CLOCK");
 		siggen.FlushCommandQueue();
 		this_thread::sleep_for(chrono::milliseconds(250));
 
