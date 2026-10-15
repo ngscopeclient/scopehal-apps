@@ -111,4 +111,7 @@ TEST_CASE("HIL_WaveformCapture")
 		LogNotice("Data is a non-null uniform analog waveform, %zu samples\n", dwfm->size());
 		REQUIRE(dwfm->size() == (1000 * 1000));
 	}
+
+	//Clear the waveforms so we don't get validation errors on shutdown
+	scope.GetChannel(0)->SetData(nullptr, 0);
 }
