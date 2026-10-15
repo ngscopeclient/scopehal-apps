@@ -84,8 +84,7 @@ TEST_CASE("HIL_UARTDecode")
 		//Enable the output as UART
 		LogNotice("Enable UART output\n");
 		siggen.SendCommandQueued("SMA1:MUX UART");
-		siggen.SendCommandQueued("SMA1:MUX UART");	//TODO: something is broken here in firmware
-		//siggen.FlushCommandQueue();
+		siggen.FlushCommandQueue();
 		this_thread::sleep_for(chrono::milliseconds(250));
 
 		//Grab the waveform

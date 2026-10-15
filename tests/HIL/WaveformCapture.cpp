@@ -68,7 +68,6 @@ TEST_CASE("HIL_WaveformCapture")
 		//then wait to make sure the output of the signal generator has turned off
 		LogNotice("Disable output\n");
 		siggen.SendCommandQueued("SMA1:MUX OFF");
-		siggen.SendCommandQueued("SMA1:MUX OFF");
 		siggen.FlushCommandQueue();
 		this_thread::sleep_for(chrono::milliseconds(100));
 	}
