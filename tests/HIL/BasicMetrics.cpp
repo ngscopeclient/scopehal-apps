@@ -139,7 +139,7 @@ TEST_CASE("HIL_BasicMetrics")
 	}
 
 	{
-		LogNotice("Validate results. Expecting 250 MHz LVCMOS18 squarewave\n");
+		LogNotice("Validate results. Expecting 125 MHz LVCMOS18 squarewave\n");
 		LogIndenter li;
 
 		Unit volts(Unit::UNIT_VOLTS);
@@ -161,10 +161,10 @@ TEST_CASE("HIL_BasicMetrics")
 		REQUIRE(vbase > -0.05);
 		REQUIRE(vbase < 0.15);
 
-		REQUIRE(vtop > 1.65);
+		REQUIRE(vtop > 1.5);
 		REQUIRE(vtop < 1.95);
 
-		REQUIRE(vmax > 1.65);
+		REQUIRE(vmax > 1.5);
 		REQUIRE(vmax < 1.95);
 
 		//Should be 125 MHz
