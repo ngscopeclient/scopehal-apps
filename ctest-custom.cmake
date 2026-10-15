@@ -142,10 +142,10 @@ elseif(${HOSTNAME} MATCHES "ubuntu-lts" )
 		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=OFF" "-DCPACK_GENERATOR=DEB")
 	endif()
 
-# CI Fedora 43
+# CI Fedora 44
 elseif(${HOSTNAME} STREQUAL "fedora" )
 	set(CTEST_SITE ci-fedora)
-	set(CTEST_BUILD_NAME x86_64-linux-fedora-43-llvmpipe)
+	set(CTEST_BUILD_NAME x86_64-linux-fedora-44-llvmpipe)
 	set(CTEST_DASHBOARD Continuous)
 	set(CTEST_GIT_COMMAND "/usr/bin/git")
 	message(STATUS "Found known CI config: fedora")
