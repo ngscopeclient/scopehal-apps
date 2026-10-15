@@ -184,6 +184,7 @@ TEST_CASE("HIL_BasicMetrics")
 		REQUIRE(nfreq < 125001000);
 	}
 
-	//Clear the waveforms so we don't get validation errors on shutdown
-	scope.GetChannel(0)->SetData(nullptr, 0);
+	//Delete filters
+	for(auto n : nodes)
+		delete n;
 }
