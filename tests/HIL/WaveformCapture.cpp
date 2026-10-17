@@ -32,82 +32,63 @@
 	@author Andrew D. Zonenberg
 	@brief Unit test for basic waveform acquisition
  */
-#ifdef _CATCH2_V3
-#include <catch2/catch_all.hpp>
-#else
-#include <catch2/catch.hpp>
-#endif
-
 #include "HIL.h"
 
 using namespace std;
 
-TEST_CASE("HIL_WaveformCapture")
+class WaveformCaptureTest : public HILTest
 {
-	//TODO: actually have scopehal driver here instead of doing it raw
-	LogNotice("Connecting to signal generator board\n");
-	SCPISocketTransport siggen(g_siggenPath);
-	auto siginfo = siggen.SendCommandQueuedWithReply("*IDN?");
-	LogNotice("siginfo = %s\n", siginfo.c_str());
+public:
+	WaveformCaptureTest()
+	{}
 
-	//TODO: Configure mux board we dont yet have
+	virtual ~WaveformCaptureTest()
+	{}
 
-	//Try to connect to the scope
-	ThunderScopeOscilloscope scope(new SCPITwinLanTransport(g_scopePath));
-	LogNotice("Connected to scope make=%s model=%s serial=%s\n",
-		scope.GetVendor().c_str(), scope.GetName().c_str(), scope.GetSerial().c_str());
-
+	virtual void Run()
 	{
-		LogNotice("Hardware setup\n");
-		LogIndenter li;
-
-		//Default setup for one digital input
-		SetupScopeForSingleChannelDigitalInput(scope);
+		HardwareSetup();
 
 		//Disable the output
 		//then wait to make sure the output of the signal generator has turned off
-		LogNotice("Disable output\n");
-		siggen.SendCommandQueued("SMA1:MUX OFF");
-		siggen.FlushCommandQueue();
-		this_thread::sleep_for(chrono::milliseconds(100));
+		{
+			LogNotice("Disable output\n");
+			m_siggen->SendCommandQueued("SMA1:MUX OFF");
+			SignalGeneratorSetupDone();
+		}
+
+		{
+			LogNotice("Check trigger with no signal applied\n");
+			LogIndenter li;
+
+			//Arm the trigger.
+			//It should NOT trigger as we have no signal coming in, make sure of this
+			LogNotice("Arm trigger\n");
+			m_scope->StartSingleTrigger();
+			m_scope->GetTransport()->FlushCommandQueue();
+			VerifyNoTrigger();
+		}
+
+		{
+			LogNotice("Check trigger with signal applied\n");
+			LogIndenter li;
+
+			//Enable the output as a clock
+			LogNotice("Enable clock output\n");
+			m_siggen->SendCommandQueued("SMA1:MUX CLOCK");
+			SignalGeneratorSetupDone();
+
+			//Grab the waveform
+			AcquireWaveformWithTimeout(0.25);
+		}
+
+		//Make sure it's plausible
+		SanityCheckWaveform(0, 1000 * 1000);
 	}
+};
 
-	{
-		LogNotice("Check trigger with no signal applied\n");
-		LogIndenter li;
-
-		//Arm the trigger.
-		//It should NOT trigger as we have no signal coming in, make sure of this
-		LogNotice("Arm trigger\n");
-		scope.StartSingleTrigger();
-		scope.GetTransport()->FlushCommandQueue();
-		VerifyNoTrigger(scope);
-	}
-
-	{
-		LogNotice("Check trigger with signal applied\n");
-		LogIndenter li;
-
-		//Enable the output as a clock
-		LogNotice("Enable clock output\n");
-		siggen.SendCommandQueued("SMA1:MUX CLOCK");
-		siggen.SendCommandQueued("SMA1:MUX CLOCK");
-		siggen.FlushCommandQueue();
-
-		//Grab the waveform
-		AcquireWaveformWithTimeout(scope, 0.25);
-	}
-
-	{
-		LogNotice("Validate acquired waveform\n");
-		LogIndenter li;
-
-		//Verify it's plausible (non-null, right number of samples)
-		auto data = scope.GetChannel(0)->GetData(0);
-		REQUIRE(data != nullptr);
-		auto dwfm = dynamic_cast<UniformAnalogWaveform*>(data);
-		REQUIRE(dwfm != nullptr);
-		LogNotice("Data is a non-null uniform analog waveform, %zu samples\n", dwfm->size());
-		REQUIRE(dwfm->size() == (1000 * 1000));
-	}
+TEST_CASE("HIL_WaveformCapture")
+{
+	WaveformCaptureTest test;
+	test.Run();
 }

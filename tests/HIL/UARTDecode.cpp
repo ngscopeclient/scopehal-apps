@@ -44,125 +44,86 @@
 
 using namespace std;
 
+class UARTDecodeTest : public HILTest
+{
+public:
+	UARTDecodeTest()
+	{}
+
+	virtual ~UARTDecodeTest()
+	{}
+
+	virtual void Run()
+	{
+		auto depth = 1000 * 1000 * 10;
+		HardwareSetup(depth);
+
+		{
+			LogNotice("Acquire waveform\n");
+			LogIndenter li;
+
+			//Enable the output
+			LogNotice("Enable UART output\n");
+			m_siggen->SendCommandQueued("SMA1:MUX UART");
+			SignalGeneratorSetupDone();
+
+			//Grab the waveform
+			LogNotice("Arm trigger\n");
+			m_scope->SetTriggerOffset(1e12);
+			m_scope->PushTrigger();
+			m_scope->StartSingleTrigger();
+			m_scope->GetTransport()->FlushCommandQueue();
+			AcquireWaveformWithTimeout(0.25);
+		}
+
+		//Make sure it's plausible
+		auto chan = m_scope->GetChannel(0);
+		SanityCheckWaveform(0, depth);
+
+		//Set up filter graph
+		auto fthresh = dynamic_cast<ThresholdFilter*>(Filter::CreateFilter("Threshold", "#ffffff"));
+		REQUIRE(fthresh != nullptr);
+		fthresh->GetThreshold().SetFloatVal(0.9);
+
+		auto fuart = dynamic_cast<UARTDecoder*>(Filter::CreateFilter("UART", "#ffffff"));
+		REQUIRE(fuart != nullptr);
+		fuart->GetBaud().SetIntVal(115200);
+
+		fthresh->SetInput("din", chan);
+		fuart->SetInput("din", fthresh);
+
+		m_nodes.emplace(fuart);
+		m_nodes.emplace(fthresh);
+
+		RunFilterGraph();
+
+		{
+			LogNotice("Validate results. Expecting hello world + index\n");
+			LogIndenter li;
+
+			LogNotice("UART has %zu error messages\n", fuart->GetMessages().size());
+			REQUIRE(!fuart->HasMessages());
+
+			//Check the decode
+			auto udata = dynamic_cast<ByteWaveform*>(fuart->GetData(0));
+			REQUIRE(udata != nullptr);
+			udata->PrepareForCpuAccess();
+			LogNotice("Got %zu bytes of data\n", udata->size());
+
+			//Get the data
+			string str;
+			for(size_t i=0; i<udata->size(); i++)
+				str += udata->m_samples[i];
+			LogNotice("Data: %s\n", str.c_str());
+
+			char num[128];
+			REQUIRE(1 == sscanf(str.c_str(), "hello world %127[0-9]", num));
+		}
+	}
+};
+
 TEST_CASE("HIL_UARTDecode")
 {
-	//TODO: actually have scopehal driver here instead of doing it raw
-	LogNotice("Connecting to signal generator board\n");
-	SCPISocketTransport siggen(g_siggenPath);
-	auto siginfo = siggen.SendCommandQueuedWithReply("*IDN?");
-	LogNotice("siginfo = %s\n", siginfo.c_str());
-
-	//TODO: Configure mux board we dont yet have
-
-	//Try to connect to the scope
-	ThunderScopeOscilloscope scope(new SCPITwinLanTransport(g_scopePath));
-	LogNotice("Connected to scope make=%s model=%s serial=%s\n",
-		scope.GetVendor().c_str(), scope.GetName().c_str(), scope.GetSerial().c_str());
-
-	{
-		LogNotice("Hardware setup\n");
-		LogIndenter li;
-
-		//Default setup for one digital input
-		SetupScopeForSingleChannelDigitalInput(scope);
-	}
-
-	{
-		LogNotice("Acquisition config for UART\n");
-		LogIndenter li;
-
-		scope.SetSampleDepth(1000 * 1000 * 10);
-		scope.SetTriggerOffset(1e12);
-		scope.PushTrigger();
-		scope.GetTransport()->FlushCommandQueue();
-	}
-
-	{
-		LogNotice("Acquire waveform\n");
-		LogIndenter li;
-
-		//Enable the output as UART
-		LogNotice("Enable UART output\n");
-		siggen.SendCommandQueued("SMA1:MUX UART");
-		siggen.FlushCommandQueue();
-		this_thread::sleep_for(chrono::milliseconds(250));
-
-		//Grab the waveform
-		LogNotice("Arm trigger\n");
-		scope.StartSingleTrigger();
-		scope.GetTransport()->FlushCommandQueue();
-		AcquireWaveformWithTimeout(scope, 0.5);
-	}
-
-	auto chan = scope.GetChannel(0);
-	auto data = chan->GetData(0);
-	{
-		LogNotice("Sanity check waveform\n");
-		LogIndenter li;
-
-		//Verify it's plausible (non-null, right number of samples)
-		REQUIRE(data != nullptr);
-		auto dwfm = dynamic_cast<UniformAnalogWaveform*>(data);
-		REQUIRE(dwfm != nullptr);
-		LogNotice("Data is a non-null uniform analog waveform, %zu samples\n", dwfm->size());
-		REQUIRE(dwfm->size() == (1000 * 1000 * 10));
-	}
-
-	//Set up filter graph
-	auto fthresh = dynamic_cast<ThresholdFilter*>(Filter::CreateFilter("Threshold", "#ffffff"));
-	REQUIRE(fthresh != nullptr);
-	fthresh->GetThreshold().SetFloatVal(0.9);
-
-	auto fuart = dynamic_cast<UARTDecoder*>(Filter::CreateFilter("UART", "#ffffff"));
-	REQUIRE(fuart != nullptr);
-	fuart->GetBaud().SetIntVal(115200);
-
-	fthresh->SetInput("din", chan);
-	fuart->SetInput("din", fthresh);
-
-	//Set up executor
-	FilterGraphExecutor exec;
-	set<FlowGraphNode*> nodes;
-	nodes.emplace(fthresh);
-	nodes.emplace(fuart);
-
-	{
-		LogNotice("Filter graph\n");
-		LogIndenter li;
-
-		//Run it
-		double start = GetTime();
-		exec.RunBlocking(nodes);
-		double dt = GetTime() - start;
-		LogNotice("Filter graph took %.3f ms\n", dt * 1000);
-	}
-
-	{
-		LogNotice("Validate results. Expecting hello world + index\n");
-		LogIndenter li;
-
-		LogNotice("UART has %zu error messages\n", fuart->GetMessages().size());
-		REQUIRE(!fuart->HasMessages());
-
-		//Check the decode
-		auto udata = dynamic_cast<ByteWaveform*>(fuart->GetData(0));
-		REQUIRE(udata != nullptr);
-		udata->PrepareForCpuAccess();
-		LogNotice("Got %zu bytes of data\n", udata->size());
-
-		//Get the data
-		string str;
-		for(size_t i=0; i<udata->size(); i++)
-			str += udata->m_samples[i];
-		LogNotice("Data: %s\n", str.c_str());
-
-		char num[128];
-		REQUIRE(1 == sscanf(str.c_str(), "hello world %127[0-9]", num));
-	}
-
-	//Delete filters
-	for(auto n : nodes)
-		n->DetachInputs();
-	for(auto n : nodes)
-		delete n;
+	UARTDecodeTest test;
+	test.Run();
 }

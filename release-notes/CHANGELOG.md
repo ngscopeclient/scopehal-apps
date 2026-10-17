@@ -16,12 +16,15 @@ None yet
 
 ## Bugs fixed since v0.3
 
+* Core: ensure scratch buffers are freed before shutting down Vulkan (fixes potential crash during exit)
+* Core: FlowGraphNode::DetachInputs would crash if some inputs were null and others were not
+* Filters: PRBS decode gave occasional incorrect outputs with very short inputs
 * Fixed several issues related to triggering and memory depth control in Keysight Infiniium driver
 * Fixed several initialization bugs in R&S RTP driver
 
 ## Other changes since v0.3
 
-None yet
+* Added several new hardware-in-loop tests for ThunderScope + FPGA board running filters on real waveforms
 
 ## Known issues
 

@@ -30,16 +30,20 @@
 #ifndef HIL_h
 #define HIL_h
 
+#ifdef _CATCH2_V3
+#include <catch2/catch_all.hpp>
+#else
+#include <catch2/catch.hpp>
+#endif
+
 #include "../../lib/scopehal/scopehal.h"
 #include "../../lib/scopehal/ThunderScopeOscilloscope.h"
 #include "../../lib/scopehal/SCPITwinLanTransport.h"
 #include "../../lib/scopeprotocols/scopeprotocols.h"
 
+#include "HILTest.h"
+
 extern std::string g_siggenPath;
 extern std::string g_scopePath;
-
-void SetupScopeForSingleChannelDigitalInput(SCPIOscilloscope& scope);
-void VerifyNoTrigger(Oscilloscope& scope);
-bool AcquireWaveformWithTimeout(Oscilloscope& scope, float timeoutSec);
 
 #endif

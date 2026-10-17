@@ -1,6 +1,10 @@
 add_executable(HIL
 	main.cpp
+	HILTest.cpp
+
 	BasicMetrics.cpp
+	PRBS7Decode.cpp
+	PRBS31Decode.cpp
 	UARTDecode.cpp
 	WaveformCapture.cpp
 )
