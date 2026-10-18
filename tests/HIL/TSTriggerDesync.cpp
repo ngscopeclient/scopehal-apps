@@ -125,7 +125,7 @@ public:
 			//Grab the waveform
 			m_scope->Start();
 			m_scope->GetTransport()->FlushCommandQueue();
-			for(size_t i=0; i</*5*/1; i++)
+			for(size_t i=0; i<5; i++)
 			{
 				LogIndenter li2;
 
