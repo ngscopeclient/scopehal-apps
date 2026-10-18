@@ -18,6 +18,7 @@ None yet
 
 * Core: ensure scratch buffers are freed before shutting down Vulkan (fixes potential crash during exit)
 * Core: FlowGraphNode::DetachInputs would crash if some inputs were null and others were not
+* Drivers: ThunderScope now checks sequence numbers after single-shot trigger to prevent stale data being left in buffer
 * Filters: PRBS decode gave occasional incorrect outputs with very short inputs
 * Fixed several issues related to triggering and memory depth control in Keysight Infiniium driver
 * Fixed several initialization bugs in R&S RTP driver
