@@ -6,6 +6,7 @@ add_executable(HIL
 	PRBS7Decode.cpp
 	PRBS31Decode.cpp
 	UARTDecode.cpp
+	TSTriggerDesync.cpp
 	WaveformCapture.cpp
 )
 

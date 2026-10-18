@@ -30,7 +30,7 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Unit test for UART
+	@brief Unit test for PRBS31 and CDR PLL
  */
 #ifdef _CATCH2_V3
 #include <catch2/catch_all.hpp>
