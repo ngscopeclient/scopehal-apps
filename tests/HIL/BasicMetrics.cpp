@@ -44,6 +44,8 @@
 #include "../../lib/scopeprotocols/TopMeasurement.h"
 #include "../../lib/scopeprotocols/MinimumFilter.h"
 #include "../../lib/scopeprotocols/MaximumFilter.h"
+#include "../../lib/scopeprotocols/PkPkMeasurement.h"
+#include "../../lib/scopeprotocols/PeriodMeasurement.h"
 
 using namespace std;
 
@@ -94,12 +96,19 @@ public:
 		REQUIRE(ffmin != nullptr);
 		auto favg = dynamic_cast<AverageFilter*>(Filter::CreateFilter("Average", "#ffffff"));
 		REQUIRE(favg != nullptr);
+		auto fpp = dynamic_cast<PkPkMeasurement*>(Filter::CreateFilter("Peak-To-Peak", "#ffffff"));
+		REQUIRE(fpp != nullptr);
+		auto fper = dynamic_cast<PeriodMeasurement*>(Filter::CreateFilter("Period", "#ffffff"));
+		REQUIRE(fper != nullptr);
+
 		fbase->SetInput("din", chan);
 		ftop->SetInput("din", chan);
 		ffreq->SetInput("din", chan);
 		ffmax->SetInput("in", chan);
 		ffmin->SetInput("in", chan);
 		favg->SetInput("in", chan);
+		fpp->SetInput("din", chan);
+		fper->SetInput("din", chan);
 
 		m_nodes.emplace(fbase);
 		m_nodes.emplace(ftop);
@@ -107,6 +116,8 @@ public:
 		m_nodes.emplace(ffmax);
 		m_nodes.emplace(ffmin);
 		m_nodes.emplace(favg);
+		m_nodes.emplace(fpp);
+		m_nodes.emplace(fper);
 
 		RunFilterGraph();
 
@@ -115,6 +126,8 @@ public:
 			LogIndenter li;
 
 			Unit volts(Unit::UNIT_VOLTS);
+			Unit hz(Unit::UNIT_HZ);
+			Unit fs(Unit::UNIT_FS);
 
 			//This is a LVCMOS18 signal into a hi-Z input.
 			//We should have base roughly around zero and top roughly around 1.8V
@@ -123,11 +136,14 @@ public:
 			auto vmin = ffmin->GetScalarValue(1);
 			auto vmax = ffmax->GetScalarValue(1);
 			auto vavg = favg->GetScalarValue(0);
+			auto vpp = fpp->GetScalarValue(1);
+
 			LogNotice("Min:  %s\n", volts.PrettyPrint(vmin).c_str());
 			LogNotice("Base: %s\n", volts.PrettyPrint(vbase).c_str());
 			LogNotice("Avg:  %s\n", volts.PrettyPrint(vavg).c_str());
 			LogNotice("Top:  %s\n", volts.PrettyPrint(vtop).c_str());
 			LogNotice("Max:  %s\n", volts.PrettyPrint(vmax).c_str());
+			LogNotice("P-P:  %s\n", volts.PrettyPrint(vpp).c_str());
 
 			REQUIRE(vmin > -0.05);
 			REQUIRE(vmin < 0.15);
@@ -144,12 +160,21 @@ public:
 			REQUIRE(vmax > 1.5);
 			REQUIRE(vmax < 1.95);
 
-			//Should be 125 MHz
-			Unit hz(Unit::UNIT_HZ);
+			REQUIRE(vpp > 1.5);
+			REQUIRE(vpp < 1.95);
+
+			//Should be 125 MHz / 8 ns
 			auto nfreq = ffreq->GetScalarValue(1);
+			auto nper = fper->GetScalarValue(1);
+
 			LogNotice("Frequency: %s\n", hz.PrettyPrint(nfreq).c_str());
+			LogNotice("Period:    %s\n", fs.PrettyPrint(nper).c_str());
+
 			REQUIRE(nfreq > 124999000);
 			REQUIRE(nfreq < 125001000);
+
+			REQUIRE(nper > 7999000);
+			REQUIRE(nper < 8001000);
 		}
 	}
 };
