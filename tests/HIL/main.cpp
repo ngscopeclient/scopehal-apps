@@ -55,10 +55,10 @@ public:
 	// Global initialization
     void testRunStarting(Catch::TestRunInfo const&) override
     {
-		auto sink = new ColoredSTDLogSink(Severity::VERBOSE);
-		//auto sink = new ColoredSTDLogSink(Severity::TRACE);
-		//g_trace_filters.emplace("SCPISocketTransport");
-		//g_trace_filters.emplace("ThunderScopeOscilloscope");
+		//auto sink = new ColoredSTDLogSink(Severity::VERBOSE);
+		auto sink = new ColoredSTDLogSink(Severity::TRACE);
+		g_trace_filters.emplace("SCPISocketTransport");
+		g_trace_filters.emplace("ThunderScopeOscilloscope");
 
 		g_log_sinks.emplace(g_log_sinks.begin(), sink);
 
