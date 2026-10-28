@@ -60,7 +60,7 @@ elseif(${HOSTNAME} STREQUAL "debian-stable" )
 	message(STATUS "Found known CI config: debian-stable")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB" "-DENABLE_HIL_TESTS=ON" "-DHIL_SIGGEN_PATH=fpgadev.lab.poulsbo.antikernel.net:8000" "-DHIL_TS_PATH=fpgadev.lab.poulsbo.antikernel.net:5025:5026")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB" "-DENABLE_HIL_TESTS=ON" "-DHIL_SIGGEN_PATH=fpgadev.lab.poulsbo.antikernel.net:8000" "-DHIL_TS_PATH=fpgadev.lab.poulsbo.antikernel.net:5025:5026" "-DHIL_RELAY_PATH=fpgadev.lab.poulsbo.antikernel.net:8001")
 
 # CI Debian Trixie with Intel Coffee Lake iGPU
 elseif(${HOSTNAME} STREQUAL "debian-stable-intel" )
