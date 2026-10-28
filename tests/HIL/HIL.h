@@ -45,5 +45,6 @@
 
 extern std::string g_siggenPath;
 extern std::string g_scopePath;
+extern std::string g_relayPath;
 
 #endif

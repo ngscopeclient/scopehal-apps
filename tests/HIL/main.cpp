@@ -44,6 +44,7 @@
 
 std::string g_siggenPath;
 std::string g_scopePath;
+std::string g_relayPath;
 
 using namespace std;
 
@@ -90,7 +91,8 @@ int main(int argc, char* argv[])
 	auto cli =
 		session.cli() |
 		Catch::Clara::Opt(g_siggenPath, "signal generator")["--siggen"]("host:port of signal generator") |
-		Catch::Clara::Opt(g_scopePath, "scope")["--scope"]("host:port of oscilloscope");
+		Catch::Clara::Opt(g_scopePath, "scope")["--scope"]("host:port1:port2 of oscilloscope") |
+		Catch::Clara::Opt(g_relayPath, "relay")["--relay"]("host:port of rellay board");
     session.cli(cli);
 
     auto result = session.applyCommandLine(argc, argv);

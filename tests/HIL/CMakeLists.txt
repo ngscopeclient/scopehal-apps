@@ -26,6 +26,6 @@ endif()
 
 catch_discover_tests(
 	HIL
-	EXTRA_ARGS --siggen ${HIL_SIGGEN_PATH} --scope ${HIL_TS_PATH}
+	EXTRA_ARGS --siggen ${HIL_SIGGEN_PATH} --scope ${HIL_TS_PATH} --relay ${HIL_RELAY_PATH}
 	PROPERTIES RUN_SERIAL
 	)

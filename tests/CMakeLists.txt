@@ -14,8 +14,11 @@ if(ENABLE_HIL_TESTS)
 	if(NOT HIL_TS_PATH)
 		message(FATAL_ERROR "Must specify HIL_TS_PATH if ENABLE_HIL_TESTS is set")
 	endif()
+	if(NOT HIL_RELAY_PATH)
+		message(FATAL_ERROR "Must specify HIL_RELAY_PATH if ENABLE_HIL_TESTS is set")
+	endif()
 
-	message(STATUS "HIL test signal generator UART is at ${HIL_SIGGEN_PATH}, ThunderScope is at ${HIL_TS_PATH}")
+	message(STATUS "HIL FPGA board is at ${HIL_SIGGEN_PATH}, ThunderScope is at ${HIL_TS_PATH}, relay at ${HIL_RELAY_PATH}")
 	add_subdirectory("HIL")
 
 else()

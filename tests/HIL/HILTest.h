@@ -40,9 +40,15 @@ public:
 	virtual ~HILTest();
 
 	virtual void Run() =0;
-	virtual void HardwareSetup(size_t memoryDepth = 1000 * 1000);
+	virtual void HardwareSetup(
+		size_t memoryDepth = 1000 * 1000,
+		bool sel0 = false,
+		bool sel1 = false,
+		bool sel2 = false,
+		bool sel3 = false);
 
 protected:
+	void SetupRelayMuxes(bool sel0, bool sel1, bool sel2, bool sel3);
 	void SetupScopeForSingleChannelDigitalInput(size_t memoryDepth = 1000 * 1000);
 	bool AcquireWaveformWithTimeout(float timeoutSec);
 	void VerifyNoTrigger();
@@ -57,6 +63,7 @@ protected:
 	UniformAnalogWaveform* SanityCheckWaveform(size_t channel, size_t expectedDepth);
 
 	std::unique_ptr<SCPISocketTransport> m_siggen;
+	std::unique_ptr<SCPISocketTransport> m_mux;
 	std::unique_ptr<ThunderScopeOscilloscope> m_scope;
 
 	FilterGraphExecutor m_executor;

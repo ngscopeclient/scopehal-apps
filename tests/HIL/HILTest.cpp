@@ -37,11 +37,20 @@ using namespace std;
 HILTest::HILTest()
 {
 	LogNotice("Connecting to signal generator board\n");
-	m_siggen = make_unique<SCPISocketTransport>(g_siggenPath);
-	auto siginfo = m_siggen->SendCommandQueuedWithReply("*IDN?");
-	LogNotice("siginfo = %s\n", siginfo.c_str());
+	{
+		LogIndenter li;
+		m_siggen = make_unique<SCPISocketTransport>(g_siggenPath);
+		auto siginfo = m_siggen->SendCommandQueuedWithReply("*IDN?");
+		LogNotice("siginfo = %s\n", siginfo.c_str());
+	}
 
-	//TODO: connect to mux board once we have it
+	LogNotice("Connecting to relay/mux board\n");
+	{
+		LogIndenter li;
+		m_mux = make_unique<SCPISocketTransport>(g_relayPath);
+		auto muxinfo = m_mux->SendCommandQueuedWithReply("*IDN?");
+		LogNotice("muxinfo = %s\n", muxinfo.c_str());
+	}
 
 	//Try to connect to the scope
 	m_scope = make_unique<ThunderScopeOscilloscope>(new SCPITwinLanTransport(g_scopePath));
@@ -61,10 +70,22 @@ HILTest::~HILTest()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Test setup helpers
 
-void HILTest::HardwareSetup(size_t memoryDepth)
+void HILTest::SetupRelayMuxes(bool sel0, bool sel1, bool sel2, bool sel3)
+{
+	m_mux->SendCommandQueued(string("CHAN0:MUX ") + (sel0 ? "B" : "A"));
+	m_mux->SendCommandQueued(string("CHAN1:MUX ") + (sel1 ? "B" : "A"));
+	m_mux->SendCommandQueued(string("CHAN2:MUX ") + (sel2 ? "B" : "A"));
+	m_mux->SendCommandQueued(string("CHAN3:MUX ") + (sel3 ? "B" : "A"));
+	m_mux->FlushCommandQueue();
+}
+
+void HILTest::HardwareSetup(size_t memoryDepth, bool sel0, bool sel1, bool sel2, bool sel3)
 {
 	LogNotice("Hardware setup\n");
 	LogIndenter li;
+
+	//Mux config
+	SetupRelayMuxes(sel0, sel1, sel2, sel3);
 
 	//Default setup for one digital input
 	SetupScopeForSingleChannelDigitalInput(memoryDepth);
