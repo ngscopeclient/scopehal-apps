@@ -714,7 +714,7 @@ float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int m
 {
 	static const float steps[3] = {1, 2, 5};
 
-	for(int exp = -4; exp < 12; exp ++)
+	for(int exp = -8; exp < 12; exp ++)
 	{
 		for(int i=0; i<3; i++)
 		{
@@ -2942,7 +2942,6 @@ void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& grid
 		//round to next power of two
 		selected_step = pow(2, round(log2(selected_step)));
 	}
-
 
 	float bottom_edge = (ybot - theight/2);
 	float top_edge = (ytop + theight/2);

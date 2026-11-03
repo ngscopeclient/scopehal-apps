@@ -4,7 +4,8 @@ This is a running list of significant bug fixes and new features since the last 
 
 ## New features since v0.3
 
-None yet
+* GUI: grid auto scaling now handles very small values (e.g. nA) better
+* Core: Fixed bug where very small current values would pretty-print as mA when inappropriate (e.g. 0.001 mA instead of 1 uA)
 
 ## Breaking changes since v0.3
 
