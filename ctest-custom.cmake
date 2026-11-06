@@ -56,6 +56,12 @@ elseif(${HOSTNAME} STREQUAL "arch" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=TGZ")
 
+	# Re-run the test with llvmpipe after we're finished
+	# TODO: we do not actually have llvmpipe installed on the Arch so it won't work until we add that
+	#set(SECOND_TEST 1)
+	#set(SECOND_TEST_DEVICE 1)
+	#set(SECOND_TEST_NAME "x86_64-linux-arch-llvmpipe")
+
 # CI Debian Trixie with RTX 3050
 elseif(${HOSTNAME} STREQUAL "debian-stable" )
 	set(CTEST_SITE ci-debian-stable)
@@ -67,6 +73,11 @@ elseif(${HOSTNAME} STREQUAL "debian-stable" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB" "-DENABLE_HIL_TESTS=ON" "-DHIL_SIGGEN_PATH=fpgadev.lab.poulsbo.antikernel.net:8000" "-DHIL_TS_PATH=fpgadev.lab.poulsbo.antikernel.net:5025:5026" "-DHIL_RELAY_PATH=fpgadev.lab.poulsbo.antikernel.net:8001")
 
+	# Re-run the test with llvmpipe after we're finished
+	set(SECOND_TEST 1)
+	set(SECOND_TEST_DEVICE 1)
+	set(SECOND_TEST_NAME "x86_64-linux-debian-13-llvmpipe")
+
 # CI Debian Trixie with Intel Coffee Lake iGPU
 elseif(${HOSTNAME} STREQUAL "debian-stable-intel" )
 	set(CTEST_SITE ci-debian-stable-intel)
@@ -77,6 +88,8 @@ elseif(${HOSTNAME} STREQUAL "debian-stable-intel" )
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=OFF" "-DCPACK_GENERATOR=DEB")
+
+	# No need to rerun with llvmpipe here since we already did that on the nvidia node
 
 # CI Debian Trixie aarch64 with virtio-venus
 elseif(${HOSTNAME} STREQUAL "debian-stable-aarch64" )
@@ -105,6 +118,11 @@ elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
 
+	# Re-run the test with llvmpipe after we're finished
+	set(SECOND_TEST 1)
+	set(SECOND_TEST_DEVICE 1)
+	set(SECOND_TEST_NAME "x86_64-linux-debian-12-llvmpipe")
+
 # CI Ubuntu Noble
 elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
 	set(CTEST_SITE ci-ubuntu-oldlts)
@@ -115,6 +133,11 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
+
+	# Re-run the test with llvmpipe after we're finished
+	set(SECOND_TEST 1)
+	set(SECOND_TEST_DEVICE 1)
+	set(SECOND_TEST_NAME "x86_64-linux-ubuntu-24-04-llvmpipe")
 
 # CI Ubuntu Resolute
 elseif(${HOSTNAME} MATCHES "ubuntu-lts" )
@@ -177,6 +200,8 @@ elseif(${HOSTNAME} STREQUAL "win11" )
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DWIXPATH=C:\\PROGRA~2\\WIXTOO~1.14\\bin" "-DCPACK_GENERATOR=WIX") # don't build docs on windows for now, TODO figure that out
+
+	# TODO: add software vulkan to the windows node??
 
 # CI MacOS ARM64, for whatever reason it reports the FQDN not just the hostname
 elseif(${HOSTNAME} STREQUAL "macos.cidmz.poulsbo.antikernel.net" )
