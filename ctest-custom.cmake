@@ -232,7 +232,7 @@ if(${SECOND_TEST})
 
 	ctest_start(${CTEST_DASHBOARD})
 	ctest_update()
-	ctest_configure(OPTIONS "${CONFIGURE_OPTIONS}")
+	ctest_configure(OPTIONS "${CONFIGURE_OPTIONS} -DSECOND_TEST=1 -DSECOND_TEST_DEVICE=${SECOND_TEST_DEVICE}")
 	ctest_test()
 	ctest_submit()
 
