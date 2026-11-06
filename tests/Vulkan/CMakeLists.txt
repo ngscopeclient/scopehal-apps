@@ -18,4 +18,4 @@ endif()
 
 if(${SECOND_TEST})
 	set_property(TEST VulkanSanityCheck APPEND PROPERTY ENVIRONMENT "SCOPEHAL_VULKAN_DEVICE_OVERRIDE=${SECOND_TEST_DEVICE}")
-end
+endif()
