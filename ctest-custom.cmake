@@ -30,6 +30,11 @@ list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "linker input file unused because lin
 
 set(STATIC_ANALYSIS 0)
 
+# By default, we are not doing a second test cycle
+set(SECOND_TEST 0)
+set(SECOND_TEST_DEVICE 0)
+set(SECOND_TEST_NAME "")
+
 # azonenberg's dev box for testing
 if(${HOSTNAME} STREQUAL "havequick" )
 	set(CTEST_SITE dev-havequick)
@@ -83,6 +88,11 @@ elseif(${HOSTNAME} STREQUAL "debian-stable-aarch64" )
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
+
+	# Re-run the test with llvmpipe after we're finished
+	set(SECOND_TEST 1)
+	set(SECOND_TEST_DEVICE 1)
+	set(SECOND_TEST_NAME "aarch64-linux-debian-13-llvmpipe")
 
 # CI Debian Bookworm
 elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
@@ -171,7 +181,7 @@ elseif(${HOSTNAME} STREQUAL "win11" )
 # CI MacOS ARM64, for whatever reason it reports the FQDN not just the hostname
 elseif(${HOSTNAME} STREQUAL "macos.cidmz.poulsbo.antikernel.net" )
 	set(CTEST_SITE ci-macos)
-	set(CTEST_BUILD_NAME aarch64-macos-15-6-moltenvk)
+	set(CTEST_BUILD_NAME aarch64-macos-27-2-moltenvk)
 	set(CTEST_DASHBOARD Continuous)
 	set(CTEST_CMAKE_GENERATOR "Ninja")
 	set(CTEST_BINARY_DIRECTORY "/Users/ci/Documents/scopehal-apps/build")
@@ -192,22 +202,31 @@ else()
 	message(FATAL_ERROR "No test config matched")
 endif()
 
+message(STATUS "Running update and configure")
 ctest_start(${CTEST_DASHBOARD})
 
 #report version number but don't do anything else
 set(CTEST_UPDATE_VERSION_ONLY 1)
 ctest_update()
-
 ctest_configure(OPTIONS "${CONFIGURE_OPTIONS}")
+
+message(STATUS "Running build")
 ctest_build(FLAGS "-j${N_PROCS}")
 
 #Don't run unit tests if doing static analysis
 if(NOT ${STATIC_ANALYSIS})
+	message(STATUS "Running tests")
 	ctest_test()
 endif()
 
 #ctest_coverage()
+message(STATUS "Submitting results");
 set(CTEST_DROP_METHOD https)
 set(CTEST_DROP_SITE dashboard.ngscopeclient.org)
 set(CTEST_DROP_LOCATION /submit.php?project=ngscopeclient)
 ctest_submit()
+
+# If we're doing a second test cycle with different environment, address that now
+if(SECOND_TEST) begin
+	message(STATUS "TODO second test cycle")
+endif()
