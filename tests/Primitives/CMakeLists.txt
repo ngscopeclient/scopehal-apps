@@ -23,7 +23,11 @@ add_custom_command(TARGET Primitives POST_BUILD
 	)
 endif()
 
-catch_discover_tests(Primitives)
+if(${SECOND_TEST})
+	catch_discover_tests(Primitives PROPERTIES ENVIRONMENT "SCOPEHAL_VULKAN_DEVICE_OVERRIDE=${SECOND_TEST_DEVICE}")
+else()
+	catch_discover_tests(Primitives)
+endif()
 
 add_dependencies(Primitives
 	ngprotoshaders

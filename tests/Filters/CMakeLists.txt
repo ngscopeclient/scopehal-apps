@@ -38,7 +38,11 @@ add_custom_command(TARGET Filters POST_BUILD
 	)
 endif()
 
-catch_discover_tests(Filters)
+if(${SECOND_TEST})
+	catch_discover_tests(Filters PROPERTIES ENVIRONMENT "SCOPEHAL_VULKAN_DEVICE_OVERRIDE=${SECOND_TEST_DEVICE}")
+else()
+	catch_discover_tests(Filters)
+endif()
 
 add_dependencies(Filters
 	ngprotoshaders
