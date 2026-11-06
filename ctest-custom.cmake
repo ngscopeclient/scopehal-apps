@@ -220,7 +220,7 @@ if(NOT ${STATIC_ANALYSIS})
 endif()
 
 #ctest_coverage()
-message(STATUS "Submitting results");
+message(STATUS "Submitting results")
 set(CTEST_DROP_METHOD https)
 set(CTEST_DROP_SITE dashboard.ngscopeclient.org)
 set(CTEST_DROP_LOCATION /submit.php?project=ngscopeclient)
