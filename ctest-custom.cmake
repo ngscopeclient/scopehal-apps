@@ -228,11 +228,11 @@ ctest_submit()
 
 # If we're doing a second test cycle with different environment, address that now
 if(${SECOND_TEST})
-	message(STATUS "TODO second test cycle")
-
 	set(CTEST_BUILD_NAME ${SECOND_TEST_NAME})
 
 	ctest_start(${CTEST_DASHBOARD})
+	ctest_update()
+	ctest_configure(OPTIONS "${CONFIGURE_OPTIONS}")
 	ctest_test()
 	ctest_submit()
 
