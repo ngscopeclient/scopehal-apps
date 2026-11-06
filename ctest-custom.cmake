@@ -227,6 +227,6 @@ set(CTEST_DROP_LOCATION /submit.php?project=ngscopeclient)
 ctest_submit()
 
 # If we're doing a second test cycle with different environment, address that now
-if(SECOND_TEST) begin
+if(SECOND_TEST)
 	message(STATUS "TODO second test cycle")
 endif()
