@@ -42,9 +42,12 @@
 #endif
 #include "Primitives.h"
 
+#include "../../lib/scopeprotocols/scopeprotocols.h"
+
 using namespace std;
 
-mt19937 g_rng;
+minstd_rand g_rng;
+MockOscilloscope* g_scope;
 
 // Global initialization
 class testRunListener : public Catch::EventListenerBase
@@ -61,16 +64,25 @@ public:
 		TransportStaticInit();
 		DriverStaticInit();
 		InitializePlugins();
+		ScopeProtocolStaticInit();
 
 		//Add search path
 		g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/ngscopeclient/");
 
 		//Initialize the RNG
 		g_rng.seed(0);
+
+		//Create some fake scope channels
+		g_scope = new MockOscilloscope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
+		g_scope->AddChannel(new OscilloscopeChannel(
+			g_scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
+		g_scope->AddChannel(new OscilloscopeChannel(
+			g_scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
 	}
 
 	void testRunEnded([[maybe_unused]] Catch::TestRunStats const& testRunStats) override
 	{
+		delete g_scope;
 		ScopehalStaticCleanup();
 	}
 };
@@ -81,4 +93,28 @@ int main(int argc, char* argv[])
 	//Run the actual test, then clean up and return
 	int ret = Catch::Session().run(argc, argv);
 	return ret;
+}
+
+//TODO: this is also in Filters test, should be librarized
+void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance)
+{
+	REQUIRE(golden.size() == observed.size());
+
+	golden.PrepareForCpuAccess();
+	observed.PrepareForCpuAccess();
+	size_t len = golden.size();
+
+	bool firstFail = true;
+	for(size_t i=0; i<len; i++)
+	{
+		float delta = fabs(golden[i] - observed[i]);
+
+		if( (delta >= tolerance) && firstFail)
+		{
+			LogError("first fail at i=%zu (delta=%f, tolerance=%f)\n", i, delta, tolerance);
+			firstFail = false;
+		}
+
+		REQUIRE(delta < tolerance);
+	}
 }

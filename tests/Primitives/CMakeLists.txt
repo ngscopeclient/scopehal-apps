@@ -6,6 +6,7 @@ add_executable(Primitives
 	Convert16BitSamples.cpp
 	DualFFT.cpp
 	EdgeDetection.cpp
+	KernelFusion.cpp
 	Sampling.cpp
 )
 
@@ -13,6 +14,8 @@ target_link_libraries(Primitives
 	scopehal
 	scopeprotocols
 	Catch2::Catch2
+	glslang::glslang
+	glslang-default-resource-limits
 	)
 
 #Needed because Windows does not support RPATH and will otherwise not be able to find DLLs when catch_discover_tests runs the executable
@@ -33,3 +36,9 @@ add_dependencies(Primitives
 	ngprotoshaders
 	nghalshaders
 	)
+
+if(TARGET glslang::SPIRV)
+	target_link_libraries(Primitives
+		glslang::SPIRV
+	)
+endif()

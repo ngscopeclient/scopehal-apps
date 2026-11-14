@@ -33,12 +33,10 @@
 #include "../../lib/scopehal/scopehal.h"
 #include "../../lib/scopeprotocols/scopeprotocols.h"
 #include "MockOscilloscope.h"
-#include <random>
 
 extern MockOscilloscope* g_scope;
 extern std::minstd_rand g_rng;
 
-void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size, float fmin=-1, float fmax=1);
 void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance = 1e-6f);
 
 class FilterReferencer

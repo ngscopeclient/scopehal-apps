@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* libscopehal v0.1                                                                                                     *
+* libscopehal                                                                                                          *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -32,7 +32,11 @@
 
 #include "../../lib/scopehal/scopehal.h"
 #include <random>
+#include "MockOscilloscope.h"
 
-extern std::mt19937 g_rng;
+extern std::minstd_rand g_rng;
+extern MockOscilloscope* g_scope;
+
+void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance = 1e-6f);
 
 #endif

@@ -87,7 +87,6 @@ public:
 			Unit(Unit::UNIT_FS),
 			Unit(Unit::UNIT_VOLTS),
 			Stream::STREAM_TYPE_DIGITAL));
-
 	}
 
 	//Clean up after the scope goes out of scope (pun not intended)
@@ -104,26 +103,7 @@ int main(int argc, char* argv[])
 	return Catch::Session().run(argc, argv);
 }
 
-/**
-	@brief Fills a waveform with random content, uniformly distributed from fmin to fmax
- */
-void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size, float fmin, float fmax)
-{
-	auto rdist = uniform_real_distribution<float>(fmin, fmax);
-
-	wfm->PrepareForCpuAccess();
-	wfm->Resize(size);
-
-	for(size_t i=0; i<size; i++)
-		wfm->m_samples[i] = rdist(g_rng);
-
-	wfm->MarkModifiedFromCpu();
-
-	wfm->m_revision ++;
-	if(wfm->m_timescale == 0)
-		wfm->m_timescale = 1000;
-}
-
+//TODO: this is also in Primitives test, should be librarized
 void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance)
 {
 	REQUIRE(golden.size() == observed.size());
