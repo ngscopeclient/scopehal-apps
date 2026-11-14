@@ -21,6 +21,7 @@ None yet
 * Core: FlowGraphNode::DetachInputs would crash if some inputs were null and others were not
 * Drivers: ThunderScope now checks sequence numbers after single-shot trigger to prevent stale data being left in buffer
 * Filters: PRBS decode gave occasional incorrect outputs with very short inputs
+* Filters: sin(x)/x upsampling filter phase shifted the input by the width of the sinc kernel
 * Fixed several issues related to triggering and memory depth control in Keysight Infiniium driver
 * Fixed several initialization bugs in R&S RTP driver
 
