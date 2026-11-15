@@ -15,7 +15,7 @@ target_link_libraries(Primitives
 	scopeprotocols
 	Catch2::Catch2
 	glslang::glslang
-	glslang-default-resource-limits
+	glslang::glslang-default-resource-limits
 	)
 
 #Needed because Windows does not support RPATH and will otherwise not be able to find DLLs when catch_discover_tests runs the executable
