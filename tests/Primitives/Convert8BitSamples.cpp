@@ -161,7 +161,7 @@ TEST_CASE("Primitive_Convert8BitSamples")
 			{
 				float delta = data_out_golden[j] - data_out[j];
 				if(fabs(delta) >= tolerance)
-					LogError("in: %zu, out golden = %f, out GPU = %f\n", data_in[j], data_out_golden[j], data_out[j]);
+					LogError("in: %02x, out golden = %f, out GPU = %f\n", data_in[j], data_out_golden[j], data_out[j]);
 				REQUIRE(fabs(delta) < tolerance);
 			}
 
