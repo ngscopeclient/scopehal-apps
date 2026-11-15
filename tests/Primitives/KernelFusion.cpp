@@ -84,22 +84,74 @@ TEST_CASE("Primitive_KernelFusion")
 	nodes.emplace(emphasis);
 	nodes.emplace(upsample);
 
-	//Make the fused shader
+	//First stage shader
+	auto es = make_shared<FusibleShader>("EmphasisFilter.glsl", "EmphasisFilter");
+	auto stage1 = make_shared<BakedShaderStage>(es);
+
+	//Second stage shader
+	auto us = make_shared<FusibleShader>("UpsampleFilter.glsl", "UpsampleFilter");
+	auto stage2 = make_shared<BakedShaderStage>(us);
+
+	//Set up the shader fusion
+	ShaderBaker baker;
+	baker.AddStage(stage1);
+	baker.AddStage(stage2);
+	baker.SetOutputStage(stage2);
+	auto fused = baker.Bake();
+
+	/*
+	//Make the fused shader by hand to start
+	auto ttop = ReadDataFile("shaderfusion/Template_TopLevel.glsl");
+	auto tbuf = ReadDataFile("shaderfusion/Template_SSBO.glsl");
+	auto shader1 = ReadDataFile("shaderfusion/EmphasisFilter.glsl");
+	auto shader2 = ReadDataFile("shaderfusion/UpsampleFilter.glsl");
+
+	//Configure the input SSBO
+	auto sdin = str_replace("[[BINDING_NUM]]", "0", tbuf);
+	sdin = str_replace("[[ACCESS_TYPE]]", "readonly", sdin);
+	sdin = str_replace("[[TYPE]]", "float", sdin);
+	sdin = str_replace("[[NAME]]", "din", sdin);
+
+	//Configure the kernel SSBO
+	auto skernel = str_replace("[[BINDING_NUM]]", "1", tbuf);
+	skernel = str_replace("[[ACCESS_TYPE]]", "readonly", skernel);
+	skernel = str_replace("[[TYPE]]", "float", skernel);
+	skernel = str_replace("[[NAME]]", "fkernel", skernel);
+
+	//Configure the output SSBO
+	auto sout = str_replace("[[BINDING_NUM]]", "2", tbuf);
+	sout = str_replace("[[ACCESS_TYPE]]", "writeonly", sout);
+	sout = str_replace("[[TYPE]]", "float", sout);
+	sout = str_replace("[[NAME]]", "dout", sout);
+
+	//Final buffer list
+	auto sbuffers = sdin + "\n" + skernel + "\n" + sout;
+
+	//Final  template replacement
+	ttop = str_replace("[[BUFFERS]]", sbuffers, ttop);
+	*/
+	//Save the output
+	FILE* fp = fopen("/tmp/foo.glsl", "w");
+	fwrite(fused.c_str(), 1, fused.size(), fp);
+	fclose(fp);
+
+	/*
 
 	//Try compiling a shader
 	//TODO use current vulkan version for jit
-	auto shaderSource = ReadDataFile("shaders/EmphasisFilter.spv");
-	const char* src = shaderSource.c_str();
+	auto shaderSource = ReadDataFile("shaderfusion/EmphasisFilter.glsl");
 	{
-		//src must remain valid for the entire lifetime of the TShader object
+		//source buffers must remain valid for the entire lifetime of the TShader object
 		glslang::TShader shader(EShLangCompute);
-		shader.setStrings(&src, shaderSource.size());
+		shader.addSourceText(shaderSource.c_str(), shaderSource.length());
 		shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
 		shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_6);
-		//shader.parse(GetResources(), 110, false, EShMsgDefault);
-	}
 
-	//ShaderBaker baker;
+		double start = GetTime();
+		shader.parse(GetResources(), 460, false, EShMsgDefault);
+		double dt = GetTime() - start;
+		LogNotice("shader parse took %.3f ms\n", dt * 1000);
+	}*/
 
 	const size_t niter = 5;
 	for(size_t i=0; i<niter; i++)
