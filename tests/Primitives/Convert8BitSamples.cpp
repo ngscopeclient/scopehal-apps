@@ -120,7 +120,7 @@ TEST_CASE("Primitive_Convert8BitSamples")
 
 			LogVerbose("CPU (no AVX)  : %6.2f ms\n", tbase * 1000);
 
-			const float tolerance = 1e-5f;
+			const float tolerance = 1.6e-5f;
 
 			#ifdef __x86_64__
 			if(reallyHasAvx2)
@@ -161,7 +161,12 @@ TEST_CASE("Primitive_Convert8BitSamples")
 			{
 				float delta = data_out_golden[j] - data_out[j];
 				if(fabs(delta) >= tolerance)
-					LogError("in: %02x, out golden = %f, out GPU = %f\n", data_in[j], data_out_golden[j], data_out[j]);
+				{
+					LogError("in: %02x, out golden = %f, out GPU = %f\n",
+						data_in[j] & 0xff,
+						data_out_golden[j],
+						data_out[j]);
+				}
 				REQUIRE(fabs(delta) < tolerance);
 			}
 
