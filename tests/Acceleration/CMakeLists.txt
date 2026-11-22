@@ -18,4 +18,8 @@ add_custom_command(TARGET Acceleration POST_BUILD
 	)
 endif()
 
-catch_discover_tests(Acceleration)
+if(${SECOND_TEST})
+	catch_discover_tests(Acceleration PROPERTIES ENVIRONMENT "SCOPEHAL_VULKAN_DEVICE_OVERRIDE=${SECOND_TEST_DEVICE}")
+else()
+	catch_discover_tests(Acceleration)
+endif()

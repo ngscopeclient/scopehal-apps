@@ -159,10 +159,12 @@ if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release")
 endif()
 
+# fsanitize=vptr is not available when linking to glslang upstream packages that are built with fno-rtti
+# https://github.com/KhronosGroup/glslang/issues/2920
 if(SANITIZE)
 	message(STATUS "SANITIZE set, enabling sanitizers")
-	add_compile_options(-fsanitize=address -fsanitize=undefined)
-	add_link_options(-fsanitize=address -fsanitize=undefined)
+	add_compile_options(-fsanitize=address -fsanitize=undefined -fno-sanitize=vptr)
+	add_link_options(-fsanitize=address -fsanitize=undefined  -fno-sanitize=vptr)
 endif()
 
 if(WIN32)

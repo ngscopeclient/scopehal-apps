@@ -1,0 +1,104 @@
+/***********************************************************************************************************************
+*                                                                                                                      *
+* ngscopeclient                                                                                                        *
+*                                                                                                                      *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
+* All rights reserved.                                                                                                 *
+*                                                                                                                      *
+* Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
+* following conditions are met:                                                                                        *
+*                                                                                                                      *
+*    * Redistributions of source code must retain the above copyright notice, this list of conditions, and the         *
+*      following disclaimer.                                                                                           *
+*                                                                                                                      *
+*    * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the       *
+*      following disclaimer in the documentation and/or other materials provided with the distribution.                *
+*                                                                                                                      *
+*    * Neither the name of the author nor the names of any contributors may be used to endorse or promote products     *
+*      derived from this software without specific prior written permission.                                           *
+*                                                                                                                      *
+* THIS SOFTWARE IS PROVIDED BY THE AUTHORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED   *
+* TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL *
+* THE AUTHORS BE HELD LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES        *
+* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR       *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT *
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE       *
+* POSSIBILITY OF SUCH DAMAGE.                                                                                          *
+*                                                                                                                      *
+***********************************************************************************************************************/
+
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Main code for HIL test cases
+ */
+
+#define CATCH_CONFIG_RUNNER
+#ifdef _CATCH2_V3
+#include <catch2/catch_all.hpp>
+#else
+#include <catch2/catch.hpp>
+#define EventListenerBase TestEventListenerBase
+#endif
+#include "HIL.h"
+
+std::string g_siggenPath;
+std::string g_scopePath;
+std::string g_relayPath;
+
+using namespace std;
+
+class testRunListener : public Catch::EventListenerBase
+{
+public:
+    using Catch::EventListenerBase::EventListenerBase;
+
+	// Global initialization
+    void testRunStarting(Catch::TestRunInfo const&) override
+    {
+		//auto sink = new ColoredSTDLogSink(Severity::VERBOSE);
+		auto sink = new ColoredSTDLogSink(Severity::TRACE);
+		g_trace_filters.emplace("SCPISocketTransport");
+		g_trace_filters.emplace("ThunderScopeOscilloscope");
+
+		g_log_sinks.emplace(g_log_sinks.begin(), sink);
+
+		if(!VulkanInit(true))
+			exit(1);
+		TransportStaticInit();
+		DriverStaticInit();
+		ScopeProtocolStaticInit();
+		InitializePlugins();
+
+		//This is a bit hacky but should work at least on Linux
+		auto searchPath = GetDirOfCurrentExecutable() + "/../../src/ngscopeclient";
+		//LogNotice("Adding %s to search path\n", searchPath.c_str());
+		g_searchPaths.push_back(searchPath);
+	}
+
+	//Clean up after the scope goes out of scope (pun not intended)
+    void testRunEnded([[maybe_unused]] Catch::TestRunStats const& testRunStats) override
+    {
+		ScopehalStaticCleanup();
+	}
+};
+CATCH_REGISTER_LISTENER(testRunListener)
+
+int main(int argc, char* argv[])
+{
+	Catch::Session session;
+
+	auto cli =
+		session.cli() |
+		Catch::Clara::Opt(g_siggenPath, "signal generator")["--siggen"]("host:port of signal generator") |
+		Catch::Clara::Opt(g_scopePath, "scope")["--scope"]("host:port1:port2 of oscilloscope") |
+		Catch::Clara::Opt(g_relayPath, "relay")["--relay"]("host:port of rellay board");
+    session.cli(cli);
+
+    auto result = session.applyCommandLine(argc, argv);
+    if(0 != result)
+		return result;
+
+	//Run the actual test
+	return session.run();
+}

@@ -100,7 +100,7 @@ TEST_CASE("Filter_FFT")
 			LogIndenter li;
 
 			//Create a random input waveform
-			FillRandomWaveform(&ua, depth);
+			FillRandomWaveform(&ua, g_rng, depth);
 
 			//Set window function for the filter
 			//(there are 4 supported window functions so this will test all of them)

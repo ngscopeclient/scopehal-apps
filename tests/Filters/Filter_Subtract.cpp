@@ -81,8 +81,8 @@ TEST_CASE("Filter_Subtract")
 			LogIndenter li;
 
 			//Create two random input waveforms
-			FillRandomWaveform(&ua, depth);
-			FillRandomWaveform(&ub, depth);
+			FillRandomWaveform(&ua, g_rng, depth);
+			FillRandomWaveform(&ub, g_rng, depth);
 
 			//Set up the filter (don't count this towards execution time)
 			ua.PrepareForGpuAccess();

@@ -4,9 +4,11 @@ This is a running list of significant bug fixes and new features since the last 
 
 ## New features since v0.3
 
+* Core: Fixed bug where very small current values would pretty-print as mA when inappropriate (e.g. 0.001 mA instead of 1 uA)
 * Drivers: Initial R&S RTP support
 * Drivers: Improved stability of Keysight Infiniium driver
 * Filters: Initial version of 1000base-X raw driver (decodes 1000base-X PCS without Ethernet framing for strange proprietary devices)
+* GUI: grid auto scaling now handles very small values (e.g. nA) better
 
 ## Breaking changes since v0.3
 
@@ -18,11 +20,19 @@ None yet
 
 ## Bugs fixed since v0.3
 
-* PicoScope driver did not cache sample rate and memory depths
+* Core: ensure scratch buffers are freed before shutting down Vulkan (fixes potential crash during exit)
+* Core: FlowGraphNode::DetachInputs would crash if some inputs were null and others were not
+* Drivers: PicoScope driver did not cache sample rate and memory depths
+* Drivers: ThunderScope now checks sequence numbers after single-shot trigger to prevent stale data being left in buffer
+* Filters: PRBS decode gave occasional incorrect outputs with very short inputs
+* Filters: sin(x)/x upsampling filter phase shifted the input by the width of the sinc kernel
+* Fixed several issues related to triggering and memory depth control in Keysight Infiniium driver
+* Fixed several initialization bugs in R&S RTP driver
 
 ## Other changes since v0.3
 
-None yet
+* Added several new hardware-in-loop tests for ThunderScope + FPGA board running filters on real waveforms
+* aarch64 Debian CI runner now uses virtio-venus rather than llvmpipe
 
 ## Known issues
 

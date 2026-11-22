@@ -96,7 +96,7 @@ TEST_CASE("Filter_Upsample")
 			LogIndenter li;
 
 			//Create a random input waveform
-			FillRandomWaveform(&ua, depth);
+			FillRandomWaveform(&ua, g_rng, depth);
 
 			//Make sure data is in the right spot (don't count this towards execution time)
 			ua.PrepareForGpuAccess();

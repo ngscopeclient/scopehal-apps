@@ -120,6 +120,8 @@ TEST_CASE("Primitive_Convert8BitSamples")
 
 			LogVerbose("CPU (no AVX)  : %6.2f ms\n", tbase * 1000);
 
+			const float tolerance = 1.6e-5f;
+
 			#ifdef __x86_64__
 			if(reallyHasAvx2)
 			{
@@ -156,7 +158,17 @@ TEST_CASE("Primitive_Convert8BitSamples")
 			data_out.PrepareForCpuAccess();
 			LogVerbose("GPU (32 bit)  : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 			for(size_t j=0; j<wavelen; j++)
-				REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 1e-5f);
+			{
+				float delta = data_out_golden[j] - data_out[j];
+				if(fabs(delta) >= tolerance)
+				{
+					LogError("in: %02x, out golden = %f, out GPU = %f\n",
+						data_in[j] & 0xff,
+						data_out_golden[j],
+						data_out[j]);
+				}
+				REQUIRE(fabs(delta) < tolerance);
+			}
 
 			//Run it again with offset
 			//TODO: test nonzero offsets

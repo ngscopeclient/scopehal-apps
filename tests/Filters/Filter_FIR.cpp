@@ -86,7 +86,7 @@ TEST_CASE("Filter_FIR")
 			LogIndenter li;
 
 			//Create a random input waveform
-			FillRandomWaveform(&ua, depth);
+			FillRandomWaveform(&ua, g_rng, depth);
 
 			//Configure the filter
 			filter->SetFilterType(static_cast<Filter::FIRFilterType>(i % 4));

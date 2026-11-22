@@ -96,9 +96,9 @@ TEST_CASE("Filter_DeEmbed")
 			LogIndenter li;
 
 			//Create a random input waveform
-			FillRandomWaveform(&ua, depth, -1, 1);
-			FillRandomWaveform(&umag, depth, -15, 0);
-			FillRandomWaveform(&uang, depth, -180, 180);
+			FillRandomWaveform(&ua, g_rng, depth, -1, 1);
+			FillRandomWaveform(&umag, g_rng, depth, -15, 0);
+			FillRandomWaveform(&uang, g_rng, depth, -180, 180);
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			//Also compute some temporaries we rely on

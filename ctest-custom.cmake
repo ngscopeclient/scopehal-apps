@@ -30,6 +30,11 @@ list(APPEND CTEST_CUSTOM_WARNING_EXCEPTION "linker input file unused because lin
 
 set(STATIC_ANALYSIS 0)
 
+# By default, we are not doing a second test cycle
+set(SECOND_TEST 0)
+set(SECOND_TEST_DEVICE 0)
+set(SECOND_TEST_NAME "")
+
 # azonenberg's dev box for testing
 if(${HOSTNAME} STREQUAL "havequick" )
 	set(CTEST_SITE dev-havequick)
@@ -51,6 +56,12 @@ elseif(${HOSTNAME} STREQUAL "arch" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=TGZ")
 
+	# Re-run the test with llvmpipe after we're finished
+	# TODO: we do not actually have llvmpipe installed on the Arch so it won't work until we add that
+	#set(SECOND_TEST 1)
+	#set(SECOND_TEST_DEVICE 1)
+	#set(SECOND_TEST_NAME "x86_64-linux-arch-llvmpipe")
+
 # CI Debian Trixie with RTX 3050
 elseif(${HOSTNAME} STREQUAL "debian-stable" )
 	set(CTEST_SITE ci-debian-stable)
@@ -60,7 +71,12 @@ elseif(${HOSTNAME} STREQUAL "debian-stable" )
 	message(STATUS "Found known CI config: debian-stable")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB" "-DENABLE_HIL_TESTS=ON" "-DHIL_SIGGEN_PATH=fpgadev.lab.poulsbo.antikernel.net:8000" "-DHIL_TS_PATH=fpgadev.lab.poulsbo.antikernel.net:5025:5026" "-DHIL_RELAY_PATH=fpgadev.lab.poulsbo.antikernel.net:8001")
+
+	# Re-run the test with llvmpipe after we're finished
+	set(SECOND_TEST 1)
+	set(SECOND_TEST_DEVICE 1)
+	set(SECOND_TEST_NAME "x86_64-linux-debian-13-llvmpipe")
 
 # CI Debian Trixie with Intel Coffee Lake iGPU
 elseif(${HOSTNAME} STREQUAL "debian-stable-intel" )
@@ -73,16 +89,23 @@ elseif(${HOSTNAME} STREQUAL "debian-stable-intel" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=OFF" "-DCPACK_GENERATOR=DEB")
 
-# CI Debian Trixie aarch64
+	# No need to rerun with llvmpipe here since we already did that on the nvidia node
+
+# CI Debian Trixie aarch64 with virtio-venus
 elseif(${HOSTNAME} STREQUAL "debian-stable-aarch64" )
 	set(CTEST_SITE ci-debian-stable-aarch64)
-	set(CTEST_BUILD_NAME aarch64-linux-debian-13-llvmpipe)
+	set(CTEST_BUILD_NAME aarch64-linux-debian-13-virtio-venus)
 	set(CTEST_DASHBOARD Continuous)
 	set(CTEST_GIT_COMMAND "/usr/bin/git")
 	message(STATUS "Found known CI config: debian-stable-aarch64")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
+
+	# Re-run the test with llvmpipe after we're finished
+	set(SECOND_TEST 1)
+	set(SECOND_TEST_DEVICE 1)
+	set(SECOND_TEST_NAME "aarch64-linux-debian-13-llvmpipe")
 
 # CI Debian Bookworm
 elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
@@ -95,6 +118,11 @@ elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
 
+	# Re-run the test with llvmpipe after we're finished
+	set(SECOND_TEST 1)
+	set(SECOND_TEST_DEVICE 1)
+	set(SECOND_TEST_NAME "x86_64-linux-debian-12-llvmpipe")
+
 # CI Ubuntu Noble
 elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
 	set(CTEST_SITE ci-ubuntu-oldlts)
@@ -105,6 +133,11 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=ON" "-DCPACK_GENERATOR=DEB")
+
+	# Re-run the test with llvmpipe after we're finished
+	set(SECOND_TEST 1)
+	set(SECOND_TEST_DEVICE 1)
+	set(SECOND_TEST_NAME "x86_64-linux-ubuntu-24-04-llvmpipe")
 
 # CI Ubuntu Resolute
 elseif(${HOSTNAME} MATCHES "ubuntu-lts" )
@@ -142,10 +175,10 @@ elseif(${HOSTNAME} MATCHES "ubuntu-lts" )
 		set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=OFF" "-DCPACK_GENERATOR=DEB")
 	endif()
 
-# CI Fedora 43
+# CI Fedora 44
 elseif(${HOSTNAME} STREQUAL "fedora" )
 	set(CTEST_SITE ci-fedora)
-	set(CTEST_BUILD_NAME x86_64-linux-fedora-43-llvmpipe)
+	set(CTEST_BUILD_NAME x86_64-linux-fedora-44-llvmpipe)
 	set(CTEST_DASHBOARD Continuous)
 	set(CTEST_GIT_COMMAND "/usr/bin/git")
 	message(STATUS "Found known CI config: fedora")
@@ -168,10 +201,12 @@ elseif(${HOSTNAME} STREQUAL "win11" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DWIXPATH=C:\\PROGRA~2\\WIXTOO~1.14\\bin" "-DCPACK_GENERATOR=WIX") # don't build docs on windows for now, TODO figure that out
 
+	# TODO: add software vulkan to the windows node??
+
 # CI MacOS ARM64, for whatever reason it reports the FQDN not just the hostname
 elseif(${HOSTNAME} STREQUAL "macos.cidmz.poulsbo.antikernel.net" )
 	set(CTEST_SITE ci-macos)
-	set(CTEST_BUILD_NAME aarch64-macos-15-6-moltenvk)
+	set(CTEST_BUILD_NAME aarch64-macos-27-2-moltenvk)
 	set(CTEST_DASHBOARD Continuous)
 	set(CTEST_CMAKE_GENERATOR "Ninja")
 	set(CTEST_BINARY_DIRECTORY "/Users/ci/Documents/scopehal-apps/build")
@@ -192,22 +227,42 @@ else()
 	message(FATAL_ERROR "No test config matched")
 endif()
 
+message(STATUS "Running update and configure")
 ctest_start(${CTEST_DASHBOARD})
 
 #report version number but don't do anything else
 set(CTEST_UPDATE_VERSION_ONLY 1)
 ctest_update()
-
 ctest_configure(OPTIONS "${CONFIGURE_OPTIONS}")
+
+message(STATUS "Running build")
 ctest_build(FLAGS "-j${N_PROCS}")
 
 #Don't run unit tests if doing static analysis
 if(NOT ${STATIC_ANALYSIS})
+	message(STATUS "Running tests")
 	ctest_test()
 endif()
 
 #ctest_coverage()
+message(STATUS "Submitting results")
 set(CTEST_DROP_METHOD https)
 set(CTEST_DROP_SITE dashboard.ngscopeclient.org)
 set(CTEST_DROP_LOCATION /submit.php?project=ngscopeclient)
 ctest_submit()
+
+# If we're doing a second test cycle with different environment, address that now
+if(${SECOND_TEST})
+	set(CTEST_BUILD_NAME ${SECOND_TEST_NAME})
+
+	ctest_start(${CTEST_DASHBOARD})
+	ctest_update()
+	ctest_configure(OPTIONS "${CONFIGURE_OPTIONS};-DSECOND_TEST=1;-DSECOND_TEST_DEVICE=${SECOND_TEST_DEVICE}")
+
+	# we need to build even though there's nothing to do so that we can discover the tests post configure
+	ctest_build(FLAGS "-j${N_PROCS}")
+
+	ctest_test()
+	ctest_submit()
+
+endif()
