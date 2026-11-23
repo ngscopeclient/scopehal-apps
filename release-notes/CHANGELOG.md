@@ -31,8 +31,8 @@ None yet
 
 ## Other changes since v0.3
 
-* Added several new hardware-in-loop tests for ThunderScope + FPGA board running filters on real waveforms
-* aarch64 Debian CI runner now uses virtio-venus rather than llvmpipe
+* CI: Added several new hardware-in-loop tests for ThunderScope + FPGA board running filters on real waveforms
+* CI: aarch64 Debian runner now uses virtio-venus rather than llvmpipe
 
 ## Known issues
 
