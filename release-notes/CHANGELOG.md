@@ -33,6 +33,7 @@ None yet
 
 * CI: Added several new hardware-in-loop tests for ThunderScope + FPGA board running filters on real waveforms
 * CI: aarch64 Debian runner now uses virtio-venus rather than llvmpipe
+* CI: Use local git mirror rather than hammering github every build
 
 ## Known issues
 
