@@ -91,6 +91,19 @@ elseif(${HOSTNAME} STREQUAL "debian-stable-intel" )
 
 	# No need to rerun with llvmpipe here since we already did that on the nvidia node
 
+# CI Debian Trixie with Radeon Pro W7500
+elseif(${HOSTNAME} STREQUAL "debian-stable-amdgpu" )
+	set(CTEST_SITE ci-debian-stable-amdgpu)
+	set(CTEST_BUILD_NAME x86_64-linux-debian-13-amd)
+	set(CTEST_DASHBOARD Continuous)
+	set(CTEST_GIT_COMMAND "/usr/bin/git")
+	message(STATUS "Found known CI config: debian-stable-amdgpu")
+
+	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON" "-DBUILD_DOCS=OFF" "-DCPACK_GENERATOR=DEB")
+
+	# No need to rerun with llvmpipe here since we already did that on the nvidia node
+
 # CI Debian Trixie aarch64 with virtio-venus
 elseif(${HOSTNAME} STREQUAL "debian-stable-aarch64" )
 	set(CTEST_SITE ci-debian-stable-aarch64)
